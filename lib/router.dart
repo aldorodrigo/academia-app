@@ -2,14 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'features/account/presentation/account_screen.dart';
 import 'features/auth/data/models.dart';
 import 'features/auth/data/session_controller.dart';
 import 'features/auth/presentation/login_screen.dart';
 import 'features/home/presentation/home_screen.dart';
+import 'features/invitations/presentation/invitation_code_screen.dart';
+import 'features/invitations/presentation/invitation_screen.dart';
 import 'features/organizations/presentation/organization_picker_screen.dart';
 
 /// Decide a dónde ir según el estado de la sesión.
 String? sessionRedirect(AsyncValue<Session?> session, String location) {
+  // Las invitaciones se abren con o sin sesión (link o QR).
+  if (location.startsWith('/invitacion')) return null;
+
   if (session.isLoading) return location == '/' ? null : '/';
 
   final value = session.value;
@@ -47,6 +53,18 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const OrganizationPickerScreen(),
       ),
       GoRoute(path: '/inicio', builder: (_, _) => const HomeScreen()),
+      GoRoute(path: '/cuenta', builder: (_, _) => const AccountScreen()),
+      GoRoute(
+        path: '/invitacion',
+        builder: (_, _) => const InvitationCodeScreen(),
+        routes: [
+          GoRoute(
+            path: ':token',
+            builder: (_, state) =>
+                InvitationScreen(token: state.pathParameters['token']!),
+          ),
+        ],
+      ),
     ],
   );
 });

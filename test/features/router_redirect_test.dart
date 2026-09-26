@@ -34,4 +34,21 @@ void main() {
       isNull,
     );
   });
+
+  test('las invitaciones se abren con o sin sesión', () {
+    expect(sessionRedirect(const AsyncLoading(), '/invitacion/abc'), isNull);
+    expect(sessionRedirect(const AsyncData(null), '/invitacion'), isNull);
+    expect(
+      sessionRedirect(AsyncData(_session(slug: 'jakare')), '/invitacion/abc'),
+      isNull,
+    );
+  });
+
+  test('mi cuenta requiere sesión', () {
+    expect(sessionRedirect(const AsyncData(null), '/cuenta'), '/ingresar');
+    expect(
+      sessionRedirect(AsyncData(_session(slug: 'jakare')), '/cuenta'),
+      isNull,
+    );
+  });
 }

@@ -48,6 +48,11 @@ lib/
 - **Organización activa:** se guarda el slug y el interceptor envía `X-Organization` en cada petición.
 - **Sesión:** `SessionController` (AsyncNotifier). `null` = sin sesión.
 - **Navegación:** `sessionRedirect()` decide: `/ingresar` → `/organizaciones` → `/inicio`.
+  `/invitacion` y `/invitacion/:token` son públicas (link o QR de invitación, con o sin sesión).
+- **Organización activa:** `currentOrganizationProvider` (`GET /organization`) da vocabulario
+  (`term('group')`), módulos (`hasFeature`) y perfiles del usuario con mandato (`roles`).
+- **Contrato de API:** `academia-api/docs/API_V1.md`. La app se construye primero contra el
+  contrato (fakes en tests, ver `fakeDio` en `test/fakes.dart`) y después se implementa la API.
 - Dinero: montos enteros en guaraníes, formateados como `₲ 150.000`.
 
 ## Convenciones
