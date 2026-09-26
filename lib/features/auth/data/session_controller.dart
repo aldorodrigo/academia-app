@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../invitations/data/invitation_repository.dart';
 import 'auth_repository.dart';
 import 'models.dart';
 
@@ -12,6 +13,24 @@ class SessionController extends AsyncNotifier<Session?> {
 
   Future<void> login({required String email, required String password}) async {
     await _repository.login(email: email, password: password);
+    state = AsyncData(await _repository.restore());
+  }
+
+  /// Acepta una invitación y entra directo a la organización que invitó.
+  Future<void> acceptInvitation(
+    String token, {
+    required String password,
+    String? name,
+    String? passwordConfirmation,
+  }) async {
+    await ref
+        .read(invitationRepositoryProvider)
+        .accept(
+          token,
+          name: name,
+          password: password,
+          passwordConfirmation: passwordConfirmation,
+        );
     state = AsyncData(await _repository.restore());
   }
 

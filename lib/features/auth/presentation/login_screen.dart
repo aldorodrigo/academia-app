@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/utils/validators.dart';
 import '../data/session_controller.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -74,15 +76,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       keyboardType: TextInputType.emailAddress,
                       autofillHints: const [AutofillHints.email],
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Ingresá tu correo electrónico.';
-                        }
-                        if (!value.contains('@')) {
-                          return 'El correo electrónico no es válido.';
-                        }
-                        return null;
-                      },
+                      validator: validateEmail,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -93,9 +87,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       obscureText: true,
                       autofillHints: const [AutofillHints.password],
-                      validator: (value) => value == null || value.isEmpty
-                          ? 'Ingresá tu contraseña.'
-                          : null,
+                      validator: validateCurrentPassword,
                       onFieldSubmitted: (_) => _submit(),
                     ),
                     if (_error != null) ...[
@@ -114,6 +106,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Text('Ingresar'),
+                    ),
+                    const SizedBox(height: 16),
+                    TextButton(
+                      onPressed: () => context.go('/invitacion'),
+                      child: const Text('Tengo una invitación'),
                     ),
                   ],
                 ),

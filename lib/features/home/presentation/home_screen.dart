@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../auth/data/session_controller.dart';
+import '../../organizations/presentation/roles_list.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -10,34 +11,33 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(sessionControllerProvider).value;
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(session?.organization?.name ?? 'Inicio'),
         actions: [
-          if ((session?.organizations.length ?? 0) > 1)
-            IconButton(
-              tooltip: 'Cambiar de organización',
-              icon: const Icon(Icons.swap_horiz),
-              onPressed: () => context.go('/organizaciones'),
-            ),
           IconButton(
-            tooltip: 'Cerrar sesión',
-            icon: const Icon(Icons.logout),
-            onPressed: () =>
-                ref.read(sessionControllerProvider.notifier).logout(),
+            tooltip: 'Mi cuenta',
+            icon: const Icon(Icons.account_circle_outlined),
+            onPressed: () => context.go('/cuenta'),
           ),
         ],
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            'Hola, ${session?.name ?? ''}.\n\n'
-            'Acá vas a ver a tus hijos, sus cuotas y los avisos del club.',
-            textAlign: TextAlign.center,
+      body: ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          Text(
+            'Hola, ${session?.name ?? ''}.',
+            style: theme.textTheme.headlineSmall,
           ),
-        ),
+          const SizedBox(height: 16),
+          const RolesList(),
+          const SizedBox(height: 32),
+          const Text(
+            'Acá vas a ver a tus hijos, sus cuotas y los avisos del club.',
+          ),
+        ],
       ),
     );
   }
