@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../auth/data/session_controller.dart';
+import '../../organizations/data/organization_repository.dart';
 import '../../organizations/presentation/roles_list.dart';
+import '../../students/data/students_repository.dart';
+import '../../students/presentation/students_list.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -12,6 +15,10 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(sessionControllerProvider).value;
     final theme = Theme.of(context);
+    final isGuardian =
+        ref.watch(currentOrganizationProvider).value?.hasRole('tutor') ?? false;
+    final students = ref.watch(studentsProvider).value ?? const [];
+    final onlySelf = students.isNotEmpty && students.every((s) => s.isSelf);
 
     return Scaffold(
       appBar: AppBar(
@@ -33,10 +40,15 @@ class HomeScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           const RolesList(),
-          const SizedBox(height: 32),
-          const Text(
-            'Acá vas a ver a tus hijos, sus cuotas y los avisos del club.',
-          ),
+          if (isGuardian || students.isNotEmpty) ...[
+            const SizedBox(height: 32),
+            Text(
+              onlySelf ? 'Mis inscripciones' : 'Mis hijos',
+              style: theme.textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            const StudentsList(),
+          ],
         ],
       ),
     );

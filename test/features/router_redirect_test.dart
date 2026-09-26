@@ -51,4 +51,16 @@ void main() {
       isNull,
     );
   });
+
+  test('la ficha de un hijo requiere sesión y organización', () {
+    expect(sessionRedirect(const AsyncData(null), '/hijos/5'), '/ingresar');
+    expect(
+      sessionRedirect(AsyncData(_session()), '/hijos/5'),
+      '/organizaciones',
+    );
+    expect(
+      sessionRedirect(AsyncData(_session(slug: 'jakare')), '/hijos/5'),
+      isNull,
+    );
+  });
 }
