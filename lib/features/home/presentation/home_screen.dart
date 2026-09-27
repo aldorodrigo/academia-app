@@ -6,6 +6,7 @@ import '../../auth/data/session_controller.dart';
 import '../../billing/presentation/account_summary_card.dart';
 import '../../organizations/data/organization_repository.dart';
 import '../../organizations/presentation/roles_list.dart';
+import '../../reports/presentation/reports_card.dart';
 import '../../students/data/students_repository.dart';
 import '../../students/presentation/students_list.dart';
 
@@ -41,6 +42,8 @@ class HomeScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           const RolesList(),
+          const SizedBox(height: 16),
+          const ReportsCard(),
           if (isGuardian || students.isNotEmpty) ...[
             const SizedBox(height: 32),
             Text(

@@ -104,4 +104,8 @@ void main() {
     expect(sessionRedirect(session, '/', from: 'https://evil.com'), '/inicio');
     expect(sessionRedirect(session, '/', from: '/ingresar'), '/inicio');
   });
+
+  test('los informes requieren sesión', () {
+    expect(sessionRedirect(const AsyncData(null), '/informes'), '/ingresar');
+  });
 }

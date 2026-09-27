@@ -38,6 +38,7 @@ class OrganizationDetails {
     required this.terminology,
     required this.features,
     required this.roles,
+    this.permissions = const [],
     this.type,
     this.currency = 'PYG',
     this.timezone = 'America/Asuncion',
@@ -58,6 +59,9 @@ class OrganizationDetails {
       roles: ((membership?['roles'] as List?) ?? const [])
           .map((r) => OrganizationRole.fromJson(r as Map<String, dynamic>))
           .toList(),
+      permissions: List<String>.from(
+        membership?['permissions'] as List? ?? const [],
+      ),
     );
   }
 
@@ -78,10 +82,15 @@ class OrganizationDetails {
   final List<String> features;
   final List<OrganizationRole> roles;
 
+  /// Permisos del usuario para la app (ej. `view_reports`).
+  final List<String> permissions;
+
   /// Etiqueta configurable de la organización (ej. term('group') → "Categoría").
   String term(String key) => terminology[key] ?? defaultTerminology[key] ?? key;
 
   bool hasFeature(String feature) => features.contains(feature);
 
   bool hasRole(String name) => roles.any((r) => r.name == name);
+
+  bool can(String permission) => permissions.contains(permission);
 }
