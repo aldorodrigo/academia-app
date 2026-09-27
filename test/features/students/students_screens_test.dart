@@ -44,6 +44,12 @@ Routes _routes({
     'data': students ?? [studentSummaryJson()],
   },
   'GET /students/12': (_) => {'data': student ?? studentDetailJson()},
+  'GET /account': (_) => {
+    'data': {'balance': 0, 'overdue': 0, 'students': [], 'charges': []},
+  },
+  'GET /students/12/account': (_) => {
+    'data': {'balance': 0, 'overdue': 0, 'students': [], 'charges': []},
+  },
 };
 
 Widget _app(Routes routes, Widget home) => ProviderScope(
@@ -147,7 +153,8 @@ void main() {
       await tester.scrollUntilVisible(find.text('Ana Benítez (vos)'), 200);
       expect(find.text('Ana Benítez (vos)'), findsOneWidget);
 
-      await tester.scrollUntilVisible(find.text('Ficha médica'), 200);
+      await tester.scrollUntilVisible(find.text('Penicilina'), 200);
+      expect(find.text('Ficha médica'), findsOneWidget);
       expect(find.text('Penicilina'), findsOneWidget);
       expect(find.text('Vigente hasta 01/03/2027'), findsOneWidget);
     });

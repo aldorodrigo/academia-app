@@ -63,4 +63,15 @@ void main() {
       isNull,
     );
   });
+
+  test('el estado de cuenta requiere sesión', () {
+    expect(
+      sessionRedirect(const AsyncData(null), '/estado-de-cuenta'),
+      '/ingresar',
+    );
+    expect(
+      sessionRedirect(AsyncData(_session(slug: 'jakare')), '/estado-de-cuenta'),
+      isNull,
+    );
+  });
 }

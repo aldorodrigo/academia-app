@@ -1,0 +1,88 @@
+/// Respuestas de ejemplo según el contrato (`academia-api/docs/API_V1.md`, Sprint 3).
+Map<String, Object?> chargeJson({
+  int id = 501,
+  int studentId = 13,
+  String firstName = 'Sofía',
+  String status = 'pendiente',
+  String description = 'Cuota septiembre 2026',
+  String? period = '2026-09',
+  int base = 150000,
+  int total = 60000,
+  List<Map<String, Object?>>? adjustments,
+}) => {
+  'id': id,
+  'student': {'id': studentId, 'first_name': firstName},
+  'concept': 'Cuota mensual',
+  'description': description,
+  'period': period,
+  'group': 'Sub-8',
+  'issued_on': '2026-09-01',
+  'due_on': '2026-09-10',
+  'status': status,
+  'status_label': status,
+  'base_amount': base,
+  'final_amount': total,
+  'adjustments':
+      adjustments ??
+      [
+        {'type': 'beca', 'label': 'Beca 50 %', 'amount': -75000},
+        {
+          'type': 'hermanos',
+          'label': 'Hermanos (2º hijo) −20 %',
+          'amount': -15000,
+        },
+      ],
+};
+
+Map<String, Object?> accountJson({
+  int balance = 270000,
+  int overdue = 150000,
+  List<Map<String, Object?>>? students,
+  List<Map<String, Object?>>? charges,
+}) => {
+  'balance': balance,
+  'overdue': overdue,
+  'students':
+      students ??
+      [
+        {
+          'id': 12,
+          'full_name': 'Mateo Benítez',
+          'balance': 150000,
+          'overdue': 150000,
+        },
+        {
+          'id': 13,
+          'full_name': 'Sofía Benítez',
+          'balance': 120000,
+          'overdue': 0,
+        },
+      ],
+  'charges':
+      charges ??
+      [
+        chargeJson(),
+        chargeJson(
+          id: 400,
+          studentId: 12,
+          firstName: 'Mateo',
+          status: 'vencido',
+          description: 'Cuota agosto 2026',
+          period: '2026-08',
+          base: 150000,
+          total: 150000,
+          adjustments: const [],
+        ),
+        chargeJson(
+          id: 300,
+          studentId: 12,
+          firstName: 'Mateo',
+          status: 'pagado',
+          description: 'Inscripción 2026',
+          period: null,
+          base: 100000,
+          total: 100000,
+          adjustments: const [],
+        ),
+      ],
+};
