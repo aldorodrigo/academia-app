@@ -64,6 +64,17 @@ void main() {
     );
   });
 
+  test('asistencia y grupos requieren sesión y organización', () {
+    for (final path in ['/clases/81', '/grupos', '/grupos/3']) {
+      expect(sessionRedirect(const AsyncData(null), path), '/ingresar');
+      expect(sessionRedirect(AsyncData(_session()), path), '/organizaciones');
+      expect(
+        sessionRedirect(AsyncData(_session(slug: 'jakare')), path),
+        isNull,
+      );
+    }
+  });
+
   test('el estado de cuenta requiere sesión', () {
     expect(
       sessionRedirect(const AsyncData(null), '/estado-de-cuenta'),

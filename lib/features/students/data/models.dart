@@ -194,6 +194,7 @@ class Student {
     this.guardians = const [],
     this.medical,
     this.canViewMedical = false,
+    this.classReminders,
   });
 
   factory Student.fromJson(Map<String, dynamic> json) {
@@ -214,6 +215,7 @@ class Student {
       guardians: _list(json['guardians'], Guardian.fromJson),
       medical: medical == null ? null : MedicalRecord.fromJson(medical),
       canViewMedical: permissions?['view_medical'] as bool? ?? false,
+      classReminders: json['class_reminders'] as bool?,
     );
   }
 
@@ -235,6 +237,9 @@ class Student {
   /// Null si el usuario no puede verla o si todavía no se cargó.
   final MedicalRecord? medical;
   final bool canViewMedical;
+
+  /// Aviso de los días de clase: null = el tutor nunca respondió.
+  final bool? classReminders;
 
   String get initials =>
       '${firstName.isEmpty ? '' : firstName[0]}'

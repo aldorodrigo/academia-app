@@ -5,3 +5,6 @@ final todayProvider = Provider<DateTime>((ref) {
   final now = DateTime.now();
   return DateTime(now.year, now.month, now.day);
 });
+
+/// Fecha y hora actuales (para saber si una clase ya empezó); reemplazable en los tests.
+final nowProvider = Provider<DateTime>((ref) => DateTime.now());

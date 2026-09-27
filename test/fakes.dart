@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:academia_app/core/push/push_service.dart';
 import 'package:academia_app/core/storage/session_storage.dart';
 
 class InMemorySessionStorage implements SessionStorage {
@@ -71,3 +72,27 @@ DioException apiError(RequestOptions options, int status, Object? data) =>
         data: data,
       ),
     );
+
+/// Push sin Firebase: cuenta las llamadas y responde [allow] al pedir permiso.
+class FakePushService implements PushService {
+  FakePushService({this.allow = true});
+
+  final bool allow;
+  int enabled = 0;
+  int unregistered = 0;
+
+  @override
+  Future<bool> enable() async {
+    enabled++;
+    return allow;
+  }
+
+  @override
+  Future<void> registerIfAllowed() async {}
+
+  @override
+  Future<void> unregister() async => unregistered++;
+
+  @override
+  Stream<String> get openedRoutes => const Stream.empty();
+}

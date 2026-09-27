@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/push/push_service.dart';
 import '../../invitations/data/invitation_repository.dart';
 import 'auth_repository.dart';
 import 'models.dart';
@@ -43,6 +44,7 @@ class SessionController extends AsyncNotifier<Session?> {
   }
 
   Future<void> logout() async {
+    await ref.read(pushServiceProvider).unregister();
     await _repository.logout();
     state = const AsyncData(null);
   }

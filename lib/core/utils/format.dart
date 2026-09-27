@@ -18,6 +18,41 @@ const _weekdays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 /// Día de la semana abreviado a partir del número ISO (1 = lunes).
 String weekdayShort(int weekday) => _weekdays[(weekday - 1) % 7];
 
+const _weekdaysLong = [
+  'lunes',
+  'martes',
+  'miércoles',
+  'jueves',
+  'viernes',
+  'sábado',
+  'domingo',
+];
+
+/// Día de la semana completo, en minúscula: 1 → "lunes".
+String weekdayLong(int weekday) => _weekdaysLong[(weekday - 1) % 7];
+
+/// Día relativo a [today]: "hoy", "mañana", "el jueves 1/10" (esta semana)
+/// o "el 12/10".
+String formatDay(DateTime date, DateTime today) {
+  final day = DateTime(date.year, date.month, date.day);
+  final diff = day.difference(today).inDays;
+  if (diff == 0) return 'hoy';
+  if (diff == 1) return 'mañana';
+  if (diff == -1) return 'ayer';
+  final short = '${date.day}/${date.month}';
+  return diff > 1 && diff < 7
+      ? 'el ${weekdayLong(date.weekday)} $short'
+      : 'el $short';
+}
+
+/// Fecha para la API: aaaa-mm-dd.
+String apiDate(DateTime d) =>
+    '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+/// Mes para la API: aaaa-mm.
+String apiMonth(DateTime d) =>
+    '${d.year}-${d.month.toString().padLeft(2, '0')}';
+
 /// Guaraníes enteros con separador de miles: 150000 → "₲ 150.000".
 String formatMoney(int amount) {
   final digits = amount.abs().toString();

@@ -21,7 +21,9 @@ los widgets de Flutter (calendarios, diálogos) muestren sus textos en español
 ## Stack
 
 Flutter 3.47 · Dart 3.13 · Riverpod 3 · go_router · dio · flutter_secure_storage.
-Push (firebase_messaging) se agrega en el Sprint 5.
+Push con firebase_messaging (Android/iOS; en la web no hay push). Se configura con
+`--dart-define=FIREBASE_API_KEY=… FIREBASE_APP_ID=… FIREBASE_MESSAGING_SENDER_ID=… FIREBASE_PROJECT_ID=…`;
+sin esos valores la app funciona igual, sin notificaciones.
 
 ## Comandos
 
@@ -60,7 +62,14 @@ lib/
   Pagos, saldo a favor y recibos (PDF por link firmado, se abre con `urlLauncherProvider`, reemplazable en tests).
 - **Informes** (comisión): `/informes` (balance del mes, saldos por familia, morosos; PDF/Excel por link firmado)
   y tarjeta en el inicio, solo si `currentOrganizationProvider` trae el permiso `view_reports` (`can()`).
-- **Fecha de hoy:** `todayProvider` (`core/utils/clock.dart`), reemplazable en los tests.
+- **Fecha de hoy:** `todayProvider` y `nowProvider` (con hora) en `core/utils/clock.dart`, reemplazables en los tests.
+- **Asistencia** (técnico, permiso `take_attendance`): tarjeta "Hoy" en el inicio con las clases de sus grupos,
+  `/clases/:id` para tomarla (todos arrancan presentes, los que el tutor avisó "No va" justificados; un toque alterna
+  presente/ausente; guardado único con reintento; suspender clase), `/grupos` y `/grupos/:id` (mes y % por alumno).
+  La planilla vive en `AttendanceSheetController`.
+- **Próxima clase** (tutor): `GET /agenda` en el inicio con "¿Lo llevás?" (hasta que empieza) y, la primera vez,
+  "¿Querés que te avise los días de clase?"; en la ficha, asistencia del mes e interruptor del aviso.
+  Acciones en `GuardianActions`. Activar el aviso pide permiso de push (`pushServiceProvider`, reemplazable en tests).
 - **Organización activa:** `currentOrganizationProvider` (`GET /organization`) da vocabulario
   (`term('group')`), módulos (`hasFeature`) y perfiles del usuario con mandato (`roles`).
 - **Contrato de API:** `academia-api/docs/API_V1.md`. La app se construye primero contra el

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../attendance/presentation/next_class_card.dart';
+import '../../attendance/presentation/today_classes_card.dart';
 import '../../auth/data/session_controller.dart';
 import '../../billing/presentation/account_summary_card.dart';
 import '../../organizations/data/organization_repository.dart';
@@ -43,6 +45,7 @@ class HomeScreen extends ConsumerWidget {
           const SizedBox(height: 16),
           const RolesList(),
           const SizedBox(height: 16),
+          const TodayClassesCard(),
           const ReportsCard(),
           if (isGuardian || students.isNotEmpty) ...[
             const SizedBox(height: 32),
@@ -51,6 +54,7 @@ class HomeScreen extends ConsumerWidget {
               style: theme.textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
+            const NextClassesList(),
             const AccountSummaryCard(),
             const SizedBox(height: 8),
             const StudentsList(),

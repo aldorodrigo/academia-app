@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'features/account/presentation/account_screen.dart';
+import 'features/attendance/presentation/class_attendance_screen.dart';
+import 'features/attendance/presentation/group_screen.dart';
+import 'features/attendance/presentation/groups_screen.dart';
 import 'features/auth/data/models.dart';
 import 'features/billing/presentation/balance_screen.dart';
 import 'features/auth/data/session_controller.dart';
@@ -92,6 +95,22 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: ':id',
             builder: (_, state) =>
                 StudentScreen(id: int.parse(state.pathParameters['id']!)),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/clases/:id',
+        builder: (_, state) =>
+            ClassAttendanceScreen(id: int.parse(state.pathParameters['id']!)),
+      ),
+      GoRoute(
+        path: '/grupos',
+        builder: (_, _) => const GroupsScreen(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            builder: (_, state) =>
+                GroupScreen(id: int.parse(state.pathParameters['id']!)),
           ),
         ],
       ),
