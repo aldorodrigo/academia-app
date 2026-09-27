@@ -74,4 +74,34 @@ void main() {
       isNull,
     );
   });
+
+  test('un link directo sobrevive a la carga de la sesión', () {
+    expect(
+      sessionRedirect(const AsyncLoading(), '/estado-de-cuenta'),
+      '/?from=%2Festado-de-cuenta',
+    );
+    expect(
+      sessionRedirect(
+        AsyncData(_session(slug: 'jakare')),
+        '/',
+        from: '/estado-de-cuenta',
+      ),
+      '/estado-de-cuenta',
+    );
+    expect(
+      sessionRedirect(
+        AsyncData(_session(slug: 'jakare')),
+        '/',
+        from: '/hijos/5',
+      ),
+      '/hijos/5',
+    );
+  });
+
+  test('from solo acepta rutas internas', () {
+    final session = AsyncData(_session(slug: 'jakare'));
+    expect(sessionRedirect(session, '/', from: '//evil.com'), '/inicio');
+    expect(sessionRedirect(session, '/', from: 'https://evil.com'), '/inicio');
+    expect(sessionRedirect(session, '/', from: '/ingresar'), '/inicio');
+  });
 }

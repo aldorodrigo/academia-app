@@ -15,11 +15,21 @@ import 'features/students/presentation/student_screen.dart';
 import 'features/students/presentation/students_screen.dart';
 
 /// Decide a dónde ir según el estado de la sesión.
-String? sessionRedirect(AsyncValue<Session?> session, String location) {
+///
+/// Mientras se restaura la sesión se espera en `/`, recordando la ruta pedida
+/// en `from` (link directo o recarga en la web) para volver ahí después.
+String? sessionRedirect(
+  AsyncValue<Session?> session,
+  String location, {
+  String? from,
+}) {
   // Las invitaciones se abren con o sin sesión (link o QR).
   if (location.startsWith('/invitacion')) return null;
 
-  if (session.isLoading) return location == '/' ? null : '/';
+  if (session.isLoading) {
+    if (location == '/') return null;
+    return Uri(path: '/', queryParameters: {'from': location}).toString();
+  }
 
   final value = session.value;
   if (value == null) return location == '/ingresar' ? null : '/ingresar';
@@ -28,9 +38,19 @@ String? sessionRedirect(AsyncValue<Session?> session, String location) {
     return location == '/organizaciones' ? null : '/organizaciones';
   }
 
-  if (location == '/' || location == '/ingresar') return '/inicio';
+  if (location == '/' || location == '/ingresar') {
+    return _isInternal(from) ? from : '/inicio';
+  }
   return null;
 }
+
+/// Solo rutas de la app (evita redirigir a otro sitio con `from=//…`).
+bool _isInternal(String? path) =>
+    path != null &&
+    path.startsWith('/') &&
+    !path.startsWith('//') &&
+    path != '/' &&
+    !path.startsWith('/ingresar');
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier(0);
@@ -43,6 +63,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) => sessionRedirect(
       ref.read(sessionControllerProvider),
       state.matchedLocation,
+      from: state.uri.queryParameters['from'],
     ),
     routes: [
       GoRoute(

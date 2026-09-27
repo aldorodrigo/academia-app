@@ -7,6 +7,7 @@ import '../../../core/utils/format.dart';
 import '../data/account_repository.dart';
 import '../data/models.dart';
 import 'charge_tile.dart';
+import 'payment_tile.dart';
 
 /// Estado de cuenta de la familia: saldo total, saldo por hijo y cargos.
 class BalanceScreen extends ConsumerStatefulWidget {
@@ -17,7 +18,7 @@ class BalanceScreen extends ConsumerStatefulWidget {
 }
 
 class _BalanceScreenState extends ConsumerState<BalanceScreen> {
-  bool _onlyUnpaid = true;
+  _Filter _filter = _Filter.unpaid;
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +47,9 @@ class _BalanceScreenState extends ConsumerState<BalanceScreen> {
 
   Widget _content(BuildContext context, Account account) {
     final theme = Theme.of(context);
-    final charges = _onlyUnpaid ? account.unpaid : account.charges;
+    final charges = _filter == _Filter.unpaid
+        ? account.unpaid
+        : account.charges;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -60,6 +63,11 @@ class _BalanceScreenState extends ConsumerState<BalanceScreen> {
           Text(
             'Vencido ${formatMoney(account.overdue)}',
             style: TextStyle(color: theme.colorScheme.error),
+          ),
+        if (account.credit > 0)
+          Text(
+            'Saldo a favor ${formatMoney(account.credit)}',
+            style: TextStyle(color: theme.colorScheme.primary),
           ),
         if (account.students.length > 1) ...[
           const SizedBox(height: 16),
@@ -78,29 +86,45 @@ class _BalanceScreenState extends ConsumerState<BalanceScreen> {
             ),
         ],
         const SizedBox(height: 16),
-        SegmentedButton<bool>(
+        SegmentedButton<_Filter>(
           segments: const [
-            ButtonSegment(value: true, label: Text('Pendientes')),
-            ButtonSegment(value: false, label: Text('Todos')),
+            ButtonSegment(value: _Filter.unpaid, label: Text('Pendientes')),
+            ButtonSegment(value: _Filter.all, label: Text('Todos')),
+            ButtonSegment(value: _Filter.payments, label: Text('Pagos')),
           ],
-          selected: {_onlyUnpaid},
-          onSelectionChanged: (value) =>
-              setState(() => _onlyUnpaid = value.first),
+          selected: {_filter},
+          onSelectionChanged: (value) => setState(() => _filter = value.first),
         ),
         const SizedBox(height: 8),
-        if (charges.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            child: Text(
-              _onlyUnpaid
+        if (_filter == _Filter.payments) ...[
+          if (account.payments.isEmpty)
+            const _Empty('Todavía no hay pagos registrados.'),
+          for (final payment in account.payments) PaymentTile(payment),
+        ] else ...[
+          if (charges.isEmpty)
+            _Empty(
+              _filter == _Filter.unpaid
                   ? 'No tenés cargos pendientes.'
                   : 'Todavía no hay cargos.',
-              textAlign: TextAlign.center,
             ),
-          ),
-        for (final charge in charges)
-          ChargeTile(charge, showStudent: account.students.length > 1),
+          for (final charge in charges)
+            ChargeTile(charge, showStudent: account.students.length > 1),
+        ],
       ],
     );
   }
+}
+
+enum _Filter { unpaid, all, payments }
+
+class _Empty extends StatelessWidget {
+  const _Empty(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 24),
+    child: Text(text, textAlign: TextAlign.center),
+  );
 }
