@@ -40,9 +40,47 @@ void main() {
     final student = Student.fromJson(studentSummaryJson());
 
     expect(student.initials, 'MB');
-    expect(student.groupsDescription, 'Sub-10 · Fútbol');
+    expect(student.groupsDescription(DateTime(2026, 9, 26)), 'Sub-10 · Fútbol');
     expect(student.guardians, isEmpty);
     expect(student.medical, isNull);
     expect(student.canViewMedical, isFalse);
+  });
+
+  test('en la lista, las vigentes primero y cuántas temporadas próximas', () {
+    Map<String, Object?> enrollment(int id, String group, String startsOn) => {
+      'id': id,
+      'status': 'activo',
+      'season': {
+        'id': id,
+        'name': 'T$id',
+        'starts_on': startsOn,
+        'ends_on': '2027-12-31',
+      },
+      'group': {
+        'id': id,
+        'name': group,
+        'program': {'id': 1, 'name': 'Fútbol'},
+      },
+    };
+    final today = DateTime(2026, 9, 26);
+    final student = Student.fromJson({
+      ...studentSummaryJson(),
+      'enrollments': [
+        enrollment(1, 'Sub-10', '2026-01-01'),
+        enrollment(2, 'Sub-10', '2027-01-04'),
+        enrollment(3, 'Sub-12', '2027-01-01'),
+      ],
+    });
+    final upcomingOnly = Student.fromJson({
+      ...studentSummaryJson(),
+      'enrollments': [enrollment(3, 'Sub-12', '2027-01-01')],
+    });
+
+    expect(
+      student.groupsDescription(today),
+      'Sub-10 · Fútbol y 2 temporadas próximas',
+    );
+    expect(student.currentEnrollments(today).map((e) => e.id), [1]);
+    expect(upcomingOnly.groupsDescription(today), 'Sub-12 · Fútbol');
   });
 }
