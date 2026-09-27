@@ -1,7 +1,11 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/storage/offline_store.dart';
 import '../../../core/storage/session_storage.dart';
 import '../../../core/utils/format.dart';
 import '../../auth/data/session_controller.dart';
@@ -35,24 +39,73 @@ class RescheduleRequest {
 }
 
 class AttendanceRepository {
-  AttendanceRepository(this._dio, this._storage);
+  AttendanceRepository(this._dio, this._storage, {this._cache});
 
   final Dio _dio;
   final SessionStorage _storage;
 
-  /// Clases del día de los grupos del técnico.
+  /// Copia de las clases para abrirlas sin conexión (null = sin caché).
+  final OfflineStore? _cache;
+
+  /// Clases del día de los grupos del técnico (sin conexión, las guardadas).
   Future<List<ClassSession>> classes(DateTime date) async {
-    final response = await _dio.get<Map<String, dynamic>>(
+    final body = await _getCached(
       '/classes',
+      'classes:${apiDate(date)}',
       queryParameters: {'date': apiDate(date)},
     );
-    return _items(response.data!, ClassSession.fromJson);
+    return _items(body, ClassSession.fromJson);
   }
 
-  /// Clase con sus alumnos, para tomar asistencia.
+  /// Clase con sus alumnos, para tomar asistencia (sin conexión, la guardada).
   Future<ClassSession> find(int id) async {
-    final response = await _dio.get<Map<String, dynamic>>('/classes/$id');
-    return ClassSession.fromJson(_data(response.data!));
+    final body = await _getCached('/classes/$id', 'class:$id');
+    return ClassSession.fromJson(_data(body));
+  }
+
+  /// Guarda en el celular el detalle de las clases (para abrirlas sin señal).
+  Future<void> precache(List<ClassSession> classes) async {
+    if (_cache == null) return;
+    for (final session in classes) {
+      try {
+        await find(session.id);
+      } catch (_) {
+        // Sin conexión o error: se queda con lo que ya tenía.
+      }
+    }
+  }
+
+  /// GET que guarda la respuesta y, si no hay red, devuelve la última guardada.
+  Future<Map<String, dynamic>> _getCached(
+    String path,
+    String key, {
+    Map<String, Object?>? queryParameters,
+  }) async {
+    final cache = _cache;
+    final cacheKey = '${await _storage.readOrganization() ?? ''}:$key';
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        path,
+        queryParameters: queryParameters,
+      );
+      await _safely(() => cache?.write(cacheKey, jsonEncode(response.data)));
+      return response.data!;
+    } catch (error) {
+      if (cache != null && isNetworkError(error)) {
+        final cached = await _safely(() => cache.read(cacheKey));
+        if (cached != null) return jsonDecode(cached) as Map<String, dynamic>;
+      }
+      rethrow;
+    }
+  }
+
+  /// La caché nunca rompe una consulta: si falla, se sigue sin ella.
+  static Future<T?> _safely<T>(Future<T?>? Function() action) async {
+    try {
+      return await action();
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<ClassSession> saveAttendance(
@@ -184,14 +237,18 @@ final attendanceRepositoryProvider = Provider<AttendanceRepository>(
   (ref) => AttendanceRepository(
     ref.watch(apiClientProvider),
     ref.watch(sessionStorageProvider),
+    cache: ref.watch(offlineStoreProvider),
   ),
 );
 
+/// Clases del día; de paso guarda el detalle de cada una para abrirlas sin señal.
 final classesProvider = FutureProvider.autoDispose
-    .family<List<ClassSession>, DateTime>(
-      (ref, date) => ref.watch(attendanceRepositoryProvider).classes(date),
-      retry: (_, _) => null,
-    );
+    .family<List<ClassSession>, DateTime>((ref, date) async {
+      final repository = ref.watch(attendanceRepositoryProvider);
+      final classes = await repository.classes(date);
+      unawaited(repository.precache(classes));
+      return classes;
+    }, retry: (_, _) => null);
 
 final classProvider = FutureProvider.autoDispose.family<ClassSession, int>(
   (ref, id) => ref.watch(attendanceRepositoryProvider).find(id),

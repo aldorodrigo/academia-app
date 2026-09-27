@@ -1,4 +1,5 @@
 import 'package:academia_app/core/api/api_client.dart';
+import 'package:academia_app/core/storage/offline_store.dart';
 import 'package:academia_app/core/storage/session_storage.dart';
 import 'package:academia_app/features/attendance/data/attendance_sheet_controller.dart';
 import 'package:academia_app/features/attendance/data/models.dart';
@@ -20,6 +21,7 @@ ProviderContainer _container(
           ..token = 't'
           ..organization = 'jakare',
       ),
+      offlineStoreProvider.overrideWithValue(InMemoryOfflineStore()),
       apiClientProvider.overrideWithValue(fakeDio(routes, requests: requests)),
     ],
   );

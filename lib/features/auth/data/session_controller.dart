@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/push/push_service.dart';
+import '../../../core/storage/offline_store.dart';
+import '../../attendance/data/attendance_outbox.dart';
 import '../../invitations/data/invitation_repository.dart';
 import 'auth_repository.dart';
 import 'models.dart';
@@ -46,6 +48,11 @@ class SessionController extends AsyncNotifier<Session?> {
   Future<void> logout() async {
     await ref.read(pushServiceProvider).unregister();
     await _repository.logout();
+    // Lo guardado para trabajar sin conexión es de esta cuenta.
+    try {
+      await ref.read(offlineStoreProvider).clear();
+    } catch (_) {}
+    ref.invalidate(attendanceOutboxProvider);
     state = const AsyncData(null);
   }
 }

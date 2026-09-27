@@ -1,5 +1,6 @@
 import 'package:academia_app/core/api/api_client.dart';
 import 'package:academia_app/core/push/push_service.dart';
+import 'package:academia_app/core/storage/offline_store.dart';
 import 'package:academia_app/core/storage/session_storage.dart';
 import 'package:academia_app/core/utils/clock.dart';
 import 'package:academia_app/features/attendance/presentation/class_attendance_screen.dart';
@@ -42,6 +43,7 @@ Widget _app(
   List<RequestOptions>? requests,
   DateTime? now,
   PushService? push,
+  OfflineStore? offline,
 }) => ProviderScope(
   overrides: [
     sessionStorageProvider.overrideWithValue(
@@ -49,6 +51,7 @@ Widget _app(
         ..token = 't'
         ..organization = 'jakare',
     ),
+    offlineStoreProvider.overrideWithValue(offline ?? InMemoryOfflineStore()),
     apiClientProvider.overrideWithValue(fakeDio(routes, requests: requests)),
     todayProvider.overrideWithValue(DateTime(2026, 9, 28)),
     nowProvider.overrideWithValue(now ?? DateTime(2026, 9, 28, 10)),

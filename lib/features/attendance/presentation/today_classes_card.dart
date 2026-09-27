@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/storage/offline_store.dart';
 import '../../../core/utils/clock.dart';
 import '../../organizations/data/organization_repository.dart';
+import '../data/attendance_outbox.dart';
 import '../data/attendance_repository.dart';
 import '../data/models.dart';
 import 'attendance_status_style.dart';
@@ -23,6 +25,8 @@ class TodayClassesCard extends ConsumerWidget {
 
     final theme = Theme.of(context);
     final classes = ref.watch(classesProvider(ref.watch(todayProvider)));
+    final pending = ref.watch(attendanceOutboxProvider).value ?? const {};
+    final online = ref.watch(connectivityProvider).value ?? true;
 
     return Card(
       child: Padding(
@@ -48,6 +52,22 @@ class TodayClassesCard extends ConsumerWidget {
                 ),
               ],
             ),
+            if (!online)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    const Icon(Icons.cloud_off_outlined, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Sin conexión: ves lo guardado en el celular.',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             classes.when(
               loading: () => const Padding(
                 padding: EdgeInsets.symmetric(vertical: 8),
@@ -59,7 +79,11 @@ class TodayClassesCard extends ConsumerWidget {
                       padding: EdgeInsets.only(bottom: 8),
                       child: Text('Hoy no tenés clases.'),
                     )
-                  : Column(children: [for (final c in classes) _ClassRow(c)]),
+                  : Column(
+                      children: [
+                        for (final c in classes) _ClassRow(c, pending[c.id]),
+                      ],
+                    ),
             ),
           ],
         ),
@@ -69,9 +93,12 @@ class TodayClassesCard extends ConsumerWidget {
 }
 
 class _ClassRow extends ConsumerWidget {
-  const _ClassRow(this.session);
+  const _ClassRow(this.session, this.pending);
 
   final ClassSession session;
+
+  /// Asistencia guardada sin conexión que todavía no se envió.
+  final PendingAttendance? pending;
 
   String _summary(DateTime today) {
     final counts = session.counts;
@@ -132,8 +159,31 @@ class _ClassRow extends ConsumerWidget {
           ),
           Text(session.timeDescription),
           Text(_summary(today), style: theme.textTheme.bodySmall),
+          if (pending != null)
+            Row(
+              children: [
+                Icon(
+                  pending!.error == null
+                      ? Icons.cloud_off_outlined
+                      : Icons.error_outline,
+                  size: 16,
+                  color: pending!.error == null
+                      ? null
+                      : theme.colorScheme.error,
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    pending!.error == null
+                        ? 'Asistencia guardada en el celular, falta enviarla'
+                        : 'No se pudo enviar la asistencia',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+              ],
+            ),
           const SizedBox(height: 8),
-          if (!session.isOff && !session.attendanceTaken)
+          if (!session.isOff && !session.attendanceTaken && pending == null)
             FilledButton.icon(
               icon: const Icon(Icons.fact_check_outlined),
               label: const Text('Tomar asistencia'),

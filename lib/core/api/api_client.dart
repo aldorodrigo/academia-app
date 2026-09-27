@@ -48,6 +48,14 @@ final apiClientProvider = Provider<Dio>(
   (ref) => buildApiClient(ref.watch(sessionStorageProvider)),
 );
 
+/// Error de red (sin señal, servidor inalcanzable o tiempo agotado), no una
+/// respuesta de la API.
+bool isNetworkError(Object error) =>
+    error is DioException &&
+    error.response == null &&
+    error.type != DioExceptionType.cancel &&
+    error.type != DioExceptionType.badCertificate;
+
 /// Mensaje de error legible para mostrar al usuario.
 String apiErrorMessage(Object error) {
   if (error is DioException) {

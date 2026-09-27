@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
+import 'attendance_outbox.dart';
 import 'attendance_repository.dart';
 import 'models.dart';
 
@@ -17,6 +18,7 @@ class AttendanceSheet {
     this.touched = false,
     this.saving = false,
     this.saveError,
+    this.pendingSync = false,
   });
 
   final ClassSession session;
@@ -32,6 +34,9 @@ class AttendanceSheet {
 
   /// Mensaje del último guardado fallido; las marcas se conservan.
   final String? saveError;
+
+  /// Guardada en el celular sin conexión: se envía al volver la señal.
+  final bool pendingSync;
 
   AttendanceStatus statusOf(int studentId) =>
       marks[studentId] ?? AttendanceStatus.present;
@@ -52,6 +57,7 @@ class AttendanceSheet {
     bool? touched,
     bool? saving,
     String? Function()? saveError,
+    bool? pendingSync,
   }) => AttendanceSheet(
     session: session ?? this.session,
     marks: marks ?? this.marks,
@@ -60,6 +66,7 @@ class AttendanceSheet {
     touched: touched ?? this.touched,
     saving: saving ?? this.saving,
     saveError: saveError == null ? this.saveError : saveError(),
+    pendingSync: pendingSync ?? this.pendingSync,
   );
 
   /// Arranca con lo guardado; si no se tomó, todos presentes salvo los que
@@ -96,8 +103,28 @@ class AttendanceSheetController extends AsyncNotifier<AttendanceSheet> {
       ref.read(attendanceRepositoryProvider);
 
   @override
-  Future<AttendanceSheet> build() async =>
-      AttendanceSheet.from(await _repository.find(classId));
+  Future<AttendanceSheet> build() async {
+    final sheet = AttendanceSheet.from(await _repository.find(classId));
+    // Cuando la cola envía esta clase, deja de estar pendiente.
+    ref.listen(attendanceOutboxProvider, (_, next) {
+      final current = state.value;
+      if (current != null &&
+          current.pendingSync &&
+          next.value?.containsKey(classId) == false) {
+        state = AsyncData(current.copyWith(pendingSync: false));
+      }
+    });
+    final pending = (await ref.read(attendanceOutboxProvider.future))[classId];
+    if (pending == null) return sheet;
+    // Lo guardado en el celular es lo último que marcó el técnico.
+    return sheet.copyWith(
+      marks: {...sheet.marks, ...pending.marks},
+      notes: pending.notes,
+      dirty: false,
+      pendingSync: true,
+      saveError: () => pending.error,
+    );
+  }
 
   AttendanceSheet? get _sheet => state.value;
 
@@ -132,7 +159,9 @@ class AttendanceSheetController extends AsyncNotifier<AttendanceSheet> {
     );
   }
 
-  /// Guarda todas las marcas. Si falla, el borrador queda para reintentar.
+  /// Guarda todas las marcas. Sin conexión, las deja en el celular y se envían
+  /// solas al volver la señal; si la API la rechaza, el borrador queda para reintentar.
+  /// Devuelve false solo si no se pudo guardar de ninguna forma.
   Future<bool> save() async {
     final sheet = _sheet;
     if (sheet == null || sheet.saving) return false;
@@ -143,14 +172,35 @@ class AttendanceSheetController extends AsyncNotifier<AttendanceSheet> {
         sheet.marks,
         notes: sheet.notes,
       );
+      await ref.read(attendanceOutboxProvider.notifier).discard(classId);
       state = AsyncData(AttendanceSheet.from(saved).copyWith(dirty: false));
       return true;
     } catch (error) {
+      if (isNetworkError(error)) {
+        await ref
+            .read(attendanceOutboxProvider.notifier)
+            .enqueue(classId, sheet.marks, sheet.notes);
+        state = AsyncData(
+          sheet.copyWith(
+            saving: false,
+            dirty: false,
+            touched: false,
+            pendingSync: true,
+          ),
+        );
+        return true;
+      }
       state = AsyncData(
         sheet.copyWith(saving: false, saveError: () => apiErrorMessage(error)),
       );
       return false;
     }
+  }
+
+  /// Descarta el envío pendiente rechazado y vuelve a lo que tiene el servidor.
+  Future<void> discardPending() async {
+    await ref.read(attendanceOutboxProvider.notifier).discard(classId);
+    ref.invalidateSelf();
   }
 
   Future<void> suspend(String reason, {bool waiveCharge = false}) =>

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:academia_app/core/push/push_service.dart';
+import 'package:academia_app/core/storage/offline_store.dart';
 import 'package:academia_app/core/storage/session_storage.dart';
 
 class InMemorySessionStorage implements SessionStorage {
@@ -100,3 +101,24 @@ class FakePushService implements PushService {
   @override
   Stream<String> get openedRoutes => const Stream.empty();
 }
+
+/// Almacenamiento sin conexión en memoria.
+class InMemoryOfflineStore implements OfflineStore {
+  final values = <String, String>{};
+
+  @override
+  Future<String?> read(String key) async => values[key];
+
+  @override
+  Future<void> write(String key, String? value) async =>
+      value == null ? values.remove(key) : values[key] = value;
+
+  @override
+  Future<void> clear() async => values.clear();
+}
+
+/// Error de red, como el que da Dio sin señal.
+DioException networkError(RequestOptions options) => DioException(
+  requestOptions: options,
+  type: DioExceptionType.connectionError,
+);

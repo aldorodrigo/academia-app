@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/utils/clock.dart';
 import '../../../core/utils/format.dart';
+import '../data/attendance_outbox.dart';
 import '../data/attendance_repository.dart';
 import '../data/attendance_sheet_controller.dart';
 import '../data/models.dart';
@@ -57,9 +58,20 @@ class _ClassAttendanceScreenState extends ConsumerState<ClassAttendanceScreen> {
   Future<void> _save() async {
     final saved = await _controller.save();
     if (!mounted || !saved) return;
-    ref.invalidate(classesProvider);
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Asistencia guardada.')));
+    final offline =
+        ref.read(attendanceSheetProvider(widget.id)).value?.pendingSync ??
+        false;
+    if (!offline) ref.invalidate(classesProvider);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          offline
+              ? 'Sin conexión: quedó guardada en el celular y se envía sola '
+                    'al volver la señal.'
+              : 'Asistencia guardada.',
+        ),
+      ),
+    );
   }
 
   Future<void> _justify(ClassStudent student, AttendanceSheet sheet) async {
@@ -167,8 +179,31 @@ class _ClassAttendanceScreenState extends ConsumerState<ClassAttendanceScreen> {
       ref.invalidate(classesProvider);
       messenger.showSnackBar(SnackBar(content: Text(done)));
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(apiErrorMessage(error))));
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            isNetworkError(error)
+                ? 'Necesitás conexión para esto: hay que avisar a los tutores.'
+                : apiErrorMessage(error),
+          ),
+        ),
+      );
     }
+  }
+
+  Future<void> _sendNow() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final sent = await ref.read(attendanceOutboxProvider.notifier).flush();
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          sent > 0
+              ? 'Asistencia enviada.'
+              : 'Todavía sin conexión. Se envía sola al volver la señal.',
+        ),
+      ),
+    );
   }
 
   @override
@@ -205,7 +240,12 @@ class _ClassAttendanceScreenState extends ConsumerState<ClassAttendanceScreen> {
         ),
         bottomNavigationBar: sheet == null || !sheet.canEdit
             ? null
-            : _SaveBar(sheet: sheet, onSave: _save),
+            : _SaveBar(
+                sheet: sheet,
+                onSave: _save,
+                onSendNow: _sendNow,
+                onDiscard: _controller.discardPending,
+              ),
       ),
     );
   }
@@ -458,16 +498,26 @@ class _StudentRow extends StatelessWidget {
 }
 
 class _SaveBar extends StatelessWidget {
-  const _SaveBar({required this.sheet, required this.onSave});
+  const _SaveBar({
+    required this.sheet,
+    required this.onSave,
+    required this.onSendNow,
+    required this.onDiscard,
+  });
 
   final AttendanceSheet sheet;
   final VoidCallback onSave;
+  final VoidCallback onSendNow;
+  final VoidCallback onDiscard;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final error = sheet.saveError;
     final present = sheet.count(AttendanceStatus.present);
     final total = sheet.session.students.length;
+    // Rechazada por la API después de guardarla sin conexión.
+    final rejected = sheet.pendingSync && error != null;
 
     return SafeArea(
       child: Padding(
@@ -476,32 +526,66 @@ class _SaveBar extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (error != null)
+            if (rejected)
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'No se pudo enviar: $error',
+                      style: TextStyle(color: scheme.error),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: onDiscard,
+                    child: const Text('Descartar'),
+                  ),
+                ],
+              )
+            else if (sheet.pendingSync && !sheet.dirty)
+              Row(
+                children: [
+                  const Icon(Icons.cloud_off_outlined),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Guardada en el celular · se envía al volver la señal',
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: onSendNow,
+                    child: const Text('Enviar ahora'),
+                  ),
+                ],
+              )
+            else if (error != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Text(
                   'No se pudo guardar: $error Tus marcas no se perdieron.',
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  style: TextStyle(color: scheme.error),
                 ),
               ),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(52),
+            if (!rejected)
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(52),
+                ),
+                onPressed: sheet.saving || !sheet.dirty ? null : onSave,
+                child: sheet.saving
+                    ? const SizedBox.square(
+                        dimension: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(
+                        error != null
+                            ? 'Reintentar'
+                            : !sheet.dirty
+                            ? (sheet.pendingSync
+                                  ? 'Guardada en el celular'
+                                  : 'Asistencia guardada')
+                            : 'Guardar asistencia ($present de $total)',
+                      ),
               ),
-              onPressed: sheet.saving || !sheet.dirty ? null : onSave,
-              child: sheet.saving
-                  ? const SizedBox.square(
-                      dimension: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(
-                      error != null
-                          ? 'Reintentar'
-                          : !sheet.dirty
-                          ? 'Asistencia guardada'
-                          : 'Guardar asistencia ($present de $total)',
-                    ),
-            ),
           ],
         ),
       ),
