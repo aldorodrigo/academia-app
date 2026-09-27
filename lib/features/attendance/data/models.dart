@@ -1,3 +1,4 @@
+import '../../../core/utils/format.dart';
 import '../../students/data/models.dart';
 
 /// Marca de asistencia de un alumno en una clase.
@@ -98,6 +99,57 @@ class ClassStudent {
   String get initials => _initials(fullName);
 }
 
+/// Cancha del club.
+class Venue {
+  const Venue({required this.id, required this.name});
+
+  factory Venue.fromJson(Map<String, dynamic> json) =>
+      Venue(id: json['id'] as int, name: json['name'] as String);
+
+  final int id;
+  final String name;
+}
+
+/// Otra clase enlazada (la recuperación o la original de una reprogramación).
+class ClassSlot {
+  const ClassSlot({
+    required this.id,
+    required this.date,
+    required this.startsAt,
+    required this.endsAt,
+    this.venue,
+  });
+
+  factory ClassSlot.fromJson(Map<String, dynamic> json) => ClassSlot(
+    id: json['id'] as int,
+    date: DateTime.parse(json['date'] as String),
+    startsAt: json['starts_at'] as String,
+    endsAt: json['ends_at'] as String? ?? '',
+    venue: (json['venue'] as Map<String, dynamic>?)?['name'] as String?,
+  );
+
+  final int id;
+  final DateTime date;
+  final String startsAt;
+  final String endsAt;
+  final String? venue;
+
+  /// "de ayer 17:00–18:30" o "del lun 28/9 17:00–18:30" (para "la clase …").
+  String describeAfterClass(DateTime today) {
+    final text = describe(today);
+    final lower = '${text[0].toLowerCase()}${text.substring(1)}';
+    final relative = formatDay(date, today);
+    return relative.startsWith('el ') ? 'del $lower' : 'de $lower';
+  }
+
+  /// "Sáb 3/10 9:00–10:30 · Cancha 2" (con "Hoy"/"Mañana" cuando corresponde).
+  String describe(DateTime today) {
+    final time = endsAt.isEmpty ? startsAt : '$startsAt–$endsAt';
+    final text = '${formatShortDay(date, today)} $time';
+    return venue == null ? text : '$text · $venue';
+  }
+}
+
 /// Un día concreto de un horario del grupo.
 class ClassSession {
   const ClassSession({
@@ -108,7 +160,13 @@ class ClassSession {
     required this.group,
     this.venue,
     this.suspended = false,
+    this.rescheduled = false,
     this.suspensionReason,
+    this.chargeWaived = false,
+    this.canWaiveCharge = false,
+    this.isMakeup = false,
+    this.rescheduledTo,
+    this.rescheduledFrom,
     this.attendanceTaken = false,
     this.counts = const ClassCounts(),
     this.editable = false,
@@ -123,7 +181,13 @@ class ClassSession {
     venue: (json['venue'] as Map<String, dynamic>?)?['name'] as String?,
     group: Group.fromJson(json['group'] as Map<String, dynamic>),
     suspended: json['status'] == 'suspendida',
+    rescheduled: json['status'] == 'reprogramada',
     suspensionReason: json['suspension_reason'] as String?,
+    chargeWaived: json['charge_waived'] as bool? ?? false,
+    canWaiveCharge: json['can_waive_charge'] as bool? ?? false,
+    isMakeup: json['is_makeup'] as bool? ?? false,
+    rescheduledTo: _slot(json['rescheduled_to']),
+    rescheduledFrom: _slot(json['rescheduled_from']),
     attendanceTaken: json['attendance_taken'] as bool? ?? false,
     counts: ClassCounts.fromJson(json['counts'] as Map<String, dynamic>?),
     editable: json['editable'] as bool? ?? false,
@@ -137,7 +201,21 @@ class ClassSession {
   final String? venue;
   final Group group;
   final bool suspended;
+
+  /// Se pasó a otro día u horario ([rescheduledTo]).
+  final bool rescheduled;
   final String? suspensionReason;
+
+  /// Suspendida y sin cobrar (temporadas por día de entrenamiento).
+  final bool chargeWaived;
+
+  /// Se puede elegir "No cobrar esta clase" al suspenderla (solo en el detalle).
+  final bool canWaiveCharge;
+
+  /// Clase de recuperación de otra ([rescheduledFrom]).
+  final bool isMakeup;
+  final ClassSlot? rescheduledTo;
+  final ClassSlot? rescheduledFrom;
   final bool attendanceTaken;
   final ClassCounts counts;
 
@@ -149,6 +227,35 @@ class ClassSession {
   DateTime get startsAtDateTime => _at(date, startsAt);
 
   bool hasStarted(DateTime now) => !now.isBefore(startsAtDateTime);
+
+  /// La misma clase con otra lista de alumnos (y editable como estaba).
+  ClassSession withStudents(List<ClassStudent> students) => ClassSession(
+    id: id,
+    date: date,
+    startsAt: startsAt,
+    endsAt: endsAt,
+    group: group,
+    venue: venue,
+    suspended: suspended,
+    rescheduled: rescheduled,
+    suspensionReason: suspensionReason,
+    chargeWaived: chargeWaived,
+    canWaiveCharge: canWaiveCharge,
+    isMakeup: isMakeup,
+    rescheduledTo: rescheduledTo,
+    rescheduledFrom: rescheduledFrom,
+    attendanceTaken: attendanceTaken,
+    counts: counts,
+    editable: editable,
+    students: students,
+  );
+
+  /// No se dicta en su día y hora: suspendida o reprogramada.
+  bool get isOff => suspended || rescheduled;
+
+  /// La clase es de un día anterior a [today].
+  bool isPast(DateTime today) =>
+      DateTime(date.year, date.month, date.day).isBefore(today);
 
   /// "17:00–18:30 · Cancha 1".
   String get timeDescription {
@@ -305,6 +412,9 @@ class GroupAttendance {
   final List<ClassSession> classes;
   final List<StudentAttendanceSummary> students;
 }
+
+ClassSlot? _slot(Object? json) =>
+    json is Map<String, dynamic> ? ClassSlot.fromJson(json) : null;
 
 DateTime _at(DateTime date, String time) {
   final parts = time.split(':');

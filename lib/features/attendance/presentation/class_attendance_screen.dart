@@ -9,6 +9,7 @@ import '../data/attendance_repository.dart';
 import '../data/attendance_sheet_controller.dart';
 import '../data/models.dart';
 import 'attendance_status_style.dart';
+import 'class_change_dialogs.dart';
 
 /// Tomar asistencia: todos arrancan presentes y un toque marca ausente.
 class ClassAttendanceScreen extends ConsumerStatefulWidget {
@@ -76,13 +77,87 @@ class _ClassAttendanceScreenState extends ConsumerState<ClassAttendanceScreen> {
     _controller.setStatus(student.id, result.$1, note: result.$2);
   }
 
-  Future<void> _suspend() async {
-    final reason = await showDialog<String>(
+  Future<void> _suspend(ClassSession session) async {
+    final choice = await showDialog<SuspendChoice>(
       context: context,
-      builder: (_) => const _SuspendDialog(),
+      builder: (_) => SuspendDialog(canWaiveCharge: session.canWaiveCharge),
     );
-    if (reason == null) return;
-    await _run(() => _controller.suspend(reason), 'Clase suspendida.');
+    if (choice == null || !mounted) return;
+    if (choice.reschedule) {
+      await _reschedule(session, reason: choice.reason);
+      return;
+    }
+    await _run(
+      () => _controller.suspend(choice.reason, waiveCharge: choice.waiveCharge),
+      'Clase suspendida. Se avisó a los tutores.',
+    );
+  }
+
+  Future<void> _reschedule(ClassSession session, {String? reason}) async {
+    final request = await showModalBottomSheet<RescheduleRequest>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => RescheduleSheet(session: session, reason: reason),
+    );
+    if (request == null) return;
+    await _run(
+      () => _controller.reschedule(request),
+      'Clase reprogramada. Se avisó a los tutores.',
+    );
+  }
+
+  void _onMenu(String action, ClassSession session) {
+    switch (action) {
+      case 'suspend':
+        _suspend(session);
+      case 'move':
+        _reschedule(session);
+      case 'reschedule':
+        _reschedule(session, reason: session.suspensionReason);
+      case 'resume':
+        _run(_controller.resume, 'La clase vuelve a estar programada.');
+      case 'cancel_reschedule':
+        _run(
+          _controller.cancelReschedule,
+          'Se canceló la reprogramación. Se avisó a los tutores.',
+        );
+      case 'open_makeup':
+        context.go('/clases/${session.rescheduledTo!.id}');
+      case 'open_original':
+        context.go('/clases/${session.rescheduledFrom!.id}');
+    }
+  }
+
+  /// Opciones del menú según el estado de la clase.
+  List<PopupMenuEntry<String>> _menu(ClassSession session) {
+    final today = ref.read(todayProvider);
+    final now = ref.read(nowProvider);
+    final past = session.isPast(today);
+    PopupMenuItem<String> item(String value, String text) =>
+        PopupMenuItem(value: value, child: Text(text));
+
+    return [
+      if (session.rescheduled) ...[
+        if (session.rescheduledTo != null)
+          item('open_makeup', 'Ver la recuperación'),
+        if (session.rescheduledTo != null &&
+            !DateTime(
+              session.rescheduledTo!.date.year,
+              session.rescheduledTo!.date.month,
+              session.rescheduledTo!.date.day,
+            ).isBefore(today))
+          item('cancel_reschedule', 'Cancelar reprogramación'),
+      ] else if (session.suspended) ...[
+        if (!past) item('resume', 'Volver a programar'),
+        if (!past) item('reschedule', 'Reprogramar'),
+      ] else if (!past) ...[
+        item('suspend', 'Suspender clase'),
+        if (!session.hasStarted(now)) item('move', 'Cambiar día u horario'),
+      ],
+      if (session.isMakeup && session.rescheduledFrom != null)
+        item('open_original', 'Ver la clase original'),
+    ];
   }
 
   Future<void> _run(Future<void> Function() action, String done) async {
@@ -111,26 +186,10 @@ class _ClassAttendanceScreenState extends ConsumerState<ClassAttendanceScreen> {
           title: Text(sheet?.session.group.name ?? 'Asistencia'),
           leading: BackButton(onPressed: () => _leave(sheet)),
           actions: [
-            if (sheet != null && sheet.session.editable)
+            if (sheet != null && _menu(sheet.session).isNotEmpty)
               PopupMenuButton<String>(
-                onSelected: (action) => action == 'suspend'
-                    ? _suspend()
-                    : _run(
-                        _controller.resume,
-                        'La clase vuelve a estar programada.',
-                      ),
-                itemBuilder: (_) => [
-                  if (sheet.session.suspended)
-                    const PopupMenuItem(
-                      value: 'resume',
-                      child: Text('Volver a programar'),
-                    )
-                  else
-                    const PopupMenuItem(
-                      value: 'suspend',
-                      child: Text('Suspender clase'),
-                    ),
-                ],
+                onSelected: (action) => _onMenu(action, sheet.session),
+                itemBuilder: (_) => _menu(sheet.session),
               ),
           ],
         ),
@@ -217,13 +276,37 @@ class _Header extends ConsumerWidget {
             '$day ${session.timeDescription}',
             style: theme.textTheme.titleSmall,
           ),
-          if (session.suspended) ...[
+          if (session.isMakeup && session.rescheduledFrom != null) ...[
+            const SizedBox(height: 8),
+            _Banner(
+              icon: Icons.event_repeat,
+              text:
+                  'Recuperación de la clase '
+                  '${session.rescheduledFrom!.describeAfterClass(today)}.',
+            ),
+          ],
+          if (session.rescheduled) ...[
+            const SizedBox(height: 12),
+            _Banner(
+              icon: Icons.event_repeat,
+              text: [
+                session.rescheduledTo == null
+                    ? 'Clase reprogramada.'
+                    : 'Reprogramada: ${session.rescheduledTo!.describe(today)}.',
+                if (session.suspensionReason != null)
+                  'Motivo: ${session.suspensionReason}.',
+              ].join(' '),
+            ),
+          ] else if (session.suspended) ...[
             const SizedBox(height: 12),
             _Banner(
               icon: Icons.block,
-              text: session.suspensionReason == null
-                  ? 'Clase suspendida.'
-                  : 'Clase suspendida: ${session.suspensionReason}.',
+              text: [
+                session.suspensionReason == null
+                    ? 'Clase suspendida.'
+                    : 'Clase suspendida: ${session.suspensionReason}.',
+                if (session.chargeWaived) 'No se cobra.',
+              ].join(' '),
             ),
           ] else if (!session.editable) ...[
             const SizedBox(height: 12),
@@ -498,79 +581,6 @@ class _MarkSheetState extends State<_MarkSheet> {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _SuspendDialog extends StatefulWidget {
-  const _SuspendDialog();
-
-  @override
-  State<_SuspendDialog> createState() => _SuspendDialogState();
-}
-
-class _SuspendDialogState extends State<_SuspendDialog> {
-  static const _reasons = ['Lluvia', 'Cancha ocupada', 'Otro'];
-
-  String _reason = _reasons.first;
-  final _other = TextEditingController();
-
-  @override
-  void dispose() {
-    _other.dispose();
-    super.dispose();
-  }
-
-  String? get _value {
-    if (_reason != 'Otro') return _reason;
-    final other = _other.text.trim();
-    return other.isEmpty ? null : other;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Suspender clase'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Wrap(
-            spacing: 8,
-            children: [
-              for (final reason in _reasons)
-                ChoiceChip(
-                  label: Text(reason),
-                  selected: _reason == reason,
-                  onSelected: (_) => setState(() => _reason = reason),
-                ),
-            ],
-          ),
-          if (_reason == 'Otro') ...[
-            const SizedBox(height: 12),
-            TextField(
-              controller: _other,
-              autofocus: true,
-              decoration: const InputDecoration(labelText: 'Motivo'),
-              onChanged: (_) => setState(() {}),
-            ),
-          ],
-          const SizedBox(height: 12),
-          const Text('Se avisa a los tutores del grupo.'),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancelar'),
-        ),
-        FilledButton(
-          onPressed: _value == null
-              ? null
-              : () => Navigator.pop(context, _value),
-          child: const Text('Suspender'),
-        ),
-      ],
     );
   }
 }

@@ -7,6 +7,33 @@ import '../../../core/utils/format.dart';
 import '../../auth/data/session_controller.dart';
 import 'models.dart';
 
+/// Nuevo día y horario de una clase.
+class RescheduleRequest {
+  const RescheduleRequest({
+    required this.date,
+    required this.startsAt,
+    required this.endsAt,
+    this.venueId,
+    this.reason,
+  });
+
+  final DateTime date;
+
+  /// "09:00".
+  final String startsAt;
+  final String endsAt;
+  final int? venueId;
+  final String? reason;
+
+  Map<String, Object?> toJson() => {
+    'date': apiDate(date),
+    'starts_at': startsAt,
+    'ends_at': endsAt,
+    'venue_id': ?venueId,
+    'reason': ?reason,
+  };
+}
+
 class AttendanceRepository {
   AttendanceRepository(this._dio, this._storage);
 
@@ -49,12 +76,37 @@ class AttendanceRepository {
     return ClassSession.fromJson(_data(response.data!));
   }
 
-  Future<ClassSession> suspend(int id, String reason) async {
+  Future<ClassSession> suspend(
+    int id,
+    String reason, {
+    bool waiveCharge = false,
+  }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/classes/$id/suspension',
-      data: {'reason': reason},
+      data: {'reason': reason, 'waive_charge': waiveCharge},
     );
     return ClassSession.fromJson(_data(response.data!));
+  }
+
+  /// Pasa la clase a otro día u horario (crea la recuperación).
+  Future<ClassSession> reschedule(int id, RescheduleRequest request) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/classes/$id/reschedule',
+      data: request.toJson(),
+    );
+    return ClassSession.fromJson(_data(response.data!));
+  }
+
+  Future<ClassSession> cancelReschedule(int id) async {
+    final response = await _dio.delete<Map<String, dynamic>>(
+      '/classes/$id/reschedule',
+    );
+    return ClassSession.fromJson(_data(response.data!));
+  }
+
+  Future<List<Venue>> venues() async {
+    final response = await _dio.get<Map<String, dynamic>>('/venues');
+    return _items(response.data!, Venue.fromJson);
   }
 
   Future<ClassSession> resume(int id) async {
@@ -143,6 +195,11 @@ final classesProvider = FutureProvider.autoDispose
 
 final classProvider = FutureProvider.autoDispose.family<ClassSession, int>(
   (ref, id) => ref.watch(attendanceRepositoryProvider).find(id),
+  retry: (_, _) => null,
+);
+
+final venuesProvider = FutureProvider.autoDispose<List<Venue>>(
+  (ref) => ref.watch(attendanceRepositoryProvider).venues(),
   retry: (_, _) => null,
 );
 

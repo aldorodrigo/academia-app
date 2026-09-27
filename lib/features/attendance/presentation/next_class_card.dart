@@ -91,6 +91,23 @@ class _NextClassCardState extends ConsumerState<NextClassCard> {
               [session.group.name, ?session.venue].join(' · '),
               style: theme.textTheme.bodySmall,
             ),
+            if (session.isMakeup && session.rescheduledFrom != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  children: [
+                    const Icon(Icons.event_repeat, size: 18),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Recupera la clase '
+                        '${session.rescheduledFrom!.describeAfterClass(today)}.',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             const SizedBox(height: 12),
             if (session.suspended)
               Row(

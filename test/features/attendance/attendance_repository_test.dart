@@ -93,7 +93,7 @@ void main() {
 
     final session = await repository.suspend(81, 'Lluvia');
 
-    expect(requests.single.data, {'reason': 'Lluvia'});
+    expect(requests.single.data, {'reason': 'Lluvia', 'waive_charge': false});
     expect(session.suspended, isTrue);
     expect(session.suspensionReason, 'Lluvia');
   });
@@ -202,5 +202,92 @@ void main() {
     final group = await repository.group(3, DateTime(2026, 9));
     expect(group.classes.single.attendanceTaken, isTrue);
     expect(group.students.single.rate, 78);
+  });
+
+  test('reprogramar, cancelar la reprogramación y canchas', () async {
+    final requests = <RequestOptions>[];
+    final rescheduled = {
+      ...classJson(status: 'reprogramada', suspensionReason: 'Lluvia'),
+      'rescheduled_to': {
+        'id': 95,
+        'date': '2026-10-03',
+        'starts_at': '09:00',
+        'ends_at': '10:30',
+        'venue': {'name': 'Cancha 2'},
+      },
+    };
+    final repository = _repository({
+      'POST /classes/81/reschedule': (_) => {'data': rescheduled},
+      'DELETE /classes/81/reschedule': (_) => {'data': classJson()},
+      'GET /venues': (_) => {
+        'data': [
+          {'id': 1, 'name': 'Cancha 1'},
+          {'id': 2, 'name': 'Cancha 2'},
+        ],
+      },
+    }, requests: requests);
+
+    final session = await repository.reschedule(
+      81,
+      RescheduleRequest(
+        date: DateTime(2026, 10, 3),
+        startsAt: '09:00',
+        endsAt: '10:30',
+        venueId: 2,
+        reason: 'Lluvia',
+      ),
+    );
+    expect(requests.first.data, {
+      'date': '2026-10-03',
+      'starts_at': '09:00',
+      'ends_at': '10:30',
+      'venue_id': 2,
+      'reason': 'Lluvia',
+    });
+    expect(session.rescheduled, isTrue);
+    expect(session.isOff, isTrue);
+    expect(
+      session.rescheduledTo!.describe(DateTime(2026, 9, 28)),
+      'Sáb 3/10 09:00–10:30 · Cancha 2',
+    );
+
+    expect((await repository.cancelReschedule(81)).rescheduled, isFalse);
+    expect((await repository.venues()).map((v) => v.name), [
+      'Cancha 1',
+      'Cancha 2',
+    ]);
+  });
+
+  test('suspender sin cobrar y recuperación', () async {
+    final requests = <RequestOptions>[];
+    final repository = _repository({
+      'POST /classes/81/suspension': (_) => {
+        'data': {
+          ...classJson(status: 'suspendida', suspensionReason: 'Lluvia'),
+          'charge_waived': true,
+        },
+      },
+      'GET /classes/95': (_) => {
+        'data': {
+          ...classJson(id: 95, date: '2026-10-03'),
+          'is_makeup': true,
+          'rescheduled_from': {
+            'id': 81,
+            'date': '2026-09-28',
+            'starts_at': '17:00',
+            'ends_at': '18:30',
+            'venue': null,
+          },
+        },
+      },
+    }, requests: requests);
+
+    final suspended = await repository.suspend(81, 'Lluvia', waiveCharge: true);
+    expect(requests.first.data, {'reason': 'Lluvia', 'waive_charge': true});
+    expect(suspended.chargeWaived, isTrue);
+
+    final makeup = await repository.find(95);
+    expect(makeup.isMakeup, isTrue);
+    expect(makeup.rescheduledFrom!.id, 81);
   });
 }

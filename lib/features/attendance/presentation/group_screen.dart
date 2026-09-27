@@ -97,10 +97,13 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
           contentPadding: EdgeInsets.zero,
           title: Text(
             '${formatShortDay(session.date, today)} · '
-            '${session.timeDescription}',
+            '${session.timeDescription}'
+            '${session.isMakeup ? ' · Recuperación' : ''}',
           ),
           subtitle: Text(
-            session.suspended
+            session.rescheduled
+                ? 'Reprogramada${session.rescheduledTo == null ? '' : ': ${session.rescheduledTo!.describe(today)}'}'
+                : session.suspended
                 ? 'Suspendida${session.suspensionReason == null ? '' : ': ${session.suspensionReason}'}'
                 : session.attendanceTaken
                 ? '${session.counts.present} presentes · '

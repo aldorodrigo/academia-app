@@ -98,8 +98,12 @@ class _StudentAttendanceSectionState
                       '${formatDate(entry.session.date)} · '
                       '${entry.session.group.program.name} ${entry.session.startsAt}',
                     ),
-                    trailing: entry.session.suspended
-                        ? const Text('Suspendida')
+                    trailing: entry.session.isOff
+                        ? Text(
+                            entry.session.rescheduled
+                                ? 'Reprogramada'
+                                : 'Suspendida',
+                          )
                         : AttendanceStatusLabel(entry.status),
                   ),
               ],

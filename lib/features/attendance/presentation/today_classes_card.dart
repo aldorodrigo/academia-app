@@ -63,13 +63,19 @@ class TodayClassesCard extends ConsumerWidget {
   }
 }
 
-class _ClassRow extends StatelessWidget {
+class _ClassRow extends ConsumerWidget {
   const _ClassRow(this.session);
 
   final ClassSession session;
 
-  String get _summary {
+  String _summary(DateTime today) {
     final counts = session.counts;
+    if (session.rescheduled) {
+      final to = session.rescheduledTo;
+      return to == null
+          ? 'Reprogramada'
+          : 'Reprogramada: ${to.describe(today)}';
+    }
     if (session.suspended) {
       return session.suspensionReason == null
           ? 'Suspendida'
@@ -92,9 +98,10 @@ class _ClassRow extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final group = session.group;
+    final today = ref.watch(todayProvider);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8, right: 8),
@@ -109,13 +116,19 @@ class _ClassRow extends StatelessWidget {
                   style: theme.textTheme.titleSmall,
                 ),
               ),
+              if (session.isMakeup)
+                const Chip(
+                  avatar: Icon(Icons.event_repeat, size: 18),
+                  label: Text('Recuperación'),
+                  visualDensity: VisualDensity.compact,
+                ),
               if (session.suspended) const SuspendedChip(),
             ],
           ),
           Text(session.timeDescription),
-          Text(_summary, style: theme.textTheme.bodySmall),
+          Text(_summary(today), style: theme.textTheme.bodySmall),
           const SizedBox(height: 8),
-          if (!session.suspended && !session.attendanceTaken)
+          if (!session.isOff && !session.attendanceTaken)
             FilledButton.icon(
               icon: const Icon(Icons.fact_check_outlined),
               label: const Text('Tomar asistencia'),
@@ -125,7 +138,7 @@ class _ClassRow extends StatelessWidget {
             OutlinedButton(
               onPressed: () => context.go('/clases/${session.id}'),
               child: Text(
-                session.suspended ? 'Ver clase' : 'Ver o corregir asistencia',
+                session.isOff ? 'Ver clase' : 'Ver o corregir asistencia',
               ),
             ),
         ],

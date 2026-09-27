@@ -39,11 +39,10 @@ class AttendanceSheet {
   int count(AttendanceStatus status) =>
       marks.values.where((s) => s == status).length;
 
-  bool get canEdit => session.editable && !session.suspended;
+  bool get canEdit => session.editable && !session.isOff;
 
   /// Hay marcas para mostrar: se puede tomar o ya se tomó.
-  bool get showsMarks =>
-      !session.suspended && (canEdit || session.attendanceTaken);
+  bool get showsMarks => !session.isOff && (canEdit || session.attendanceTaken);
 
   AttendanceSheet copyWith({
     ClassSession? session,
@@ -154,10 +153,18 @@ class AttendanceSheetController extends AsyncNotifier<AttendanceSheet> {
     }
   }
 
-  Future<void> suspend(String reason) =>
-      _replaceSession(() => _repository.suspend(classId, reason));
+  Future<void> suspend(String reason, {bool waiveCharge = false}) =>
+      _replaceSession(
+        () => _repository.suspend(classId, reason, waiveCharge: waiveCharge),
+      );
 
   Future<void> resume() => _replaceSession(() => _repository.resume(classId));
+
+  Future<void> reschedule(RescheduleRequest request) =>
+      _replaceSession(() => _repository.reschedule(classId, request));
+
+  Future<void> cancelReschedule() =>
+      _replaceSession(() => _repository.cancelReschedule(classId));
 
   Future<void> _replaceSession(Future<ClassSession> Function() call) async {
     final sheet = _sheet;
@@ -166,22 +173,9 @@ class AttendanceSheetController extends AsyncNotifier<AttendanceSheet> {
     // Conserva lo que el técnico ya marcó y el detalle de alumnos.
     state = AsyncData(
       sheet.copyWith(
-        session: ClassSession(
-          id: session.id,
-          date: session.date,
-          startsAt: session.startsAt,
-          endsAt: session.endsAt,
-          venue: session.venue,
-          group: session.group,
-          suspended: session.suspended,
-          suspensionReason: session.suspensionReason,
-          attendanceTaken: session.attendanceTaken,
-          counts: session.counts,
-          editable: session.editable,
-          students: session.students.isEmpty
-              ? sheet.session.students
-              : session.students,
-        ),
+        session: session.students.isEmpty
+            ? session.withStudents(sheet.session.students)
+            : session,
       ),
     );
   }

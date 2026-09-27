@@ -245,7 +245,7 @@ void main() {
       await tester.tap(find.text('Suspender'));
       await tester.pumpAndSettle();
 
-      expect(requests.last.data, {'reason': 'Lluvia'});
+      expect(requests.last.data, {'reason': 'Lluvia', 'waive_charge': false});
       expect(find.text('Clase suspendida: Lluvia.'), findsOneWidget);
       expect(find.textContaining('Guardar asistencia'), findsNothing);
     });
@@ -304,6 +304,238 @@ void main() {
         findsOneWidget,
       );
       expect(find.textContaining('Guardar asistencia'), findsNothing);
+    });
+  });
+
+  group('suspender y reprogramar', () {
+    Routes classRoutes({
+      Map<String, Object?>? detail,
+      Map<String, Object? Function(RequestOptions)> extra = const {},
+    }) => {
+      ..._organization(),
+      'GET /classes/81': (_) => {
+        'data': detail ?? classJson(students: threeStudents()),
+      },
+      'GET /venues': (_) => {
+        'data': [
+          {'id': 1, 'name': 'Cancha 1'},
+          {'id': 2, 'name': 'Cancha 2'},
+        ],
+      },
+      ...extra,
+    };
+
+    Future<void> openMenu(WidgetTester tester, String item) async {
+      await tester.tap(find.byType(PopupMenuButton<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(item));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('en temporadas por día se puede no cobrar la clase', (
+      tester,
+    ) async {
+      final requests = <RequestOptions>[];
+      await tester.pumpWidget(
+        _app(
+          classRoutes(
+            detail: {
+              ...classJson(students: threeStudents()),
+              'can_waive_charge': true,
+            },
+            extra: {
+              'POST /classes/81/suspension': (_) => {
+                'data': {
+                  ...classJson(
+                    status: 'suspendida',
+                    suspensionReason: 'Lluvia',
+                  ),
+                  'charge_waived': true,
+                },
+              },
+            },
+          ),
+          const ClassAttendanceScreen(id: 81),
+          requests: requests,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await openMenu(tester, 'Suspender clase');
+      expect(find.text('No cobrar esta clase'), findsOneWidget);
+      await tester.tap(find.text('Suspender'));
+      await tester.pumpAndSettle();
+
+      expect(requests.last.data, {'reason': 'Lluvia', 'waive_charge': true});
+      expect(
+        find.text('Clase suspendida: Lluvia. No se cobra.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('con cuota fija no aparece la casilla de cobro', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _app(classRoutes(), const ClassAttendanceScreen(id: 81)),
+      );
+      await tester.pumpAndSettle();
+
+      await openMenu(tester, 'Suspender clase');
+      expect(find.text('No cobrar esta clase'), findsNothing);
+      expect(find.text('Cancelar la clase'), findsOneWidget);
+      expect(find.text('Reprogramar'), findsOneWidget);
+    });
+
+    testWidgets('suspender y reprogramar al día siguiente', (tester) async {
+      final requests = <RequestOptions>[];
+      await tester.pumpWidget(
+        _app(
+          classRoutes(
+            extra: {
+              'POST /classes/81/reschedule': (_) => {
+                'data': {
+                  ...classJson(
+                    status: 'reprogramada',
+                    suspensionReason: 'Lluvia',
+                  ),
+                  'rescheduled_to': {
+                    'id': 95,
+                    'date': '2026-09-29',
+                    'starts_at': '17:00',
+                    'ends_at': '18:30',
+                    'venue': {'name': 'Cancha 1'},
+                  },
+                },
+              },
+            },
+          ),
+          const ClassAttendanceScreen(id: 81),
+          requests: requests,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await openMenu(tester, 'Suspender clase');
+      await tester.tap(find.text('Reprogramar'));
+      await tester.pumpAndSettle();
+      expect(find.text('No cobrar esta clase'), findsNothing);
+      await tester.tap(find.text('Elegir día y hora'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Mañana'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Reprogramar'));
+      await tester.pumpAndSettle();
+
+      expect(requests.last.path, '/classes/81/reschedule');
+      expect(requests.last.data, {
+        'date': '2026-09-29',
+        'starts_at': '17:00',
+        'ends_at': '18:30',
+        'venue_id': 1,
+        'reason': 'Lluvia',
+      });
+      expect(
+        find.text(
+          'Reprogramada: Mañana 17:00–18:30 · Cancha 1. Motivo: Lluvia.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Guardar asistencia'), findsNothing);
+      expect(
+        find.text('Clase reprogramada. Se avisó a los tutores.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('cambiar el horario sin suspender', (tester) async {
+      final requests = <RequestOptions>[];
+      await tester.pumpWidget(
+        _app(
+          classRoutes(
+            extra: {
+              'POST /classes/81/reschedule': (_) => {
+                'data': classJson(status: 'reprogramada'),
+              },
+            },
+          ),
+          const ClassAttendanceScreen(id: 81),
+          requests: requests,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await openMenu(tester, 'Cambiar día u horario');
+      await tester.tap(find.widgetWithText(FilledButton, 'Reprogramar'));
+      await tester.pumpAndSettle();
+
+      expect((requests.last.data as Map).containsKey('reason'), isFalse);
+    });
+
+    testWidgets('clase reprogramada: ver la recuperación y cancelar', (
+      tester,
+    ) async {
+      final requests = <RequestOptions>[];
+      await tester.pumpWidget(
+        _app(
+          classRoutes(
+            detail: {
+              ...classJson(status: 'reprogramada', students: threeStudents()),
+              'rescheduled_to': {
+                'id': 95,
+                'date': '2026-10-03',
+                'starts_at': '09:00',
+                'ends_at': '10:30',
+                'venue': null,
+              },
+            },
+            extra: {
+              'DELETE /classes/81/reschedule': (_) => {'data': classJson()},
+            },
+          ),
+          const ClassAttendanceScreen(id: 81),
+          requests: requests,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Reprogramada: Sáb 3/10 09:00–10:30.'), findsOneWidget);
+      await openMenu(tester, 'Cancelar reprogramación');
+
+      expect(requests.last.method, 'DELETE');
+      expect(find.textContaining('Guardar asistencia'), findsOneWidget);
+    });
+
+    testWidgets('"Hoy" muestra reprogramadas y recuperaciones', (tester) async {
+      await tester.pumpWidget(
+        _app(
+          {
+            ..._organization(permissions: ['take_attendance']),
+            'GET /classes': (_) => {
+              'data': [
+                {
+                  ...classJson(status: 'reprogramada'),
+                  'rescheduled_to': {
+                    'id': 95,
+                    'date': '2026-10-03',
+                    'starts_at': '09:00',
+                    'ends_at': '10:30',
+                  },
+                },
+                {...classJson(id: 96), 'is_makeup': true},
+              ],
+            },
+          },
+          const Scaffold(
+            body: SingleChildScrollView(child: TodayClassesCard()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Reprogramada: Sáb 3/10 09:00–10:30'), findsOneWidget);
+      expect(find.text('Recuperación'), findsOneWidget);
+      expect(find.text('Tomar asistencia'), findsOneWidget);
     });
   });
 
@@ -386,6 +618,36 @@ void main() {
 
       expect(find.text('Clase suspendida: Lluvia.'), findsOneWidget);
       expect(find.text('No va'), findsNothing);
+    });
+
+    testWidgets('la recuperación dice qué clase recupera', (tester) async {
+      await tester.pumpWidget(
+        card({
+          'GET /agenda': (_) => {
+            'data': [
+              {
+                ...agendaItemJson(date: '2026-10-03', classReminders: true),
+                'class': {
+                  ...classJson(date: '2026-10-03'),
+                  'is_makeup': true,
+                  'rescheduled_from': {
+                    'id': 81,
+                    'date': '2026-09-28',
+                    'starts_at': '17:00',
+                    'ends_at': '18:30',
+                  },
+                },
+              },
+            ],
+          },
+        }),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Recupera la clase de hoy 17:00–18:30.'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('pregunta una vez si quiere el aviso y pide permiso', (
