@@ -6,7 +6,8 @@ import '../../../core/api/api_client.dart';
 import '../../../core/utils/format.dart';
 import '../data/account_repository.dart';
 
-/// Tarjeta del inicio: total a pagar de la familia y lo vencido.
+/// Tarjeta del inicio: lo que la familia tiene que pagar ahora, lo vencido
+/// y las próximas cuotas.
 class AccountSummaryCard extends ConsumerWidget {
   const AccountSummaryCard({super.key});
 
@@ -22,8 +23,8 @@ class AccountSummaryCard extends ConsumerWidget {
         child: ListTile(
           leading: const Icon(Icons.receipt_long_outlined),
           title: Text(
-            account.balance > 0
-                ? 'Total a pagar ${formatMoney(account.balance)}'
+            account.dueNow > 0
+                ? 'A pagar ahora ${formatMoney(account.dueNow)}'
                 : 'Estás al día',
           ),
           subtitle: account.overdue > 0
@@ -33,6 +34,8 @@ class AccountSummaryCard extends ConsumerWidget {
                 )
               : account.credit > 0
               ? Text('Saldo a favor ${formatMoney(account.credit)}')
+              : account.upcoming > 0
+              ? Text('Próximas cuotas ${formatMoney(account.upcoming)}')
               : null,
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.go('/estado-de-cuenta'),

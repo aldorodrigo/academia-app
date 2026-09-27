@@ -5,9 +5,12 @@ import '../data/models.dart';
 
 /// Estado del cargo como etiqueta compacta (entra en el `trailing` del tile).
 class ChargeStatusLabel extends StatelessWidget {
-  const ChargeStatusLabel(this.status, {super.key});
+  const ChargeStatusLabel(this.status, {super.key, this.upcoming = false});
 
   final ChargeStatus status;
+
+  /// Cuota próxima: se muestra "Próxima" en lugar de "Pendiente".
+  final bool upcoming;
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +23,7 @@ class ChargeStatusLabel extends StatelessWidget {
     };
 
     return Text(
-      status.label,
+      upcoming && status.isUnpaid ? 'Próxima' : status.label,
       style: Theme.of(context).textTheme.labelMedium?.copyWith(color: color),
     );
   }
@@ -60,12 +63,18 @@ class ChargeTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(formatMoney(shownAmount), style: theme.textTheme.titleSmall),
-            ChargeStatusLabel(charge.status),
+            ChargeStatusLabel(charge.status, upcoming: charge.isUpcoming),
           ],
         ),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         children: [
-          _Line(charge.concept, charge.baseAmount),
+          _Line(
+            charge.quantity != null && charge.unitAmount != null
+                ? '${charge.concept} (${charge.quantity} × '
+                      '${formatMoney(charge.unitAmount!)})'
+                : charge.concept,
+            charge.baseAmount,
+          ),
           for (final adjustment in charge.adjustments)
             _Line(adjustment.label, adjustment.amount),
           const Divider(),
@@ -75,10 +84,13 @@ class ChargeTile extends StatelessWidget {
             _Line('Falta pagar', charge.pendingAmount, bold: true),
           ],
           _DueLine(charge),
-          if (charge.group != null)
+          if (charge.group != null || charge.season != null)
             Align(
               alignment: Alignment.centerLeft,
-              child: Text(charge.group!, style: theme.textTheme.bodySmall),
+              child: Text(
+                [charge.group, charge.season].whereType<String>().join(' · '),
+                style: theme.textTheme.bodySmall,
+              ),
             ),
         ],
       ),

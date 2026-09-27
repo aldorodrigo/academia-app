@@ -25,8 +25,8 @@ class StudentAccountSection extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            account.balance > 0
-                ? 'Saldo ${formatMoney(account.balance)}'
+            account.dueNow > 0
+                ? 'A pagar ahora ${formatMoney(account.dueNow)}'
                 : 'Está al día.',
             style: theme.textTheme.titleSmall,
           ),
@@ -35,8 +35,10 @@ class StudentAccountSection extends ConsumerWidget {
               'Vencido ${formatMoney(account.overdue)}',
               style: TextStyle(color: theme.colorScheme.error),
             ),
+          if (account.upcoming > 0)
+            Text('Próximas cuotas ${formatMoney(account.upcoming)}'),
           const SizedBox(height: 8),
-          for (final charge in account.unpaid)
+          for (final charge in account.dueCharges)
             ChargeTile(charge, showStudent: false),
           Align(
             alignment: Alignment.centerRight,

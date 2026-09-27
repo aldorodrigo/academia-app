@@ -96,19 +96,32 @@ class Enrollment {
     required this.status,
     required this.season,
     required this.group,
+    this.seasonStartsOn,
+    this.seasonEndsOn,
   });
 
-  factory Enrollment.fromJson(Map<String, dynamic> json) => Enrollment(
-    id: json['id'] as int,
-    status: EnrollmentStatus.parse(json['status']),
-    season: (json['season'] as Map<String, dynamic>)['name'] as String,
-    group: Group.fromJson(json['group'] as Map<String, dynamic>),
-  );
+  factory Enrollment.fromJson(Map<String, dynamic> json) {
+    final season = json['season'] as Map<String, dynamic>;
+    return Enrollment(
+      id: json['id'] as int,
+      status: EnrollmentStatus.parse(json['status']),
+      season: season['name'] as String,
+      seasonStartsOn: _date(season['starts_on']),
+      seasonEndsOn: _date(season['ends_on']),
+      group: Group.fromJson(json['group'] as Map<String, dynamic>),
+    );
+  }
 
   final int id;
   final EnrollmentStatus status;
   final String season;
+  final DateTime? seasonStartsOn;
+  final DateTime? seasonEndsOn;
   final Group group;
+
+  /// La temporada todavía no empezó.
+  bool isUpcoming(DateTime today) =>
+      seasonStartsOn != null && seasonStartsOn!.isAfter(today);
 }
 
 class Guardian {

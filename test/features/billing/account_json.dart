@@ -34,6 +34,31 @@ Map<String, Object?> chargeJson({
       ],
 };
 
+/// Cuota semanal de una colonia, creada por adelantado (Sprint 4c).
+Map<String, Object?> upcomingChargeJson({
+  int id = 700,
+  String description = 'Colonia: semana 4–10 ene (5 entrenamientos)',
+  String dueOn = '2027-01-07',
+  bool upcoming = true,
+}) => {
+  ...chargeJson(
+    id: id,
+    description: description,
+    period: '2027-01',
+    base: 100000,
+    total: 100000,
+    adjustments: const [],
+  ),
+  'concept': 'Cuota',
+  'due_on': dueOn,
+  'season': {'id': 3, 'name': 'Colonia de verano 2027'},
+  'period_start': '2027-01-04',
+  'period_end': '2027-01-10',
+  'quantity': 5,
+  'unit_amount': 20000,
+  'is_upcoming': upcoming,
+};
+
 Map<String, Object?> accountJson({
   int balance = 270000,
   int overdue = 150000,

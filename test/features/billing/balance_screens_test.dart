@@ -67,7 +67,7 @@ void main() {
     await tester.pumpWidget(_app(_routes(), const AccountSummaryCard()));
     await tester.pumpAndSettle();
 
-    expect(find.text('Total a pagar ₲ 270.000'), findsOneWidget);
+    expect(find.text('A pagar ahora ₲ 270.000'), findsOneWidget);
     expect(find.text('Vencido ₲ 150.000'), findsOneWidget);
   });
 
@@ -149,7 +149,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('No tenés cargos pendientes.'), findsOneWidget);
+    expect(find.text('No tenés nada para pagar ahora.'), findsOneWidget);
   });
 
   testWidgets('la ficha del hijo muestra su saldo y sus impagos', (
@@ -160,9 +160,83 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Saldo ₲ 60.000'), findsOneWidget);
+    expect(find.text('A pagar ahora ₲ 60.000'), findsOneWidget);
     expect(find.text('Cuota septiembre 2026'), findsOneWidget);
     expect(find.text('Cuota marzo 2026'), findsNothing);
     expect(find.text('Vence 10/09/2026'), findsOneWidget);
+  });
+
+  group('cuotas próximas', () {
+    final withUpcoming = {
+      ...accountJson(
+        balance: 470000,
+        charges: [
+          chargeJson(),
+          upcomingChargeJson(
+            id: 701,
+            description: 'Semana 11–17 ene',
+            dueOn: '2027-01-14',
+          ),
+          upcomingChargeJson(),
+        ],
+      ),
+      'due_now': 270000,
+      'upcoming': 200000,
+    };
+
+    testWidgets('la tarjeta del inicio separa a pagar ahora y próximas', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _app(
+          _routes(account: {...withUpcoming, 'overdue': 0}),
+          const AccountSummaryCard(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('A pagar ahora ₲ 270.000'), findsOneWidget);
+      expect(find.text('Próximas cuotas ₲ 200.000'), findsOneWidget);
+    });
+
+    testWidgets('el estado de cuenta pliega las próximas cuotas', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sessionStorageProvider.overrideWithValue(
+              InMemorySessionStorage()
+                ..token = 't'
+                ..organization = 'jakare',
+            ),
+            apiClientProvider.overrideWithValue(
+              fakeDio(_routes(account: withUpcoming)),
+            ),
+          ],
+          child: const MaterialApp(home: BalanceScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('₲ 270.000'), findsOneWidget);
+      expect(find.text('Cuota septiembre 2026'), findsOneWidget);
+      expect(find.text('Semana 11–17 ene'), findsNothing);
+
+      await tester.scrollUntilVisible(find.text('Próximas cuotas (2)'), 200);
+      await tester.tap(find.text('Próximas cuotas (2)'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.text('Semana 11–17 ene'), 200);
+      expect(find.text('Próxima'), findsNWidgets(2));
+
+      const colonia = 'Colonia: semana 4–10 ene (5 entrenamientos)';
+      await tester.tap(find.text(colonia));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Sub-8 · Colonia de verano 2027').first,
+        200,
+      );
+      expect(find.text('Cuota (5 × ₲ 20.000)'), findsOneWidget);
+    });
   });
 }

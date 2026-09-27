@@ -49,10 +49,14 @@ lib/
 - **Sesión:** `SessionController` (AsyncNotifier). `null` = sin sesión.
 - **Navegación:** `sessionRedirect()` decide: `/ingresar` → `/organizaciones` → `/inicio`.
   `/invitacion` y `/invitacion/:token` son públicas (link o QR de invitación, con o sin sesión).
+- **Temporadas:** puede haber varias vigentes a la vez (por disciplina, y colonias); la API manda las inscripciones
+  vigentes o próximas con las fechas de la temporada. Las próximas se marcan "Empieza el …".
 - **Mis hijos:** el inicio lista los alumnos a cargo (`GET /students`); la ficha es `/hijos/:id`.
   La ficha médica solo se muestra si la API la manda (`permissions.view_medical`).
 - **Estado de cuenta:** tarjeta en el inicio y `/estado-de-cuenta` (`GET /account`, consolidado de la
   familia); en la ficha del hijo, `GET /students/{id}/account`. Montos con `formatMoney` (`core/utils/format.dart`).
+  "A pagar ahora" (`due_now`) separado de "Próximas cuotas" (`upcoming`, cuotas creadas por adelantado,
+  `Charge.isUpcoming`); cada cuota trae su temporada y, en el cobro por día, cantidad × monto.
   Pagos, saldo a favor y recibos (PDF por link firmado, se abre con `urlLauncherProvider`, reemplazable en tests).
 - **Informes** (comisión): `/informes` (balance del mes, saldos por familia, morosos; PDF/Excel por link firmado)
   y tarjeta en el inicio, solo si `currentOrganizationProvider` trae el permiso `view_reports` (`can()`).

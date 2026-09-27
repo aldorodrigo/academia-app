@@ -58,11 +58,18 @@ class Charge {
     this.group,
     this.issuedOn,
     this.adjustments = const [],
+    this.season,
+    this.periodStart,
+    this.periodEnd,
+    this.quantity,
+    this.unitAmount,
+    this.isUpcoming = false,
   }) : paidAmount = paidAmount ?? 0,
        pendingAmount = pendingAmount ?? finalAmount;
 
   factory Charge.fromJson(Map<String, dynamic> json) {
     final student = json['student'] as Map<String, dynamic>;
+    final season = json['season'] as Map<String, dynamic>?;
     return Charge(
       id: json['id'] as int,
       studentId: student['id'] as int,
@@ -81,6 +88,12 @@ class Charge {
       adjustments: ((json['adjustments'] as List?) ?? const [])
           .map((a) => ChargeAdjustment.fromJson(a as Map<String, dynamic>))
           .toList(),
+      season: season?['name'] as String?,
+      periodStart: _date(json['period_start']),
+      periodEnd: _date(json['period_end']),
+      quantity: json['quantity'] as int?,
+      unitAmount: json['unit_amount'] as int?,
+      isUpcoming: json['is_upcoming'] as bool? ?? false,
     );
   }
 
@@ -105,6 +118,20 @@ class Charge {
   /// Lo que falta pagar. Si la API no lo manda, el monto final.
   final int pendingAmount;
   final List<ChargeAdjustment> adjustments;
+
+  /// Temporada a la que corresponde la cuota; null en cargos manuales.
+  final String? season;
+
+  /// Período que cubre la cuota (mes, quincena, semana o día).
+  final DateTime? periodStart;
+  final DateTime? periodEnd;
+
+  /// Cobro por día agrupado: "5 entrenamientos × ₲ 20.000".
+  final int? quantity;
+  final int? unitAmount;
+
+  /// Cuota creada por adelantado cuyo período todavía no empezó.
+  final bool isUpcoming;
 
   bool get hasAdjustments => adjustments.isNotEmpty;
 
@@ -185,19 +212,27 @@ class StudentBalance {
     required this.fullName,
     required this.balance,
     required this.overdue,
-  });
+    int? dueNow,
+    this.upcoming = 0,
+  }) : dueNow = dueNow ?? balance;
 
   factory StudentBalance.fromJson(Map<String, dynamic> json) => StudentBalance(
     id: json['id'] as int,
     fullName: json['full_name'] as String,
     balance: json['balance'] as int,
     overdue: json['overdue'] as int,
+    dueNow: json['due_now'] as int?,
+    upcoming: json['upcoming'] as int? ?? 0,
   );
 
   final int id;
   final String fullName;
   final int balance;
   final int overdue;
+
+  /// A pagar ahora (sin las próximas cuotas).
+  final int dueNow;
+  final int upcoming;
 }
 
 /// Estado de cuenta: consolidado de la familia o de un solo hijo.
@@ -209,11 +244,15 @@ class Account {
     required this.charges,
     this.credit = 0,
     this.payments = const [],
-  });
+    int? dueNow,
+    this.upcoming = 0,
+  }) : dueNow = dueNow ?? balance;
 
   factory Account.fromJson(Map<String, dynamic> json) => Account(
     balance: json['balance'] as int,
     overdue: json['overdue'] as int,
+    dueNow: json['due_now'] as int?,
+    upcoming: json['upcoming'] as int? ?? 0,
     credit: json['credit'] as int? ?? 0,
     payments: ((json['payments'] as List?) ?? const [])
         .map((p) => Payment.fromJson(p as Map<String, dynamic>))
@@ -233,8 +272,15 @@ class Account {
     charges: [],
   );
 
+  /// Total: a pagar ahora más las próximas cuotas.
   final int balance;
   final int overdue;
+
+  /// Lo que hay que pagar ahora (vencido y período en curso, menos el saldo a favor).
+  final int dueNow;
+
+  /// Cuotas creadas por adelantado que todavía no empezaron.
+  final int upcoming;
   final List<StudentBalance> students;
   final List<Charge> charges;
 
@@ -243,6 +289,15 @@ class Account {
   final List<Payment> payments;
 
   List<Charge> get unpaid => charges.where((c) => c.status.isUnpaid).toList();
+
+  /// Impagos a pagar ahora, sin las próximas cuotas.
+  List<Charge> get dueCharges =>
+      charges.where((c) => c.status.isUnpaid && !c.isUpcoming).toList();
+
+  /// Próximas cuotas, de la más cercana a la más lejana.
+  List<Charge> get upcomingCharges =>
+      charges.where((c) => c.status.isUnpaid && c.isUpcoming).toList()
+        ..sort((a, b) => a.dueOn.compareTo(b.dueOn));
 }
 
 DateTime? _date(Object? value) =>
