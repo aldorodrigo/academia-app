@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
 import '../config/env.dart';
+import 'class_notifications.dart';
 
 /// Notificaciones push: registro del dispositivo en la API y rutas a abrir
 /// cuando se toca una notificación. Se reemplaza en los tests.
@@ -53,6 +54,7 @@ class FirebasePushService implements PushService {
   FirebasePushService(this._dio);
 
   final Dio _dio;
+  final _notifications = ClassNotifications();
 
   @override
   bool get isSupported => true;
@@ -62,15 +64,19 @@ class FirebasePushService implements PushService {
   String? _token;
 
   Future<FirebaseMessaging> _init() => _messaging ??= () async {
-    await Firebase.initializeApp(
-      options: const FirebaseOptions(
-        apiKey: Env.firebaseApiKey,
-        appId: Env.firebaseAppId,
-        messagingSenderId: Env.firebaseSenderId,
-        projectId: Env.firebaseProjectId,
-      ),
-    );
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(options: Env.firebaseOptions);
+    }
     final messaging = FirebaseMessaging.instance;
+    // Notificaciones con botones: tocar el cuerpo o "Tomar asistencia" abre su pantalla.
+    await _notifications.initialize(onOpen: _routes.add);
+    final launch = await _notifications.launchRoute();
+    if (launch != null) _routes.add(launch);
+    // Con la app abierta, los push con botones también se dibujan acá.
+    FirebaseMessaging.onMessage.listen((message) {
+      final push = ActionablePush.fromData(message.data);
+      if (push != null) _notifications.show(push);
+    });
     FirebaseMessaging.onMessageOpenedApp.listen(_open);
     final initial = await messaging.getInitialMessage();
     if (initial != null) _open(initial);

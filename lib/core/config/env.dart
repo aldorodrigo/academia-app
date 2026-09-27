@@ -1,3 +1,5 @@
+import 'package:firebase_core/firebase_core.dart';
+
 /// Configuración por entorno, vía `--dart-define`.
 ///
 /// Ejemplo: flutter run --dart-define=API_BASE_URL=http://10.0.2.2/api/v1
@@ -18,6 +20,13 @@ class Env {
   );
   static const firebaseProjectId = String.fromEnvironment(
     'FIREBASE_PROJECT_ID',
+  );
+
+  static const firebaseOptions = FirebaseOptions(
+    apiKey: firebaseApiKey,
+    appId: firebaseAppId,
+    messagingSenderId: firebaseSenderId,
+    projectId: firebaseProjectId,
   );
 
   static bool get hasFirebase =>
