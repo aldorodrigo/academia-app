@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/utils/clock.dart';
 import '../../../core/utils/format.dart';
+import '../../billing/presentation/student_account_section.dart';
 import '../../organizations/data/models.dart';
 import '../../organizations/data/organization_repository.dart';
 import '../data/models.dart';
@@ -88,6 +89,8 @@ class _StudentDetails extends ConsumerWidget {
           const Text('No tiene inscripciones en la temporada actual.'),
         for (final enrollment in student.enrollments)
           _EnrollmentCard(enrollment, organization),
+        const _SectionTitle('Estado de cuenta'),
+        StudentAccountSection(studentId: student.id),
         if (student.guardians.isNotEmpty) ...[
           const _SectionTitle('Tutores'),
           for (final guardian in student.guardians)

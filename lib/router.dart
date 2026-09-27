@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'features/account/presentation/account_screen.dart';
 import 'features/auth/data/models.dart';
+import 'features/billing/presentation/balance_screen.dart';
 import 'features/auth/data/session_controller.dart';
 import 'features/auth/presentation/login_screen.dart';
 import 'features/home/presentation/home_screen.dart';
@@ -56,6 +57,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/inicio', builder: (_, _) => const HomeScreen()),
       GoRoute(path: '/cuenta', builder: (_, _) => const AccountScreen()),
+      GoRoute(
+        path: '/estado-de-cuenta',
+        builder: (_, _) => const BalanceScreen(),
+      ),
       GoRoute(
         path: '/hijos',
         builder: (_, _) => const StudentsScreen(),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../auth/data/session_controller.dart';
+import '../../billing/presentation/account_summary_card.dart';
 import '../../organizations/data/organization_repository.dart';
 import '../../organizations/presentation/roles_list.dart';
 import '../../students/data/students_repository.dart';
@@ -46,6 +47,8 @@ class HomeScreen extends ConsumerWidget {
               onlySelf ? 'Mis inscripciones' : 'Mis hijos',
               style: theme.textTheme.titleMedium,
             ),
+            const SizedBox(height: 8),
+            const AccountSummaryCard(),
             const SizedBox(height: 8),
             const StudentsList(),
           ],
