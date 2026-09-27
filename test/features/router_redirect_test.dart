@@ -65,7 +65,12 @@ void main() {
   });
 
   test('asistencia y grupos requieren sesión y organización', () {
-    for (final path in ['/clases/81', '/grupos', '/grupos/3']) {
+    for (final path in [
+      '/clases/81',
+      '/grupos',
+      '/grupos/3',
+      '/notificaciones',
+    ]) {
       expect(sessionRedirect(const AsyncData(null), path), '/ingresar');
       expect(sessionRedirect(AsyncData(_session()), path), '/organizaciones');
       expect(

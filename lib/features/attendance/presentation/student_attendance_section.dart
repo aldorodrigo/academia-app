@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/utils/clock.dart';
@@ -71,6 +72,14 @@ class _StudentAttendanceSectionState
           subtitle: const Text('Unas horas antes, para confirmar si va.'),
           value: _reminders ?? widget.student.classReminders ?? false,
           onChanged: _busy ? null : _setReminders,
+        ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            icon: const Icon(Icons.notifications_outlined),
+            label: const Text('Configurar avisos'),
+            onPressed: () => context.push('/notificaciones'),
+          ),
         ),
         attendance.when(
           loading: () => const LinearProgressIndicator(),

@@ -13,6 +13,7 @@ import 'features/auth/presentation/login_screen.dart';
 import 'features/home/presentation/home_screen.dart';
 import 'features/invitations/presentation/invitation_code_screen.dart';
 import 'features/invitations/presentation/invitation_screen.dart';
+import 'features/notifications/presentation/notification_settings_screen.dart';
 import 'features/organizations/presentation/organization_picker_screen.dart';
 import 'features/reports/presentation/reports_screen.dart';
 import 'features/students/presentation/student_screen.dart';
@@ -102,6 +103,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/clases/:id',
         builder: (_, state) =>
             ClassAttendanceScreen(id: int.parse(state.pathParameters['id']!)),
+      ),
+      GoRoute(
+        path: '/notificaciones',
+        builder: (_, _) => const NotificationSettingsScreen(),
       ),
       GoRoute(
         path: '/grupos',

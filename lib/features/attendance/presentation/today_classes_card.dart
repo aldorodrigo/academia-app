@@ -37,6 +37,11 @@ class TodayClassesCard extends ConsumerWidget {
                 Expanded(
                   child: Text('Hoy', style: theme.textTheme.titleMedium),
                 ),
+                IconButton(
+                  tooltip: 'Configurar avisos',
+                  icon: const Icon(Icons.notifications_outlined),
+                  onPressed: () => context.push('/notificaciones'),
+                ),
                 TextButton(
                   onPressed: () => context.go('/grupos'),
                   child: const Text('Mis grupos'),

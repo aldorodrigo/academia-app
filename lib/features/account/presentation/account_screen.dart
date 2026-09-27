@@ -41,6 +41,12 @@ class AccountScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
           const Divider(),
+          ListTile(
+            leading: const Icon(Icons.notifications_outlined),
+            title: const Text('Notificaciones'),
+            subtitle: const Text('Avisos de los días de clase'),
+            onTap: () => context.push('/notificaciones'),
+          ),
           if ((session?.organizations.length ?? 0) > 1)
             ListTile(
               leading: const Icon(Icons.swap_horiz),
