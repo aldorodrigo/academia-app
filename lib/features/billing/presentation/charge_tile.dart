@@ -40,8 +40,14 @@ class ChargeTile extends StatelessWidget {
     final theme = Theme.of(context);
     final subtitle = [
       if (showStudent) charge.studentFirstName,
-      'Vence ${formatDate(charge.dueOn)}',
+      charge.isPartiallyPaid
+          ? 'Pagado ${formatMoney(charge.paidAmount)} de ${formatMoney(charge.finalAmount)}'
+          : 'Vence ${formatDate(charge.dueOn)}',
     ].join(' · ');
+    // Lo que falta pagar; si ya está pagado o anulado, el monto del cargo.
+    final shownAmount = charge.status.isUnpaid
+        ? charge.pendingAmount
+        : charge.finalAmount;
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -53,10 +59,7 @@ class ChargeTile extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(
-              formatMoney(charge.finalAmount),
-              style: theme.textTheme.titleSmall,
-            ),
+            Text(formatMoney(shownAmount), style: theme.textTheme.titleSmall),
             ChargeStatusLabel(charge.status),
           ],
         ),
@@ -67,6 +70,11 @@ class ChargeTile extends StatelessWidget {
             _Line(adjustment.label, adjustment.amount),
           const Divider(),
           _Line('Total', charge.finalAmount, bold: true),
+          if (charge.paidAmount > 0) ...[
+            _Line('Pagado', -charge.paidAmount),
+            _Line('Falta pagar', charge.pendingAmount, bold: true),
+          ],
+          _DueLine(charge),
           if (charge.group != null)
             Align(
               alignment: Alignment.centerLeft,
@@ -76,6 +84,21 @@ class ChargeTile extends StatelessWidget {
       ),
     );
   }
+}
+
+class _DueLine extends StatelessWidget {
+  const _DueLine(this.charge);
+
+  final Charge charge;
+
+  @override
+  Widget build(BuildContext context) => Align(
+    alignment: Alignment.centerLeft,
+    child: Text(
+      'Vence ${formatDate(charge.dueOn)}',
+      style: Theme.of(context).textTheme.bodySmall,
+    ),
+  );
 }
 
 class _Line extends StatelessWidget {

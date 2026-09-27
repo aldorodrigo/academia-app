@@ -31,6 +31,8 @@ class AccountSummaryCard extends ConsumerWidget {
                   'Vencido ${formatMoney(account.overdue)}',
                   style: TextStyle(color: theme.colorScheme.error),
                 )
+              : account.credit > 0
+              ? Text('Saldo a favor ${formatMoney(account.credit)}')
               : null,
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.go('/estado-de-cuenta'),

@@ -53,6 +53,7 @@ lib/
   La ficha médica solo se muestra si la API la manda (`permissions.view_medical`).
 - **Estado de cuenta:** tarjeta en el inicio y `/estado-de-cuenta` (`GET /account`, consolidado de la
   familia); en la ficha del hijo, `GET /students/{id}/account`. Montos con `formatMoney` (`core/utils/format.dart`).
+  Pagos, saldo a favor y recibos (PDF por link firmado, se abre con `urlLauncherProvider`, reemplazable en tests).
 - **Fecha de hoy:** `todayProvider` (`core/utils/clock.dart`), reemplazable en los tests.
 - **Organización activa:** `currentOrganizationProvider` (`GET /organization`) da vocabulario
   (`term('group')`), módulos (`hasFeature`) y perfiles del usuario con mandato (`roles`).

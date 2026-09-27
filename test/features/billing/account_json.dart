@@ -86,3 +86,33 @@ Map<String, Object?> accountJson({
         ),
       ],
 };
+
+Map<String, Object?> paymentJson({
+  int id = 90,
+  bool voided = false,
+  int creditGenerated = 90000,
+}) => {
+  'id': id,
+  'receipt_number': '000123',
+  'received_on': '2026-09-20',
+  'amount': 300000,
+  'method': 'transferencia',
+  'method_label': 'Transferencia',
+  'voided': voided,
+  'receipt_url': 'https://api.test/recibos/$id?signature=abc',
+  'allocations': [
+    {
+      'charge_id': 400,
+      'description': 'Cuota agosto 2026',
+      'student_first_name': 'Mateo',
+      'amount': 150000,
+    },
+    {
+      'charge_id': 501,
+      'description': 'Cuota septiembre 2026',
+      'student_first_name': 'Sofía',
+      'amount': 60000,
+    },
+  ],
+  'credit_generated': creditGenerated,
+};
