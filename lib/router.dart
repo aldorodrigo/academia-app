@@ -11,6 +11,7 @@ import 'features/home/presentation/home_screen.dart';
 import 'features/invitations/presentation/invitation_code_screen.dart';
 import 'features/invitations/presentation/invitation_screen.dart';
 import 'features/organizations/presentation/organization_picker_screen.dart';
+import 'features/reports/presentation/reports_screen.dart';
 import 'features/students/presentation/student_screen.dart';
 import 'features/students/presentation/students_screen.dart';
 
@@ -78,6 +79,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/inicio', builder: (_, _) => const HomeScreen()),
       GoRoute(path: '/cuenta', builder: (_, _) => const AccountScreen()),
+      GoRoute(path: '/informes', builder: (_, _) => const ReportsScreen()),
       GoRoute(
         path: '/estado-de-cuenta',
         builder: (_, _) => const BalanceScreen(),

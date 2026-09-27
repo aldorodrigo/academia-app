@@ -24,6 +24,7 @@ void main() {
               'ends_on': '2027-12-31',
             },
           ],
+          'permissions': ['view_reports'],
         },
       },
     },
@@ -53,6 +54,8 @@ void main() {
     expect(organization.hasFeature('board'), isTrue);
     expect(organization.hasFeature('apparel'), isFalse);
     expect(organization.hasRole('tesorero'), isTrue);
+    expect(organization.can('view_reports'), isTrue);
+    expect(organization.can('otro'), isFalse);
     expect(organization.roles.map((r) => r.description), [
       'Tutor',
       'Tesorero · hasta 31/12/2027',
