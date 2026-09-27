@@ -45,6 +45,15 @@ String formatDay(DateTime date, DateTime today) {
       : 'el $short';
 }
 
+/// Día corto para listas: "Hoy", "Mañana", "Ayer" o "Jue 24/9".
+String formatShortDay(DateTime date, DateTime today) {
+  final relative = formatDay(date, today);
+  if (!relative.startsWith('el ')) {
+    return '${relative[0].toUpperCase()}${relative.substring(1)}';
+  }
+  return '${weekdayShort(date.weekday)} ${date.day}/${date.month}';
+}
+
 /// Fecha para la API: aaaa-mm-dd.
 String apiDate(DateTime d) =>
     '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';

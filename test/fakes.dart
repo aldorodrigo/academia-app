@@ -75,9 +75,13 @@ DioException apiError(RequestOptions options, int status, Object? data) =>
 
 /// Push sin Firebase: cuenta las llamadas y responde [allow] al pedir permiso.
 class FakePushService implements PushService {
-  FakePushService({this.allow = true});
+  FakePushService({this.allow = true, this.isSupported = true});
 
   final bool allow;
+
+  @override
+  final bool isSupported;
+
   int enabled = 0;
   int unregistered = 0;
 

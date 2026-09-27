@@ -41,6 +41,10 @@ class AttendanceSheet {
 
   bool get canEdit => session.editable && !session.suspended;
 
+  /// Hay marcas para mostrar: se puede tomar o ya se tomó.
+  bool get showsMarks =>
+      !session.suspended && (canEdit || session.attendanceTaken);
+
   AttendanceSheet copyWith({
     ClassSession? session,
     Map<int, AttendanceStatus>? marks,

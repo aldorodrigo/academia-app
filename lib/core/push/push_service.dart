@@ -12,6 +12,9 @@ import '../config/env.dart';
 /// Notificaciones push: registro del dispositivo en la API y rutas a abrir
 /// cuando se toca una notificación. Se reemplaza en los tests.
 abstract class PushService {
+  /// Este dispositivo puede recibir push (no es web y hay Firebase configurado).
+  bool get isSupported;
+
   /// Pide permiso (si hace falta) y registra el dispositivo. False si no hay
   /// push (web, sin configurar o permiso denegado).
   Future<bool> enable();
@@ -31,6 +34,9 @@ class DisabledPushService implements PushService {
   const DisabledPushService();
 
   @override
+  bool get isSupported => false;
+
+  @override
   Future<bool> enable() async => false;
 
   @override
@@ -47,6 +53,10 @@ class FirebasePushService implements PushService {
   FirebasePushService(this._dio);
 
   final Dio _dio;
+
+  @override
+  bool get isSupported => true;
+
   final _routes = StreamController<String>.broadcast();
   Future<FirebaseMessaging>? _messaging;
   String? _token;

@@ -96,7 +96,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
         ListTile(
           contentPadding: EdgeInsets.zero,
           title: Text(
-            '${_capitalize(formatDay(session.date, today))} · '
+            '${formatShortDay(session.date, today)} · '
             '${session.timeDescription}',
           ),
           subtitle: Text(
@@ -147,6 +147,3 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
     ];
   }
 }
-
-String _capitalize(String text) =>
-    text.isEmpty ? text : '${text[0].toUpperCase()}${text.substring(1)}';

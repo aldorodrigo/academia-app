@@ -250,6 +250,31 @@ void main() {
       expect(find.textContaining('Guardar asistencia'), findsNothing);
     });
 
+    testWidgets('una clase futura se ve pero todavía no se toma', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _app({
+          ..._organization(),
+          'GET /classes/81': (_) => {
+            'data': classJson(
+              date: '2026-09-30',
+              editable: false,
+              students: threeStudents(),
+            ),
+          },
+        }, const ClassAttendanceScreen(id: 81)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining('La asistencia se toma el día de la clase.'),
+        findsOneWidget,
+      );
+      expect(find.text('Avisó que no va'), findsOneWidget);
+      expect(find.textContaining('Guardar asistencia'), findsNothing);
+    });
+
     testWidgets('pasados los días de corrección es solo lectura', (
       tester,
     ) async {
@@ -258,6 +283,7 @@ void main() {
           ..._organization(),
           'GET /classes/81': (_) => {
             'data': classJson(
+              date: '2026-09-21',
               editable: false,
               attendanceTaken: true,
               students: [

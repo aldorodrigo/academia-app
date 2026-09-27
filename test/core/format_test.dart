@@ -12,6 +12,11 @@ void main() {
     expect(formatDay(DateTime(2026, 10, 12), today), 'el 12/10');
   });
 
+  test('día corto para listas', () {
+    expect(formatShortDay(DateTime(2026, 9, 28), today), 'Hoy');
+    expect(formatShortDay(DateTime(2026, 9, 24), today), 'Jue 24/9');
+  });
+
   test('fechas para la API', () {
     expect(apiDate(DateTime(2026, 9, 5)), '2026-09-05');
     expect(apiMonth(DateTime(2026, 9, 5)), '2026-09');

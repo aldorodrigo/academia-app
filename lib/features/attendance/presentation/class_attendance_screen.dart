@@ -184,7 +184,7 @@ class _ClassAttendanceScreenState extends ConsumerState<ClassAttendanceScreen> {
         for (final student in students)
           _StudentRow(
             student: student,
-            status: sheet.statusOf(student.id),
+            status: sheet.showsMarks ? sheet.statusOf(student.id) : null,
             note: sheet.notes[student.id],
             enabled: sheet.canEdit,
             onTap: () => _controller.toggle(student.id),
@@ -205,7 +205,7 @@ class _Header extends ConsumerWidget {
     final theme = Theme.of(context);
     final session = sheet.session;
     final today = ref.watch(todayProvider);
-    final day = formatDay(session.date, today);
+    final day = formatShortDay(session.date, today);
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -214,7 +214,7 @@ class _Header extends ConsumerWidget {
         children: [
           Text(
             '${session.group.program.name} · '
-            '${day[0].toUpperCase()}${day.substring(1)} ${session.timeDescription}',
+            '$day ${session.timeDescription}',
             style: theme.textTheme.titleSmall,
           ),
           if (session.suspended) ...[
@@ -227,10 +227,17 @@ class _Header extends ConsumerWidget {
             ),
           ] else if (!session.editable) ...[
             const SizedBox(height: 12),
-            const _Banner(
-              icon: Icons.lock_outline,
-              text: 'Ya no se puede corregir desde la app.',
-            ),
+            session.date.isAfter(today)
+                ? const _Banner(
+                    icon: Icons.schedule,
+                    text:
+                        'La asistencia se toma el día de la clase. '
+                        'Mientras tanto ves quiénes avisaron que van.',
+                  )
+                : const _Banner(
+                    icon: Icons.lock_outline,
+                    text: 'Ya no se puede corregir desde la app.',
+                  ),
           ] else ...[
             const SizedBox(height: 4),
             Text(
@@ -238,7 +245,7 @@ class _Header extends ConsumerWidget {
               style: theme.textTheme.bodySmall,
             ),
           ],
-          if (!session.suspended) ...[
+          if (sheet.showsMarks) ...[
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -313,7 +320,7 @@ class _StudentRow extends StatelessWidget {
   });
 
   final ClassStudent student;
-  final AttendanceStatus status;
+  final AttendanceStatus? status;
   final String? note;
   final bool enabled;
   final VoidCallback onTap;
@@ -338,7 +345,7 @@ class _StudentRow extends StatelessWidget {
     final subtitle = _subtitle;
 
     return Semantics(
-      label: '${student.fullName}: ${status.label}',
+      label: '${student.fullName}: ${status?.label ?? 'sin tomar'}',
       child: ListTile(
         minTileHeight: 64,
         enabled: enabled,

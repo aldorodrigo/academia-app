@@ -9,7 +9,10 @@ enum RemindersResult {
   /// Guardado y el dispositivo quedó registrado para push.
   enabled,
 
-  /// Guardado, pero este dispositivo no recibe push (web o permiso denegado).
+  /// Guardado, pero no se dio permiso de notificaciones en este celular.
+  permissionDenied,
+
+  /// Guardado desde un dispositivo sin push (la web): llega a la app del celular.
   savedWithoutPush,
 
   disabled,
@@ -43,8 +46,11 @@ class GuardianActions {
     _ref.invalidate(agendaProvider);
     _ref.invalidate(studentProvider(studentId));
     if (!enabled) return RemindersResult.disabled;
-    final push = await _ref.read(pushServiceProvider).enable();
-    return push ? RemindersResult.enabled : RemindersResult.savedWithoutPush;
+    final push = _ref.read(pushServiceProvider);
+    if (!push.isSupported) return RemindersResult.savedWithoutPush;
+    return await push.enable()
+        ? RemindersResult.enabled
+        : RemindersResult.permissionDenied;
   }
 }
 
@@ -55,7 +61,9 @@ String remindersMessage(RemindersResult result, String firstName) =>
     switch (result) {
       RemindersResult.enabled =>
         'Listo: te avisamos los días de clase de $firstName.',
-      RemindersResult.savedWithoutPush => 'Listo. Para recibir el aviso, permití las notificaciones de la app en tu celular.',
+      RemindersResult.permissionDenied => 'Listo. Para recibir el aviso, permití las notificaciones de la app en tu celular.',
+      RemindersResult.savedWithoutPush =>
+        'Listo. El aviso te llega en la app instalada en tu celular.',
       RemindersResult.disabled =>
         'No te vamos a avisar los días de clase de $firstName.',
     };
