@@ -107,6 +107,7 @@ class _BalanceTabState extends ConsumerState<_BalanceTab> {
                   AmountRow('Saldo inicial', r.openingBalance),
                   AmountRow('Ingresos', r.incomeTotal),
                   AmountRow('Gastos', -r.expensesTotal),
+                  if (r.other != 0) AmountRow('Otros movimientos', r.other),
                   const Divider(),
                   AmountRow('Saldo final', r.closingBalance, bold: true),
                   if (r.pendingExpenses > 0)

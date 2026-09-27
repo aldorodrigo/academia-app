@@ -41,6 +41,7 @@ Map<String, Object?> balanceJson({
     {'name': 'Banco Itaú', 'balance': 1500000},
   ],
   'pending_expenses': 1200000,
+  'other': 500000,
   'pdf_url': 'https://api.test/informes/balance.pdf?signature=a',
   'xlsx_url': 'https://api.test/informes/balance.xlsx?signature=a',
 };
@@ -196,6 +197,7 @@ void main() {
     expect(find.text('₲ 1.850.000'), findsWidgets);
     expect(find.text('Alquiler de cancha'), findsOneWidget);
     expect(find.text('Gastos pendientes de pago'), findsOneWidget);
+    expect(find.text('Otros movimientos'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Mes anterior'));
     await tester.pumpAndSettle();

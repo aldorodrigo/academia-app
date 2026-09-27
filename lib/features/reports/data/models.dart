@@ -47,6 +47,7 @@ class BalanceReport {
     required this.accounts,
     required this.pendingExpenses,
     required this.links,
+    this.other = 0,
   });
 
   factory BalanceReport.fromJson(Map<String, dynamic> json) {
@@ -65,6 +66,7 @@ class BalanceReport {
           .map((a) => AccountBalance.fromJson(a as Map<String, dynamic>))
           .toList(),
       pendingExpenses: json['pending_expenses'] as int? ?? 0,
+      other: json['other'] as int? ?? 0,
       links: ReportLinks.fromJson(json),
     );
   }
@@ -80,6 +82,9 @@ class BalanceReport {
   final List<AccountBalance> accounts;
   final int pendingExpenses;
   final ReportLinks links;
+
+  /// Saldos iniciales y ajustes (ni ingreso ni gasto): inicial + ingresos − gastos + otros = final.
+  final int other;
 
   /// Ingresos menos gastos del período.
   int get result => incomeTotal - expensesTotal;
