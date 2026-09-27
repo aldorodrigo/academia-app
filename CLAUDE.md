@@ -49,6 +49,9 @@ lib/
 - **Sesión:** `SessionController` (AsyncNotifier). `null` = sin sesión.
 - **Navegación:** `sessionRedirect()` decide: `/ingresar` → `/organizaciones` → `/inicio`.
   `/invitacion` y `/invitacion/:token` son públicas (link o QR de invitación, con o sin sesión).
+- **Mis hijos:** el inicio lista los alumnos a cargo (`GET /students`); la ficha es `/hijos/:id`.
+  La ficha médica solo se muestra si la API la manda (`permissions.view_medical`).
+- **Fecha de hoy:** `todayProvider` (`core/utils/clock.dart`), reemplazable en los tests.
 - **Organización activa:** `currentOrganizationProvider` (`GET /organization`) da vocabulario
   (`term('group')`), módulos (`hasFeature`) y perfiles del usuario con mandato (`roles`).
 - **Contrato de API:** `academia-api/docs/API_V1.md`. La app se construye primero contra el

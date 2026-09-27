@@ -10,6 +10,8 @@ import 'features/home/presentation/home_screen.dart';
 import 'features/invitations/presentation/invitation_code_screen.dart';
 import 'features/invitations/presentation/invitation_screen.dart';
 import 'features/organizations/presentation/organization_picker_screen.dart';
+import 'features/students/presentation/student_screen.dart';
+import 'features/students/presentation/students_screen.dart';
 
 /// Decide a dónde ir según el estado de la sesión.
 String? sessionRedirect(AsyncValue<Session?> session, String location) {
@@ -54,6 +56,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/inicio', builder: (_, _) => const HomeScreen()),
       GoRoute(path: '/cuenta', builder: (_, _) => const AccountScreen()),
+      GoRoute(
+        path: '/hijos',
+        builder: (_, _) => const StudentsScreen(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            builder: (_, state) =>
+                StudentScreen(id: int.parse(state.pathParameters['id']!)),
+          ),
+        ],
+      ),
       GoRoute(
         path: '/invitacion',
         builder: (_, _) => const InvitationCodeScreen(),
