@@ -96,19 +96,32 @@ class Enrollment {
     required this.status,
     required this.season,
     required this.group,
+    this.seasonStartsOn,
+    this.seasonEndsOn,
   });
 
-  factory Enrollment.fromJson(Map<String, dynamic> json) => Enrollment(
-    id: json['id'] as int,
-    status: EnrollmentStatus.parse(json['status']),
-    season: (json['season'] as Map<String, dynamic>)['name'] as String,
-    group: Group.fromJson(json['group'] as Map<String, dynamic>),
-  );
+  factory Enrollment.fromJson(Map<String, dynamic> json) {
+    final season = json['season'] as Map<String, dynamic>;
+    return Enrollment(
+      id: json['id'] as int,
+      status: EnrollmentStatus.parse(json['status']),
+      season: season['name'] as String,
+      seasonStartsOn: _date(season['starts_on']),
+      seasonEndsOn: _date(season['ends_on']),
+      group: Group.fromJson(json['group'] as Map<String, dynamic>),
+    );
+  }
 
   final int id;
   final EnrollmentStatus status;
   final String season;
+  final DateTime? seasonStartsOn;
+  final DateTime? seasonEndsOn;
   final Group group;
+
+  /// La temporada todavía no empezó.
+  bool isUpcoming(DateTime today) =>
+      seasonStartsOn != null && seasonStartsOn!.isAfter(today);
 }
 
 class Guardian {
@@ -231,10 +244,25 @@ class Student {
   int? age(DateTime today) =>
       birthDate == null ? null : ageOn(birthDate!, today);
 
-  /// "Sub-10 · Fútbol, Inicial · Pádel".
-  String get groupsDescription => enrollments
-      .map((e) => '${e.group.name} · ${e.group.program.name}')
-      .join(', ');
+  /// Inscripciones de temporadas vigentes (sin las que todavía no empezaron).
+  List<Enrollment> currentEnrollments(DateTime today) =>
+      enrollments.where((e) => !e.isUpcoming(today)).toList();
+
+  /// "Sub-10 · Fútbol, Inicial · Pádel" de las vigentes, y cuántas temporadas
+  /// próximas tiene ("… y 2 temporadas próximas"). Si solo tiene próximas, esas.
+  String groupsDescription(DateTime today) {
+    final current = currentEnrollments(today);
+    final upcoming = enrollments.length - current.length;
+    final groups = (current.isEmpty ? enrollments : current)
+        .map((e) => '${e.group.name} · ${e.group.program.name}')
+        .toSet()
+        .join(', ');
+
+    if (current.isEmpty || upcoming == 0) return groups;
+    return upcoming == 1
+        ? '$groups y 1 temporada próxima'
+        : '$groups y $upcoming temporadas próximas';
+  }
 }
 
 DateTime? _date(Object? value) =>

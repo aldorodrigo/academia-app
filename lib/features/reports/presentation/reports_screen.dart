@@ -169,6 +169,7 @@ class _BalancesTab extends ConsumerWidget {
             AmountRow('Pendiente de cobro', r.pending, bold: true),
             AmountRow('Vencido', r.overdue, color: theme.colorScheme.error),
             if (r.credit > 0) AmountRow('Saldo a favor', r.credit),
+            if (r.upcoming > 0) AmountRow('Próximas cuotas', r.upcoming),
           ],
         ),
         DownloadButtons(r.links),
@@ -192,6 +193,8 @@ class _BalancesTab extends ConsumerWidget {
                     'Vencido ${formatMoney(family.overdue)}',
                   if (family.credit > 0)
                     'Saldo a favor ${formatMoney(family.credit)}',
+                  if (family.upcoming > 0)
+                    'Próximas ${formatMoney(family.upcoming)}',
                 ].join(' · '),
               ),
               trailing: Text(

@@ -48,15 +48,16 @@ class _BalanceScreenState extends ConsumerState<BalanceScreen> {
   Widget _content(BuildContext context, Account account) {
     final theme = Theme.of(context);
     final charges = _filter == _Filter.unpaid
-        ? account.unpaid
+        ? account.dueCharges
         : account.charges;
+    final upcoming = account.upcomingCharges;
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text('Total a pagar', style: theme.textTheme.labelLarge),
+        Text('A pagar ahora', style: theme.textTheme.labelLarge),
         Text(
-          formatMoney(account.balance),
+          formatMoney(account.dueNow),
           style: theme.textTheme.headlineMedium,
         ),
         if (account.overdue > 0)
@@ -69,6 +70,8 @@ class _BalanceScreenState extends ConsumerState<BalanceScreen> {
             'Saldo a favor ${formatMoney(account.credit)}',
             style: TextStyle(color: theme.colorScheme.primary),
           ),
+        if (account.upcoming > 0)
+          Text('Próximas cuotas ${formatMoney(account.upcoming)}'),
         if (account.students.length > 1) ...[
           const SizedBox(height: 16),
           for (final student in account.students)
@@ -81,14 +84,14 @@ class _BalanceScreenState extends ConsumerState<BalanceScreen> {
                       style: TextStyle(color: theme.colorScheme.error),
                     )
                   : null,
-              trailing: Text(formatMoney(student.balance)),
+              trailing: Text(formatMoney(student.dueNow)),
               onTap: () => context.go('/hijos/${student.id}'),
             ),
         ],
         const SizedBox(height: 16),
         SegmentedButton<_Filter>(
           segments: const [
-            ButtonSegment(value: _Filter.unpaid, label: Text('Pendientes')),
+            ButtonSegment(value: _Filter.unpaid, label: Text('A pagar')),
             ButtonSegment(value: _Filter.all, label: Text('Todos')),
             ButtonSegment(value: _Filter.payments, label: Text('Pagos')),
           ],
@@ -104,11 +107,17 @@ class _BalanceScreenState extends ConsumerState<BalanceScreen> {
           if (charges.isEmpty)
             _Empty(
               _filter == _Filter.unpaid
-                  ? 'No tenés cargos pendientes.'
+                  ? 'No tenés nada para pagar ahora.'
                   : 'Todavía no hay cargos.',
             ),
           for (final charge in charges)
             ChargeTile(charge, showStudent: account.students.length > 1),
+          if (_filter == _Filter.unpaid && upcoming.isNotEmpty)
+            _UpcomingCharges(
+              upcoming,
+              total: account.upcoming,
+              showStudent: account.students.length > 1,
+            ),
         ],
       ],
     );
@@ -116,6 +125,34 @@ class _BalanceScreenState extends ConsumerState<BalanceScreen> {
 }
 
 enum _Filter { unpaid, all, payments }
+
+/// Cuotas creadas por adelantado, plegadas para no confundir con lo que se debe hoy.
+class _UpcomingCharges extends StatelessWidget {
+  const _UpcomingCharges(
+    this.charges, {
+    required this.total,
+    required this.showStudent,
+  });
+
+  final List<Charge> charges;
+  final int total;
+  final bool showStudent;
+
+  @override
+  Widget build(BuildContext context) => ExpansionTile(
+    key: const PageStorageKey('upcoming-charges'),
+    tilePadding: EdgeInsets.zero,
+    title: Text('Próximas cuotas (${charges.length})'),
+    subtitle: const Text(
+      'Todavía no empezaron; podés pagarlas por adelantado.',
+    ),
+    trailing: Text(formatMoney(total)),
+    children: [
+      for (final charge in charges)
+        ChargeTile(charge, showStudent: showStudent),
+    ],
+  );
+}
 
 class _Empty extends StatelessWidget {
   const _Empty(this.text);

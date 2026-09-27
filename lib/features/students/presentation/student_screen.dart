@@ -86,9 +86,9 @@ class _StudentDetails extends ConsumerWidget {
           student.enrollments.length == 1 ? 'Inscripción' : 'Inscripciones',
         ),
         if (student.enrollments.isEmpty)
-          const Text('No tiene inscripciones en la temporada actual.'),
+          const Text('No tiene inscripciones vigentes.'),
         for (final enrollment in student.enrollments)
-          _EnrollmentCard(enrollment, organization),
+          _EnrollmentCard(enrollment, organization, today),
         const _SectionTitle('Estado de cuenta'),
         StudentAccountSection(studentId: student.id),
         if (student.guardians.isNotEmpty) ...[
@@ -118,10 +118,11 @@ class _StudentDetails extends ConsumerWidget {
 }
 
 class _EnrollmentCard extends StatelessWidget {
-  const _EnrollmentCard(this.enrollment, this.organization);
+  const _EnrollmentCard(this.enrollment, this.organization, this.today);
 
   final Enrollment enrollment;
   final OrganizationDetails? organization;
+  final DateTime today;
 
   String _term(String key, String fallback) =>
       organization?.term(key) ?? fallback;
@@ -130,6 +131,8 @@ class _EnrollmentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final group = enrollment.group;
+    final startsOn = enrollment.seasonStartsOn;
+    final endsOn = enrollment.seasonEndsOn;
 
     return Card(
       child: Padding(
@@ -145,13 +148,24 @@ class _EnrollmentCard extends StatelessWidget {
                     style: theme.textTheme.titleMedium,
                   ),
                 ),
-                EnrollmentStatusChip(enrollment.status),
+                if (enrollment.isUpcoming(today))
+                  Chip(
+                    label: Text('Empieza el ${formatDate(startsOn!)}'),
+                    visualDensity: VisualDensity.compact,
+                  )
+                else
+                  EnrollmentStatusChip(enrollment.status),
               ],
             ),
             Text(
               '${_term('program', 'Disciplina')}: ${group.program.name} · '
               'Temporada ${enrollment.season}',
             ),
+            if (startsOn != null && endsOn != null)
+              Text(
+                'Del ${formatDate(startsOn)} al ${formatDate(endsOn)}',
+                style: theme.textTheme.bodySmall,
+              ),
             if (group.schedules.isNotEmpty) ...[
               const SizedBox(height: 12),
               Text('Horarios', style: theme.textTheme.labelLarge),
