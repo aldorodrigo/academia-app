@@ -191,7 +191,9 @@ class _OffsetsEditor extends StatelessWidget {
           runSpacing: 8,
           children: [
             for (final offset in offsets)
-              InputChip(
+              // Chip (no InputChip): con un solo aviso no se puede quitar, pero no se ve deshabilitado.
+              Chip(
+                avatar: const Icon(Icons.notifications_outlined, size: 18),
                 label: Text(settings.labelOf(offset)),
                 onDeleted: offsets.length > 1 ? () => onRemove(offset) : null,
                 deleteButtonTooltipMessage: 'Quitar',

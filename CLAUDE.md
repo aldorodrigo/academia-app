@@ -65,9 +65,21 @@ lib/
 - **Fecha de hoy:** `todayProvider` y `nowProvider` (con hora) en `core/utils/clock.dart`, reemplazables en los tests.
 - **Asistencia** (técnico, permiso `take_attendance`): tarjeta "Hoy" en el inicio con las clases de sus grupos,
   `/clases/:id` para tomarla (todos arrancan presentes, los que el tutor avisó "No va" justificados; un toque alterna
-  presente/ausente; guardado único con reintento; suspender clase), `/grupos` y `/grupos/:id` (mes y % por alumno).
-  La planilla vive en `AttendanceSheetController`.
-- **Próxima clase** (tutor): `GET /agenda` en el inicio con "¿Lo llevás?" (hasta que empieza) y, la primera vez,
+  presente/ausente; guardado único con reintento), `/grupos` y `/grupos/:id` (mes y % por alumno).
+  La planilla vive en `AttendanceSheetController`. Suspender: "Cancelar la clase" (con "No cobrar esta clase" si
+  `can_waive_charge`) o "Reprogramar" (`RescheduleSheet` en `class_change_dialogs.dart`); también "Cambiar día u
+  horario" y "Cancelar reprogramación". Las recuperaciones (`isMakeup`) son clases como cualquier otra.
+- **Sin conexión** (solo la asistencia del técnico): `AttendanceRepository` guarda en `OfflineStore`
+  (`core/storage/offline_store.dart`, shared_preferences; `InMemoryOfflineStore` en tests) la respuesta de
+  `GET classes` y el detalle de cada clase; sin red devuelve lo guardado. Guardar sin red encola en
+  `AttendanceOutbox` (una entrada por clase) y se envía al volver la señal (`connectivityProvider`), al volver a la app
+  o con "Enviar ahora". Suspender y reprogramar requieren conexión. Al cerrar sesión se borra todo.
+- **Notificaciones** (`/notificaciones`, desde "Mi cuenta"): hasta 3 avisos por clase para técnico y tutor
+  (`GET/PUT me/notification-settings`). Los push `class_reminder` ("Sí, va" / "No va" por link firmado) y
+  `class_today` ("Tomar asistencia") se dibujan con `flutter_local_notifications` (`core/push/class_notifications.dart`;
+  en Android llegan solo con datos).
+- **Próxima clase** (tutor): `GET /agenda` en el inicio con "¿Lo llevás?" (hasta que empieza; si es recuperación,
+  "Recupera la clase de…") y, la primera vez,
   "¿Querés que te avise los días de clase?"; en la ficha, asistencia del mes e interruptor del aviso.
   Acciones en `GuardianActions`. Activar el aviso pide permiso de push (`pushServiceProvider`, reemplazable en tests).
 - **Organización activa:** `currentOrganizationProvider` (`GET /organization`) da vocabulario
