@@ -9,7 +9,11 @@ import 'features/attendance/presentation/groups_screen.dart';
 import 'features/auth/data/models.dart';
 import 'features/billing/presentation/balance_screen.dart';
 import 'features/auth/data/session_controller.dart';
+import 'features/auth/presentation/create_account_screen.dart';
+import 'features/auth/presentation/forgot_password_screen.dart';
 import 'features/auth/presentation/login_screen.dart';
+import 'features/auth/presentation/register_screen.dart';
+import 'features/auth/presentation/verify_account_screen.dart';
 import 'features/home/presentation/home_screen.dart';
 import 'features/invitations/presentation/invitation_code_screen.dart';
 import 'features/invitations/presentation/invitation_screen.dart';
@@ -19,6 +23,13 @@ import 'features/lessons/presentation/lesson_profile_screen.dart';
 import 'features/lessons/presentation/teacher_agenda_screen.dart';
 import 'features/lessons/presentation/teacher_students_screen.dart';
 import 'features/notifications/presentation/notification_settings_screen.dart';
+import 'features/onboarding/presentation/club_form_screen.dart';
+import 'features/onboarding/presentation/groups_step_screen.dart';
+import 'features/onboarding/presentation/instructors_step_screen.dart';
+import 'features/onboarding/presentation/programs_step_screen.dart';
+import 'features/onboarding/presentation/season_step_screen.dart';
+import 'features/onboarding/presentation/setup_done_screen.dart';
+import 'features/onboarding/presentation/setup_screen.dart';
 import 'features/organizations/presentation/organization_picker_screen.dart';
 import 'features/reports/presentation/reports_screen.dart';
 import 'features/students/presentation/student_screen.dart';
@@ -42,10 +53,24 @@ String? sessionRedirect(
   }
 
   final value = session.value;
-  if (value == null) return location == '/ingresar' ? null : '/ingresar';
+  if (value == null) return _public.contains(location) ? null : '/ingresar';
+
+  // Cuenta recién creada: primero el código (WhatsApp o correo).
+  if (!value.verified) {
+    return location == '/registro/codigo' ? null : '/registro/codigo';
+  }
+  if (location == '/registro/codigo' ||
+      location == '/crear-cuenta' ||
+      location == '/registro' ||
+      location == '/recuperar') {
+    if (value.organizations.isEmpty) return '/registro/club';
+    return value.organizationSlug == null ? '/organizaciones' : '/inicio';
+  }
 
   if (value.organizationSlug == null) {
-    return location == '/organizaciones' ? null : '/organizaciones';
+    return location == '/organizaciones' || location == '/registro/club'
+        ? null
+        : '/organizaciones';
   }
 
   if (location == '/' || location == '/ingresar') {
@@ -53,6 +78,9 @@ String? sessionRedirect(
   }
   return null;
 }
+
+/// Rutas sin sesión: ingresar, crear cuenta y recuperar la contraseña.
+const _public = {'/ingresar', '/crear-cuenta', '/registro', '/recuperar'};
 
 /// Solo rutas de la app (evita redirigir a otro sitio con `from=//…`).
 bool _isInternal(String? path) =>
@@ -82,6 +110,49 @@ final routerProvider = Provider<GoRouter>((ref) {
             const Scaffold(body: Center(child: CircularProgressIndicator())),
       ),
       GoRoute(path: '/ingresar', builder: (_, _) => const LoginScreen()),
+      GoRoute(
+        path: '/recuperar',
+        builder: (_, state) =>
+            ForgotPasswordScreen(login: state.uri.queryParameters['login']),
+      ),
+      GoRoute(
+        path: '/crear-cuenta',
+        builder: (_, _) => const CreateAccountScreen(),
+      ),
+      GoRoute(
+        path: '/registro',
+        builder: (_, _) => const RegisterScreen(),
+        routes: [
+          GoRoute(
+            path: 'codigo',
+            builder: (_, _) => const VerifyAccountScreen(),
+          ),
+          GoRoute(path: 'club', builder: (_, _) => const ClubFormScreen()),
+        ],
+      ),
+      GoRoute(
+        path: '/configurar',
+        builder: (_, _) => const SetupScreen(),
+        routes: [
+          GoRoute(
+            path: 'disciplinas',
+            builder: (_, _) => const ProgramsStepScreen(),
+          ),
+          GoRoute(
+            path: 'categorias',
+            builder: (_, _) => const GroupsStepScreen(),
+          ),
+          GoRoute(
+            path: 'temporada',
+            builder: (_, _) => const SeasonStepScreen(),
+          ),
+          GoRoute(
+            path: 'tecnicos',
+            builder: (_, _) => const InstructorsStepScreen(),
+          ),
+          GoRoute(path: 'listo', builder: (_, _) => const SetupDoneScreen()),
+        ],
+      ),
       GoRoute(
         path: '/organizaciones',
         builder: (_, _) => const OrganizationPickerScreen(),

@@ -15,14 +15,14 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _email = TextEditingController();
+  final _login = TextEditingController();
   final _password = TextEditingController();
   bool _loading = false;
   String? _error;
 
   @override
   void dispose() {
-    _email.dispose();
+    _login.dispose();
     _password.dispose();
     super.dispose();
   }
@@ -38,7 +38,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       await ref
           .read(sessionControllerProvider.notifier)
-          .login(email: _email.text.trim(), password: _password.text);
+          .login(login: _login.text.trim(), password: _password.text);
     } catch (e) {
       setState(() => _error = apiErrorMessage(e));
     } finally {
@@ -69,14 +69,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 32),
                     TextFormField(
-                      key: const Key('email'),
-                      controller: _email,
+                      key: const Key('login'),
+                      controller: _login,
                       decoration: const InputDecoration(
-                        labelText: 'Correo electrónico',
+                        labelText: 'Celular o correo',
+                        hintText: '0981 123 456',
                       ),
                       keyboardType: TextInputType.emailAddress,
-                      autofillHints: const [AutofillHints.email],
-                      validator: validateEmail,
+                      autofillHints: const [
+                        AutofillHints.telephoneNumber,
+                        AutofillHints.email,
+                      ],
+                      validator: validateLogin,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -89,6 +93,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       autofillHints: const [AutofillHints.password],
                       validator: validateCurrentPassword,
                       onFieldSubmitted: (_) => _submit(),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        key: const Key('forgot-password'),
+                        onPressed: () => context.go(
+                          Uri(
+                            path: '/recuperar',
+                            queryParameters: {
+                              if (_login.text.trim().isNotEmpty)
+                                'login': _login.text.trim(),
+                            },
+                          ).toString(),
+                        ),
+                        child: const Text('¿Olvidaste tu contraseña?'),
+                      ),
                     ),
                     if (_error != null) ...[
                       const SizedBox(height: 16),
@@ -108,6 +128,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           : const Text('Ingresar'),
                     ),
                     const SizedBox(height: 16),
+                    OutlinedButton(
+                      key: const Key('create-account'),
+                      onPressed: () => context.go('/crear-cuenta'),
+                      child: const Text('Crear cuenta'),
+                    ),
+                    const SizedBox(height: 8),
                     TextButton(
                       onPressed: () => context.go('/invitacion'),
                       child: const Text('Tengo una invitación'),

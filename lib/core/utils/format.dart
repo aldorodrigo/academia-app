@@ -93,3 +93,33 @@ String formatPeriod(String period) {
   final parts = period.split('-');
   return '${_months[int.parse(parts[1]) - 1]} ${parts[0]}';
 }
+
+/// "16:00" → minutos desde las 0:00 (null si no es una hora válida).
+int? minutesOf(String time) {
+  final parts = time.split(':');
+  if (parts.length != 2) return null;
+  final hours = int.tryParse(parts[0]);
+  final minutes = int.tryParse(parts[1]);
+  if (hours == null || minutes == null) return null;
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+  return hours * 60 + minutes;
+}
+
+/// Minutos desde las 0:00 → "16:00".
+String timeOf(int minutes) =>
+    '${(minutes ~/ 60).toString().padLeft(2, '0')}:${(minutes % 60).toString().padLeft(2, '0')}';
+
+/// "35.000" o "35000" → 35000 (null si no es un monto válido).
+int? parseAmount(String text) {
+  final digits = text.replaceAll(RegExp(r'[.\s₲]'), '');
+  final value = int.tryParse(digits);
+  return value == null || value <= 0 ? null : value;
+}
+
+/// Celular de la API (formato internacional) para mostrar:
+/// "+595981123456" → "0981 123 456". Los de otros países, tal cual.
+String formatPhone(String phone) {
+  final match = RegExp(r'^\+595(\d{3})(\d{3})(\d{3})$').firstMatch(phone);
+  if (match == null) return phone;
+  return '0${match[1]} ${match[2]} ${match[3]}';
+}

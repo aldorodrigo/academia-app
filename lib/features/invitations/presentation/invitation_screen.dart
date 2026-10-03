@@ -125,7 +125,7 @@ class _AcceptFormState extends ConsumerState<_AcceptForm> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  invitation.email,
+                  invitation.contact,
                   style: theme.textTheme.bodySmall,
                   textAlign: TextAlign.center,
                 ),
@@ -152,6 +152,8 @@ class _AcceptFormState extends ConsumerState<_AcceptForm> {
                         : 'Tu contraseña',
                     helperText: _newAccount
                         ? 'Al menos $minPasswordLength caracteres.'
+                        : invitation.phone != null
+                        ? 'Ya tenés una cuenta con este número.'
                         : 'Ya tenés una cuenta con este correo.',
                   ),
                   obscureText: true,

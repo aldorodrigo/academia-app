@@ -48,6 +48,7 @@ dependencies:
   shared_preferences: ^2.5.5
   connectivity_plus: ^7.3.1
   flutter_local_notifications: ^22.3.1
+  cloudflare_turnstile: ^3.8.1
 
 dev_dependencies:
   flutter_test:

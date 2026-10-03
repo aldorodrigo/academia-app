@@ -18,6 +18,19 @@ const invitationJson = {
 };
 
 void main() {
+  test('una invitación por celular muestra el número', () {
+    final invitation = Invitation.fromJson('abc', {
+      'organization': {'slug': 'jakare', 'name': 'Club Jakare'},
+      'email': null,
+      'phone': '+595981123456',
+      'roles': const [],
+      'user_exists': true,
+    });
+    expect(invitation.email, isNull);
+    expect(invitation.contact, '0981 123 456');
+    expect(invitation.userExists, isTrue);
+  });
+
   group('parseInvitationToken', () {
     test('acepta el link completo o solo el código', () {
       expect(

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/captcha/captcha.dart';
 import '../../../core/push/push_service.dart';
 import '../../../core/storage/offline_store.dart';
 import '../../attendance/data/attendance_outbox.dart';
@@ -14,8 +15,64 @@ class SessionController extends AsyncNotifier<Session?> {
   @override
   Future<Session?> build() => _repository.restore();
 
-  Future<void> login({required String email, required String password}) async {
-    await _repository.login(email: email, password: password);
+  Future<void> login({required String login, required String password}) async {
+    await _repository.login(login: login, password: password);
+    state = AsyncData(await _repository.restore());
+  }
+
+  Future<void> register({
+    required String name,
+    String? phone,
+    String? email,
+    required String password,
+    required String passwordConfirmation,
+  }) async {
+    await _repository.register(
+      name: name,
+      phone: phone,
+      email: email,
+      password: password,
+      passwordConfirmation: passwordConfirmation,
+      captchaToken: await ref.read(captchaProvider).token(),
+    );
+    state = AsyncData(await _repository.restore());
+  }
+
+  Future<void> verify(String code) async {
+    await _repository.verify(code);
+    state = AsyncData(await _repository.restore());
+  }
+
+  Future<void> resendCode({bool byEmail = false}) async =>
+      _repository.resendCode(
+        byEmail: byEmail,
+        captchaToken: await ref.read(captchaProvider).token(),
+      );
+
+  Future<void> forgotPassword(String login) async => _repository.forgotPassword(
+    login,
+    captchaToken: await ref.read(captchaProvider).token(),
+  );
+
+  Future<void> resetPassword({
+    required String login,
+    required String code,
+    required String password,
+    required String passwordConfirmation,
+  }) async {
+    await _repository.resetPassword(
+      login: login,
+      code: code,
+      password: password,
+      passwordConfirmation: passwordConfirmation,
+    );
+    state = AsyncData(await _repository.restore());
+  }
+
+  /// Vuelve a pedir el usuario y sus organizaciones; con [select], entra a esa
+  /// organización (ej. el club que se acaba de crear).
+  Future<void> reload({String? select}) async {
+    if (select != null) await _repository.selectOrganization(select);
     state = AsyncData(await _repository.restore());
   }
 

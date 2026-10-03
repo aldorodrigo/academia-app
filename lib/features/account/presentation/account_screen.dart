@@ -30,7 +30,12 @@ class AccountScreen extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.person_outline),
             title: Text(session?.name ?? ''),
-            subtitle: Text(session?.email ?? ''),
+            subtitle: Text(
+              [
+                session?.contact,
+                if (session?.phone != null) session?.email,
+              ].whereType<String>().join('\n'),
+            ),
           ),
           ListTile(
             leading: const Icon(Icons.groups_outlined),
@@ -47,6 +52,13 @@ class AccountScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
           const Divider(),
+          if (organization?.can('configure_organization') ?? false)
+            ListTile(
+              leading: const Icon(Icons.tune),
+              title: const Text('Configurar el club'),
+              subtitle: const Text('Guía de primeros pasos'),
+              onTap: () => context.go('/configurar'),
+            ),
           ListTile(
             leading: const Icon(Icons.notifications_outlined),
             title: const Text('Notificaciones'),

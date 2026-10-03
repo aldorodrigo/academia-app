@@ -262,13 +262,6 @@ Future<PaymentResult?> showCollectSheet(
   ),
 );
 
-/// "35.000" o "35000" → 35000 (null si no es un monto válido).
-int? parseAmount(String text) {
-  final digits = text.replaceAll(RegExp(r'[.\s₲]'), '');
-  final value = int.tryParse(digits);
-  return value == null || value <= 0 ? null : value;
-}
-
 class CollectSheet extends ConsumerStatefulWidget {
   const CollectSheet({
     super.key,

@@ -7,7 +7,6 @@ import '../../../core/api/api_client.dart';
 import '../../../core/utils/format.dart';
 import '../data/booking_controller.dart';
 import '../data/models.dart';
-import 'booking_sheet.dart';
 
 const _durations = [30, 45, 60, 90, 120];
 

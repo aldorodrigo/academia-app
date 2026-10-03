@@ -20,7 +20,7 @@ void main() {
     await tester.tap(find.text('Ingresar'));
     await tester.pump();
 
-    expect(find.text('Ingresá tu correo electrónico.'), findsOneWidget);
+    expect(find.text('Ingresá tu celular o tu correo.'), findsOneWidget);
     expect(find.text('Ingresá tu contraseña.'), findsOneWidget);
   });
 }

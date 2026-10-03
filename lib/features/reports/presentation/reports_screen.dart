@@ -122,7 +122,7 @@ class _BalanceTabState extends ConsumerState<_BalanceTab> {
                 'Ingresos',
                 children: [
                   if (r.income.isEmpty)
-                    const Text('Sin ingresos en el período.'),
+                    const Text('Sin ingresos en estas fechas.'),
                   for (final line in r.income)
                     AmountRow(line.label, line.amount),
                 ],
@@ -131,7 +131,7 @@ class _BalanceTabState extends ConsumerState<_BalanceTab> {
                 'Gastos',
                 children: [
                   if (r.expenses.isEmpty)
-                    const Text('Sin gastos en el período.'),
+                    const Text('Sin gastos en estas fechas.'),
                   for (final line in r.expenses)
                     AmountRow(line.label, line.amount),
                 ],

@@ -66,8 +66,13 @@ String apiErrorMessage(Object error) {
         return (errors.first as List).first.toString();
       }
     }
-    if (data is Map && data['message'] is String) {
+    if (data is Map &&
+        data['message'] is String &&
+        data['message'] != 'Too Many Attempts.') {
       return data['message'] as String;
+    }
+    if (error.response?.statusCode == 429) {
+      return 'Esperá un momento antes de volver a intentar.';
     }
     if (error.type == DioExceptionType.connectionError ||
         error.type == DioExceptionType.connectionTimeout) {

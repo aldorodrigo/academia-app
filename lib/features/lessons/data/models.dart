@@ -1,20 +1,5 @@
 import '../../../core/utils/format.dart';
 
-/// "16:00" → minutos desde las 0:00 (null si no es una hora válida).
-int? minutesOf(String time) {
-  final parts = time.split(':');
-  if (parts.length != 2) return null;
-  final hours = int.tryParse(parts[0]);
-  final minutes = int.tryParse(parts[1]);
-  if (hours == null || minutes == null) return null;
-  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
-  return hours * 60 + minutes;
-}
-
-/// Minutos desde las 0:00 → "16:00".
-String timeOf(int minutes) =>
-    '${(minutes ~/ 60).toString().padLeft(2, '0')}:${(minutes % 60).toString().padLeft(2, '0')}';
-
 DateTime _date(Object? value) => DateTime.parse(value as String);
 
 DateTime? _maybeDate(Object? value) =>

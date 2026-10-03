@@ -11,6 +11,14 @@ class Env {
     defaultValue: 'http://localhost/api/v1',
   );
 
+  // Cloudflare Turnstile (anti-bots) al pedir códigos. Sin clave no se usa.
+  // La URL tiene que estar en los dominios del widget en Cloudflare.
+  static const turnstileSiteKey = String.fromEnvironment('TURNSTILE_SITE_KEY');
+  static const turnstileBaseUrl = String.fromEnvironment(
+    'TURNSTILE_BASE_URL',
+    defaultValue: 'http://localhost/',
+  );
+
   // Proyecto de Firebase para push (Android/iOS). Sin estos valores la app
   // funciona igual, sin notificaciones.
   static const firebaseApiKey = String.fromEnvironment('FIREBASE_API_KEY');
