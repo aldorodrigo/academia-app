@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'core/theme/brand.dart';
 import 'features/account/presentation/account_screen.dart';
 import 'features/attendance/presentation/class_attendance_screen.dart';
 import 'features/attendance/presentation/group_screen.dart';
@@ -104,11 +105,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       from: state.uri.queryParameters['from'],
     ),
     routes: [
-      GoRoute(
-        path: '/',
-        builder: (_, _) =>
-            const Scaffold(body: Center(child: CircularProgressIndicator())),
-      ),
+      GoRoute(path: '/', builder: (_, _) => const TukuSplash()),
       GoRoute(path: '/ingresar', builder: (_, _) => const LoginScreen()),
       GoRoute(
         path: '/recuperar',

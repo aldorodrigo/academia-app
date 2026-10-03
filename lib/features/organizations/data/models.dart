@@ -71,6 +71,7 @@ class OrganizationDetails {
     'student': 'Jugador',
     'instructor': 'Técnico',
     'guardian': 'Tutor',
+    'space': 'Cancha',
   };
 
   final String slug;

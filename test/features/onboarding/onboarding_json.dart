@@ -298,6 +298,8 @@ Map<String, Object?> instructorsJson({
 
 Map<String, Object?> organizationJson({
   List<String> permissions = const ['configure_organization'],
+  String group = 'Categoría',
+  String instructor = 'Técnico',
 }) => {
   'data': {
     'slug': 'jakare',
@@ -305,9 +307,9 @@ Map<String, Object?> organizationJson({
     'features': <String>[],
     'terminology': {
       'program': 'Disciplina',
-      'group': 'Categoría',
+      'group': group,
       'student': 'Jugador',
-      'instructor': 'Técnico',
+      'instructor': instructor,
       'guardian': 'Tutor',
     },
     'membership': {'roles': <Object?>[], 'permissions': permissions},

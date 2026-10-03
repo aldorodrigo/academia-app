@@ -1,5 +1,4 @@
 import 'package:academia_app/core/utils/validators.dart';
-import 'package:academia_app/features/attendance/data/models.dart';
 import 'package:academia_app/features/onboarding/data/models.dart';
 import 'package:academia_app/features/onboarding/data/onboarding_controller.dart';
 import 'package:academia_app/features/onboarding/data/step_controllers.dart';
@@ -116,7 +115,7 @@ void main() {
         ),
       ],
       groups: const [],
-      venues: const <Venue>[],
+      sites: const [],
       levels: const [],
       programId: 1,
       drafts: drafts,
@@ -292,5 +291,22 @@ void main() {
       seasonPreviewJson()['data']! as Map<String, dynamic>,
     );
     expect(preview.terms!.unit, 'mes');
+  });
+
+  test('concordancia con el vocabulario del club', () {
+    for (final word in [
+      'Categoría',
+      'Clase',
+      'Profesora',
+      'Actividad',
+      'Disciplina',
+    ]) {
+      expect(isFeminine(word), isTrue, reason: word);
+    }
+    for (final word in ['Grupo', 'Nivel', 'Técnico', 'Profesor', 'Estilo']) {
+      expect(isFeminine(word), isFalse, reason: word);
+    }
+    expect(gendered('Grupo', 'cada uno', 'cada una'), 'cada uno');
+    expect(gendered('Categoría', 'todos', 'todas'), 'todas');
   });
 }

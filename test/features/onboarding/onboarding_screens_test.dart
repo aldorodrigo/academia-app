@@ -392,7 +392,7 @@ void main() {
           return {'data': programs};
         },
         'GET /setup/groups': (_) => {'data': <Object?>[]},
-        'GET /venues': (_) => {'data': <Object?>[]},
+        'GET /setup/sites': (_) => {'data': <Object?>[]},
         'POST /setup/groups/suggestions': (_) => {
           'data': [
             {'name': 'Sub-6', 'min_age': 5, 'max_age': 6, 'level': null},
@@ -452,7 +452,43 @@ void main() {
           'data': [programJson(1, 'Fútbol')],
         },
         'GET /setup/groups': (_) => {'data': <Object?>[]},
-        'GET /venues': (_) => {'data': <Object?>[]},
+        // Un lugar con dos canchas.
+        'GET /setup/sites': (_) => {
+          'data': [
+            {
+              'id': 1,
+              'name': 'Polideportivo',
+              'address': 'Av. España 123',
+              'spaces': [
+                {
+                  'id': 11,
+                  'name': 'Cancha 1',
+                  'label': 'Polideportivo · Cancha 1',
+                },
+                {
+                  'id': 12,
+                  'name': 'Cancha 2',
+                  'label': 'Polideportivo · Cancha 2',
+                },
+              ],
+            },
+          ],
+        },
+        // El sábado de Sub-10 choca con una categoría que ya existe.
+        'POST /setup/schedules/conflicts': (options) {
+          final schedules = (options.data as Map)['schedules'] as List;
+          final saturday = schedules.any(
+            (s) => (s as Map)['key'] == '1-1' && s['venue_id'] == 11,
+          );
+          return {
+            'data': {
+              if (saturday)
+                '1-1': [
+                  'Choca con Sub-14 el sábado de 17:00 a 18:30 en Polideportivo · Cancha 1.',
+                ],
+            },
+          };
+        },
         'POST /setup/groups/suggestions': (_) => {
           'data': [
             {'name': 'Sub-8', 'min_age': 7, 'max_age': 8, 'level': null},
@@ -495,6 +531,12 @@ void main() {
     await tester.pump();
     await tester.tap(find.descendant(of: sub8, matching: find.text('Jue')));
     await _settle(tester);
+    // La cancha de ese horario.
+    expect(find.text('Polideportivo'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('space-0-0-null')));
+    await _settle(tester);
+    await tester.tap(find.text('Polideportivo · Cancha 1').last);
+    await _settle(tester);
     expect(find.text('Crear 2 categorías (1 sin horario)'), findsOneWidget);
     await tester.tap(find.text('Copiar a todas'));
     await _settle(tester);
@@ -502,24 +544,32 @@ void main() {
 
     // Sub-10: además, el sábado a otra hora.
     final sub10 = find.byKey(const ValueKey('schedule-1'));
-    await tester.ensureVisible(
-      find.descendant(of: sub10, matching: find.text('Otro horario')),
-    );
-    await tester.tap(
-      find.descendant(of: sub10, matching: find.text('Otro horario')),
-    );
-    await _settle(tester);
-    final saturday = find.descendant(
-      of: find.byKey(const ValueKey('slot-1-1')),
-      matching: find.text('Sáb'),
-    );
-    await tester.ensureVisible(saturday);
-    await tester.tap(saturday);
-    await _settle(tester);
+    // (Se corre un poco: la barra de abajo tapa el final de la lista.)
+    Future<void> tapVisible(Finder finder) async {
+      await tester.ensureVisible(finder);
+      await tester.drag(find.byType(ListView).first, const Offset(0, -150));
+      await tester.pumpAndSettle();
+      await tester.tap(finder);
+      await _settle(tester);
+    }
 
-    await tester.ensureVisible(find.byKey(const Key('venue-name')));
-    await tester.enterText(find.byKey(const Key('venue-name')), 'Cancha 1');
-    await _settle(tester);
+    await tapVisible(
+      find.descendant(of: sub10, matching: find.text('Otro horario')),
+    );
+    await tapVisible(
+      find.descendant(
+        of: find.byKey(const ValueKey('slot-1-1')),
+        matching: find.text('Sáb'),
+      ),
+    );
+
+    // Aviso de choque debajo del horario (se puede guardar igual).
+    expect(
+      find.text(
+        'Choca con Sub-14 el sábado de 17:00 a 18:30 en Polideportivo · Cancha 1.',
+      ),
+      findsOneWidget,
+    );
     await tester.tap(find.text('Crear 2 categorías'));
     await _settle(tester);
 
@@ -535,15 +585,14 @@ void main() {
       'Sub-10',
     ]);
     expect(((body['groups']! as List).first as Map)['schedules'], [
-      {'weekday': 2, 'starts_at': '17:00', 'ends_at': '18:30'},
-      {'weekday': 4, 'starts_at': '17:00', 'ends_at': '18:30'},
+      {'weekday': 2, 'starts_at': '17:00', 'ends_at': '18:30', 'venue_id': 11},
+      {'weekday': 4, 'starts_at': '17:00', 'ends_at': '18:30', 'venue_id': 11},
     ]);
     expect(((body['groups']! as List).last as Map)['schedules'], [
-      {'weekday': 2, 'starts_at': '17:00', 'ends_at': '18:30'},
-      {'weekday': 4, 'starts_at': '17:00', 'ends_at': '18:30'},
-      {'weekday': 6, 'starts_at': '17:00', 'ends_at': '18:30'},
+      {'weekday': 2, 'starts_at': '17:00', 'ends_at': '18:30', 'venue_id': 11},
+      {'weekday': 4, 'starts_at': '17:00', 'ends_at': '18:30', 'venue_id': 11},
+      {'weekday': 6, 'starts_at': '17:00', 'ends_at': '18:30', 'venue_id': 11},
     ]);
-    expect(body['venue'], {'name': 'Cancha 1'});
     expect(find.text('¿Cuándo es la temporada?'), findsOneWidget);
   });
 
@@ -794,5 +843,66 @@ void main() {
     expect(find.text('¿Cuándo vence?'), findsOneWidget);
     expect(find.text('Opciones avanzadas'), findsNothing);
     expect(find.textContaining('mitad de'), findsNothing);
+  });
+
+  testWidgets('con "Grupo" y "Profesora" los textos concuerdan', (
+    tester,
+  ) async {
+    await _pumpApp(tester, {
+      ..._admin(
+        onboarding: () => onboardingJson(programs: 'done', groups: 'pending'),
+      ),
+      'GET /organization': (_) =>
+          organizationJson(group: 'Grupo', instructor: 'Profesora'),
+      'GET /setup/programs': (_) => {
+        'data': [programJson(1, 'Danza', criterion: 'level')],
+      },
+      'GET /setup/groups': (_) => {'data': <Object?>[]},
+      'GET /setup/sites': (_) => {'data': <Object?>[]},
+      'POST /setup/groups/suggestions': (_) => {
+        'data': [
+          {
+            'name': 'Inicial',
+            'min_age': null,
+            'max_age': null,
+            'level': 'Inicial',
+          },
+          {
+            'name': 'Avanzado',
+            'min_age': null,
+            'max_age': null,
+            'level': 'Avanzado',
+          },
+        ],
+      },
+      'GET /setup/instructors': (_) => instructorsJson(),
+    }, location: '/configurar/categorias');
+
+    expect(
+      find.textContaining('Las familias eligen el grupo al inscribirse.'),
+      findsOneWidget,
+    );
+    expect(find.text('Nuevos en Danza'), findsOneWidget);
+    expect(find.text('Agregar otro'), findsOneWidget);
+
+    await tester.tap(find.text('Siguiente: horarios'));
+    await _settle(tester);
+    expect(find.textContaining('el horario de cada uno'), findsOneWidget);
+    expect(find.textContaining('«Copiar a todos»'), findsOneWidget);
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(Scaffold).first),
+    );
+    container.read(routerProvider).go('/configurar/tecnicos');
+    await _settle(tester);
+    expect(find.text('Invitar a una profesora'), findsOneWidget);
+    expect(
+      find.text('Todavía no invitaste a ninguna profesora.'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('Las profesoras toman asistencia'),
+      findsOneWidget,
+    );
   });
 }

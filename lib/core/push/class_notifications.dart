@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../config/env.dart';
+import '../theme/tuku_theme.dart';
 
 /// Push de clases que la app dibuja con botones (llegan solo con `data` en
 /// Android): "¿Lo llevás?" con [Sí, va] [No va] y el aviso del técnico con
@@ -129,7 +130,9 @@ class ClassNotifications {
   Future<void> initialize({ValueChanged<String>? onOpen}) async {
     await _plugin.initialize(
       settings: InitializationSettings(
-        android: const AndroidInitializationSettings('@mipmap/ic_launcher'),
+        android: const AndroidInitializationSettings(
+          '@drawable/ic_notification',
+        ),
         iOS: DarwinInitializationSettings(
           requestAlertPermission: false,
           requestBadgePermission: false,
@@ -184,6 +187,7 @@ class ClassNotifications {
         push.type == ActionablePush.today ? 'Mis clases' : 'Días de clase',
         importance: Importance.high,
         priority: Priority.high,
+        color: TukuColors.verde,
         styleInformation: BigTextStyleInformation(push.body),
         actions: push.type == ActionablePush.today
             ? const [
@@ -226,6 +230,7 @@ class ClassNotifications {
             android: AndroidNotificationDetails(
               'dias_de_clase',
               'Días de clase',
+              color: TukuColors.verde,
             ),
           ),
         );

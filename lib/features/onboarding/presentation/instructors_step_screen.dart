@@ -107,8 +107,10 @@ class _InstructorsStepScreenState extends ConsumerState<InstructorsStepScreen>
       stepKey: 'instructors',
       title: '¿Quién da las clases?',
       description:
-          'Los ${plural.toLowerCase()} toman asistencia desde la app y ven a '
-          'sus alumnos. Los invitás con su correo.',
+          '${gendered(role, 'Los', 'Las')} ${plural.toLowerCase()} toman '
+          'asistencia desde la app y ven a sus '
+          '${pluralize(organization?.term('student') ?? 'Alumno').toLowerCase()}. '
+          '${gendered(role, 'Los', 'Las')} invitás con su correo.',
       primaryLabel: 'Listo, seguir',
       onPrimary: anyone ? _continue : null,
       loading: _saving,
@@ -162,7 +164,10 @@ class _InstructorsStepScreenState extends ConsumerState<InstructorsStepScreen>
               ],
               StepSection(plural),
               if (step.team.instructors.isEmpty)
-                Text('Todavía no invitaste a ningún ${role.toLowerCase()}.'),
+                Text(
+                  'Todavía no invitaste a ${gendered(role, 'ningún', 'ninguna')} '
+                  '${role.toLowerCase()}.',
+                ),
               for (final instructor in step.team.instructors)
                 Card(
                   child: ListTile(
@@ -207,7 +212,9 @@ class _InstructorsStepScreenState extends ConsumerState<InstructorsStepScreen>
               OutlinedButton.icon(
                 key: const Key('invite-instructor'),
                 icon: const Icon(Icons.person_add_alt_1_outlined),
-                label: Text('Invitar a un ${role.toLowerCase()}'),
+                label: Text(
+                  'Invitar a ${gendered(role, 'un', 'una')} ${role.toLowerCase()}',
+                ),
                 onPressed: () => _invite(step, role),
               ),
             ],
@@ -284,7 +291,8 @@ class _InviteSheetState extends ConsumerState<_InviteSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Invitar a un ${widget.role.toLowerCase()}',
+                'Invitar a ${gendered(widget.role, 'un', 'una')} '
+                '${widget.role.toLowerCase()}',
                 style: theme.textTheme.titleLarge,
               ),
               const SizedBox(height: 16),

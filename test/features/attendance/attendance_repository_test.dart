@@ -227,7 +227,7 @@ void main() {
       },
     }, requests: requests);
 
-    final session = await repository.reschedule(
+    final (session, warnings) = await repository.reschedule(
       81,
       RescheduleRequest(
         date: DateTime(2026, 10, 3),
@@ -244,6 +244,7 @@ void main() {
       'venue_id': 2,
       'reason': 'Lluvia',
     });
+    expect(warnings, isEmpty);
     expect(session.rescheduled, isTrue);
     expect(session.isOff, isTrue);
     expect(

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/push/push_service.dart';
 import 'core/storage/offline_store.dart';
+import 'core/theme/tuku_theme.dart';
 import 'features/attendance/data/attendance_outbox.dart';
 import 'features/auth/data/session_controller.dart';
 import 'router.dart';
@@ -68,17 +69,13 @@ class _AppState extends ConsumerState<App> {
     });
 
     return MaterialApp.router(
-      title: 'Academia',
+      title: 'Tuku',
       debugShowCheckedModeBanner: false,
       locale: App.locale,
       supportedLocales: const [App.locale],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF059669)),
-        inputDecorationTheme: const InputDecorationTheme(
-          border: OutlineInputBorder(),
-        ),
-      ),
+      theme: tukuLightTheme(),
+      darkTheme: tukuDarkTheme(),
       routerConfig: router,
     );
   }

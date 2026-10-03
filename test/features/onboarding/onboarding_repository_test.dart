@@ -272,60 +272,72 @@ void main() {
       expect(onboarding.done, 1);
     });
 
-    test('crea categorías con horario propio y un lugar nuevo', () async {
-      final requests = <RequestOptions>[];
-      final repository = OnboardingRepository(
-        fakeDio({
-          'POST /setup/groups': (_) => {
-            'data': [groupJson(3, 'Sub-10'), groupJson(4, 'Sub-12')],
+    test(
+      'crea categorías con horario propio y la cancha de cada horario',
+      () async {
+        final requests = <RequestOptions>[];
+        final repository = OnboardingRepository(
+          fakeDio({
+            'POST /setup/groups': (_) => {
+              'data': [groupJson(3, 'Sub-10'), groupJson(4, 'Sub-12')],
+            },
+          }, requests: requests),
+          InMemorySessionStorage(),
+        );
+
+        final created = await repository.createGroups(
+          programId: 1,
+          groups: const [
+            GroupDraft(
+              name: 'Sub-10',
+              minAge: 9,
+              maxAge: 10,
+              slots: [
+                WeeklyTime(weekdays: {4, 2}, venueId: 7),
+              ],
+            ),
+            GroupDraft(
+              name: 'Sub-12',
+              minAge: 11,
+              maxAge: 12,
+              // Dos horarios: martes a la tarde y sábado a la mañana; el vacío no va.
+              slots: [
+                WeeklyTime(weekdays: {2}, startsAt: '18:30', endsAt: '20:00'),
+                WeeklyTime(weekdays: {6}, startsAt: '09:00', endsAt: '10:30'),
+                WeeklyTime(),
+              ],
+            ),
+          ],
+          capacity: 20,
+        );
+
+        expect(created, hasLength(2));
+        final body = requests.single.data as Map<String, Object?>;
+        expect(body['program_id'], 1);
+        expect(body.containsKey('venue'), isFalse);
+        final groups = body['groups']! as List;
+        // Cada horario con su cancha.
+        expect((groups.first as Map)['schedules'], [
+          {
+            'weekday': 2,
+            'starts_at': '17:00',
+            'ends_at': '18:30',
+            'venue_id': 7,
           },
-        }, requests: requests),
-        InMemorySessionStorage(),
-      );
-
-      final created = await repository.createGroups(
-        programId: 1,
-        groups: const [
-          GroupDraft(
-            name: 'Sub-10',
-            minAge: 9,
-            maxAge: 10,
-            slots: [
-              WeeklyTime(weekdays: {4, 2}),
-            ],
-          ),
-          GroupDraft(
-            name: 'Sub-12',
-            minAge: 11,
-            maxAge: 12,
-            // Dos horarios: martes a la tarde y sábado a la mañana; el vacío no va.
-            slots: [
-              WeeklyTime(weekdays: {2}, startsAt: '18:30', endsAt: '20:00'),
-              WeeklyTime(weekdays: {6}, startsAt: '09:00', endsAt: '10:30'),
-              WeeklyTime(),
-            ],
-          ),
-        ],
-        capacity: 20,
-        venueName: ' Polideportivo ',
-        venueAddress: '',
-      );
-
-      expect(created, hasLength(2));
-      final body = requests.single.data as Map<String, Object?>;
-      expect(body['program_id'], 1);
-      expect(body['venue'], {'name': 'Polideportivo'});
-      final groups = body['groups']! as List;
-      expect((groups.first as Map)['schedules'], [
-        {'weekday': 2, 'starts_at': '17:00', 'ends_at': '18:30'},
-        {'weekday': 4, 'starts_at': '17:00', 'ends_at': '18:30'},
-      ]);
-      expect((groups.first as Map)['capacity'], 20);
-      expect((groups.last as Map)['schedules'], [
-        {'weekday': 2, 'starts_at': '18:30', 'ends_at': '20:00'},
-        {'weekday': 6, 'starts_at': '09:00', 'ends_at': '10:30'},
-      ]);
-    });
+          {
+            'weekday': 4,
+            'starts_at': '17:00',
+            'ends_at': '18:30',
+            'venue_id': 7,
+          },
+        ]);
+        expect((groups.first as Map)['capacity'], 20);
+        expect((groups.last as Map)['schedules'], [
+          {'weekday': 2, 'starts_at': '18:30', 'ends_at': '20:00'},
+          {'weekday': 6, 'starts_at': '09:00', 'ends_at': '10:30'},
+        ]);
+      },
+    );
 
     test('la temporada va con los mismos campos que el panel', () async {
       final requests = <RequestOptions>[];

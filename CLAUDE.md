@@ -6,7 +6,7 @@ Guía para Claude Code al trabajar en este repositorio.
 
 App (Android, iOS y web) del SaaS para academias, clubes y escuelas de formación.
 Usuarios: padres/tutores, técnicos/instructores y miembros de la comisión.
-Piloto: **Club Jakare**. Nombre del producto: pendiente (nombre en clave: `academia`).
+Piloto: **Club Jakare**. Producto: **Tuku** (dominio `tukuha.app`; el paquete sigue siendo `academia_app`).
 
 El backend (Laravel 13 + Filament) vive en el repo `academia-api`; su `business-logic.md`
 es el documento maestro de negocio.
@@ -34,6 +34,7 @@ flutter run -d chrome --dart-define=API_BASE_URL=http://localhost/api/v1
 flutter analyze
 flutter test
 dart format lib test
+cd tool/brand_icons && npm install && node generate.mjs   # íconos y pantalla de inicio desde assets/brand/
 ```
 
 ## Arquitectura
@@ -43,7 +44,7 @@ lib/
   core/        config (Env), api (dio + interceptor), storage (token y organización)
   features/    una carpeta por funcionalidad: data/ (repositorios, modelos) y presentation/ (pantallas)
   router.dart  rutas y redirecciones según la sesión
-  app.dart     MaterialApp (tema, locale es)
+  app.dart     MaterialApp (tema claro y oscuro de Tuku, locale es)
 ```
 
 - **Autenticación:** token Sanctum (`POST /api/v1/auth/token` con `login`: celular o correo) guardado en
@@ -107,6 +108,12 @@ lib/
 - **Contrato de API:** `academia-api/docs/API_V1.md`. La app se construye primero contra el
   contrato (fakes en tests, ver `fakeDio` en `test/fakes.dart`) y después se implementa la API.
 - Dinero: montos enteros en guaraníes, formateados como `₲ 150.000`.
+- **Marca Tuku:** tema en `core/theme/tuku_theme.dart` (tokens del sistema de diseño: verde, brote, sol, aviso en
+  `tertiary`, sin azul ni rojo de marca; claro y oscuro según el sistema) y `TukuLogo`/`TukuSplash` en
+  `core/theme/brand.dart`. Tipografías empaquetadas en `assets/fonts/` (Baloo 2 para `display*`/`headline*`,
+  Nunito Sans para el resto). Usar colores del `ColorScheme`, nunca `Color(0x…)` sueltos. Los SVG maestros
+  (logo, ícono, mascota) están en `assets/brand/`; los PNG de Android, iOS y la web se generan con
+  `tool/brand_icons`.
 
 ## Convenciones
 

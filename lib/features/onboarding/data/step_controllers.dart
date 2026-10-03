@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
-import '../../attendance/data/models.dart';
 import '../../organizations/data/organization_repository.dart';
 import 'models.dart';
 import 'onboarding_controller.dart';
@@ -128,7 +127,7 @@ class GroupsStep {
   const GroupsStep({
     required this.programs,
     required this.groups,
-    required this.venues,
+    required this.sites,
     required this.levels,
     this.programId,
     this.drafts = const [],
@@ -136,14 +135,15 @@ class GroupsStep {
     this.agesTo = 16,
     this.agesSpan = 2,
     this.capacity,
-    this.venueId,
-    this.newVenueName = '',
-    this.newVenueAddress = '',
+    this.lastVenueId,
+    this.conflicts = const {},
   });
 
   final List<SetupProgram> programs;
   final List<SetupGroup> groups;
-  final List<Venue> venues;
+
+  /// Lugares con sus canchas (salas, aulas).
+  final List<Site> sites;
 
   /// Niveles para generar (con criterio por nivel).
   final List<String> levels;
@@ -157,10 +157,14 @@ class GroupsStep {
 
   final int? capacity;
 
-  /// Lugar existente; si es null y hay nombre, se crea uno nuevo.
-  final int? venueId;
-  final String newVenueName;
-  final String newVenueAddress;
+  /// La última cancha elegida: se sugiere en los horarios nuevos.
+  final int? lastVenueId;
+
+  /// Choques de los horarios ("i-j" → avisos), según la API.
+  final Map<String, List<String>> conflicts;
+
+  /// Todas las canchas de todos los lugares.
+  List<Space> get spaces => [for (final site in sites) ...site.spaces];
 
   SetupProgram? get program {
     for (final p in programs) {
@@ -185,7 +189,7 @@ class GroupsStep {
   GroupsStep copyWith({
     List<SetupProgram>? programs,
     List<SetupGroup>? groups,
-    List<Venue>? venues,
+    List<Site>? sites,
     List<String>? levels,
     int? programId,
     List<GroupDraft>? drafts,
@@ -194,14 +198,12 @@ class GroupsStep {
     int? agesSpan,
     int? capacity,
     bool clearCapacity = false,
-    int? venueId,
-    bool clearVenue = false,
-    String? newVenueName,
-    String? newVenueAddress,
+    int? lastVenueId,
+    Map<String, List<String>>? conflicts,
   }) => GroupsStep(
     programs: programs ?? this.programs,
     groups: groups ?? this.groups,
-    venues: venues ?? this.venues,
+    sites: sites ?? this.sites,
     levels: levels ?? this.levels,
     programId: programId ?? this.programId,
     drafts: drafts ?? this.drafts,
@@ -209,9 +211,8 @@ class GroupsStep {
     agesTo: agesTo ?? this.agesTo,
     agesSpan: agesSpan ?? this.agesSpan,
     capacity: clearCapacity ? null : (capacity ?? this.capacity),
-    venueId: clearVenue ? null : (venueId ?? this.venueId),
-    newVenueName: newVenueName ?? this.newVenueName,
-    newVenueAddress: newVenueAddress ?? this.newVenueAddress,
+    lastVenueId: lastVenueId ?? this.lastVenueId,
+    conflicts: conflicts ?? this.conflicts,
   );
 
   /// Pantalla 1 (la lista): null si se puede seguir a los horarios.
@@ -255,16 +256,18 @@ class GroupsStepController extends AsyncNotifier<GroupsStep> {
     final templates = await ref.watch(onboardingTemplatesProvider.future);
     final programs = await _repository.programs();
     final groups = await _repository.groups();
-    final venues = await _repository.venues();
+    final sites = await _repository.sites();
+    final spaces = [for (final site in sites) ...site.spaces];
     var step = GroupsStep(
       programs: programs,
       groups: groups,
-      venues: venues,
+      sites: sites,
       levels: templates.levels,
       agesFrom: templates.agesFrom,
       agesTo: templates.agesTo,
       agesSpan: templates.agesSpan,
-      venueId: venues.length == 1 ? venues.first.id : null,
+      // Con una sola cancha, se sugiere en todos los horarios.
+      lastVenueId: spaces.length == 1 ? spaces.first.id : null,
     );
     final first = programs.where((p) => step.groupsOf(p.id).isEmpty);
     final program = first.isNotEmpty
@@ -282,13 +285,17 @@ class GroupsStepController extends AsyncNotifier<GroupsStep> {
   Future<List<GroupDraft>> _suggest(GroupsStep step) async {
     final program = step.program;
     if (program == null) return const [];
-    return _repository.suggestGroups(
+    final drafts = await _repository.suggestGroups(
       programId: program.id,
       from: step.agesFrom,
       to: step.agesTo,
       span: step.agesSpan,
       levels: step.byAge ? null : step.levels,
     );
+    return [
+      for (final draft in drafts)
+        draft.copyWith(slots: [WeeklyTime(venueId: step.lastVenueId)]),
+    ];
   }
 
   Future<void> _regenerate(GroupsStep step) async {
@@ -352,7 +359,11 @@ class GroupsStepController extends AsyncNotifier<GroupsStep> {
     (s) => s.copyWith(
       drafts: [
         ...s.drafts,
-        GroupDraft(name: name.trim(), level: s.byAge ? null : name.trim()),
+        GroupDraft(
+          name: name.trim(),
+          level: s.byAge ? null : name.trim(),
+          slots: [WeeklyTime(venueId: s.lastVenueId)],
+        ),
       ],
     ),
   );
@@ -360,18 +371,25 @@ class GroupsStepController extends AsyncNotifier<GroupsStep> {
   void _editSlots(
     int index,
     List<WeeklyTime> Function(List<WeeklyTime>) change,
-  ) => _edit(
-    (s) => s.copyWith(
-      drafts: [...s.drafts]
-        ..[index] = s.drafts[index].copyWith(
-          slots: change([...s.drafts[index].slots]),
-        ),
-    ),
-  );
+  ) {
+    _edit(
+      (s) => s.copyWith(
+        drafts: [...s.drafts]
+          ..[index] = s.drafts[index].copyWith(
+            slots: change([...s.drafts[index].slots]),
+          ),
+      ),
+    );
+    _checkConflicts();
+  }
 
-  /// Cambia un horario de una categoría (días u horas).
-  void setSlot(int index, int slot, WeeklyTime time) =>
-      _editSlots(index, (slots) => slots..[slot] = time);
+  /// Cambia un horario de una categoría (días, horas o cancha).
+  void setSlot(int index, int slot, WeeklyTime time) {
+    if (time.venueId != null) {
+      _edit((s) => s.copyWith(lastVenueId: time.venueId));
+    }
+    _editSlots(index, (slots) => slots..[slot] = time);
+  }
 
   /// "+ Otro horario": otros días a otra hora (ej. sábado a la mañana).
   void addSlot(int index) => _editSlots(
@@ -381,37 +399,118 @@ class GroupsStepController extends AsyncNotifier<GroupsStep> {
       WeeklyTime(
         startsAt: slots.isEmpty ? '17:00' : slots.last.startsAt,
         endsAt: slots.isEmpty ? '18:30' : slots.last.endsAt,
+        venueId: slots.isEmpty ? _step?.lastVenueId : slots.last.venueId,
       ),
     ],
   );
 
   void removeSlot(int index, int slot) => _editSlots(
     index,
-    (slots) =>
-        slots.length == 1 ? [const WeeklyTime()] : (slots..removeAt(slot)),
+    (slots) => slots.length == 1
+        ? [WeeklyTime(venueId: slots.first.venueId)]
+        : (slots..removeAt(slot)),
   );
 
   /// "Copiar a todas": los horarios de una categoría pasan a las demás.
-  void copySlotsToAll(int index) => _edit((s) {
-    final slots = s.drafts[index].slots;
-    return s.copyWith(
-      drafts: [for (final draft in s.drafts) draft.copyWith(slots: slots)],
+  void copySlotsToAll(int index) {
+    _edit((s) {
+      final slots = s.drafts[index].slots;
+      return s.copyWith(
+        drafts: [for (final draft in s.drafts) draft.copyWith(slots: slots)],
+      );
+    });
+    _checkConflicts();
+  }
+
+  /// Lugar nuevo (con sus canchas); su primera cancha queda en los horarios
+  /// que todavía no tienen. Devuelve el error o null.
+  Future<String?> createSite({
+    required String name,
+    String? address,
+    List<String> spaces = const [],
+  }) async {
+    try {
+      final site = await _repository.createSite(
+        name: name.trim(),
+        address: address,
+        spaces: spaces,
+      );
+      _useSite(site);
+      return null;
+    } catch (error) {
+      return apiErrorMessage(error);
+    }
+  }
+
+  /// Otra cancha en un lugar que ya existe.
+  Future<String?> addSpace(Site site, String name) async {
+    try {
+      final updated = await _repository.addSpace(site.id, name.trim());
+      _edit(
+        (s) => s.copyWith(
+          sites: [for (final x in s.sites) x.id == site.id ? updated : x],
+        ),
+      );
+      return null;
+    } catch (error) {
+      return apiErrorMessage(error);
+    }
+  }
+
+  void _useSite(Site site) {
+    final first = site.spaces.isEmpty ? null : site.spaces.first.id;
+    _edit(
+      (s) => s.copyWith(
+        sites: [...s.sites, site],
+        lastVenueId: first,
+        drafts: [
+          for (final draft in s.drafts)
+            draft.copyWith(
+              slots: [
+                for (final slot in draft.slots)
+                  slot.venueId == null ? slot.copyWith(venueId: first) : slot,
+              ],
+            ),
+        ],
+      ),
     );
-  });
+    _checkConflicts();
+  }
+
+  /// Pide a la API los choques (misma cancha, mismo día y hora) de lo que se
+  /// está cargando, contra lo guardado y entre sí.
+  Future<void> _checkConflicts() async {
+    final step = _step;
+    if (step == null || step.program == null) return;
+    final schedules = <Map<String, Object?>>[
+      for (var i = 0; i < step.drafts.length; i++)
+        for (var j = 0; j < step.drafts[i].slots.length; j++)
+          if (!step.drafts[i].slots[j].isEmpty &&
+              step.drafts[i].slots[j].validate() == null)
+            for (final schedule in step.drafts[i].slots[j].toSchedules())
+              {
+                'key': '$i-$j',
+                'group_name': step.drafts[i].name,
+                'weekday': schedule.weekday,
+                'starts_at': schedule.startsAt,
+                'ends_at': schedule.endsAt,
+                'venue_id': schedule.venueId,
+              },
+    ];
+    if (schedules.every((s) => s['venue_id'] == null)) {
+      _edit((s) => s.copyWith(conflicts: const {}));
+      return;
+    }
+    try {
+      final conflicts = await _repository.scheduleConflicts(schedules);
+      _edit((s) => s.copyWith(conflicts: conflicts));
+    } catch (_) {
+      // Sin aviso: se puede guardar igual.
+    }
+  }
 
   void setCapacity(int? capacity) => _edit(
     (s) => s.copyWith(capacity: capacity, clearCapacity: capacity == null),
-  );
-
-  void selectVenue(int? id) =>
-      _edit((s) => s.copyWith(venueId: id, clearVenue: id == null));
-
-  void setNewVenue({String? name, String? address}) => _edit(
-    (s) => s.copyWith(
-      newVenueName: name,
-      newVenueAddress: address,
-      clearVenue: true,
-    ),
   );
 
   /// Crea las categorías de la disciplina; devuelve el error o null. Si queda
@@ -426,25 +525,12 @@ class GroupsStepController extends AsyncNotifier<GroupsStep> {
         programId: step.programId!,
         groups: step.drafts,
         capacity: step.capacity,
-        venueId: step.venueId,
-        venueName: step.venueId == null ? step.newVenueName : null,
-        venueAddress: step.newVenueAddress,
       );
-      final venues = step.venueId == null && step.newVenueName.trim().isNotEmpty
-          ? await _repository.venues()
-          : step.venues;
-      var next = step.copyWith(
+      final next = step.copyWith(
         groups: [...step.groups, ...created],
-        venues: venues,
         drafts: const [],
-        newVenueName: '',
-        newVenueAddress: '',
+        conflicts: const {},
       );
-      // El lugar recién creado queda elegido para la próxima disciplina.
-      if (step.venueId == null && step.newVenueName.trim().isNotEmpty) {
-        final match = venues.where((v) => v.name == step.newVenueName.trim());
-        if (match.isNotEmpty) next = next.copyWith(venueId: match.first.id);
-      }
       final pending = next.nextWithoutGroups;
       if (pending != null) {
         await _regenerate(next.copyWith(programId: pending.id));
@@ -749,14 +835,14 @@ class InstructorsStepController extends AsyncNotifier<InstructorsStep> {
     final step = _step;
     if (step == null) return null;
     try {
-      final team = await _repository.setTeaching(
+      final (team, warnings) = await _repository.setTeaching(
         teaches: teaches,
         groupIds: groupIds,
       );
       state = AsyncData(step.copyWith(team: team));
       // Dar clases cambia el permiso de tomar asistencia (tarjeta del inicio).
       ref.invalidate(currentOrganizationProvider);
-      return null;
+      return _overlaps(warnings);
     } catch (error) {
       return apiErrorMessage(error);
     }
@@ -786,12 +872,20 @@ class InstructorsStepController extends AsyncNotifier<InstructorsStep> {
     List<int> groupIds,
   ) async {
     try {
-      await _repository.setInstructorGroups(instructor.userId!, groupIds);
-      return await _reload();
+      final (_, warnings) = await _repository.setInstructorGroups(
+        instructor.userId!,
+        groupIds,
+      );
+      await _reload();
+      return _overlaps(warnings);
     } catch (error) {
       return apiErrorMessage(error);
     }
   }
+
+  /// Dos categorías a la misma hora: se guardó igual, pero se avisa.
+  String? _overlaps(List<String> warnings) =>
+      warnings.isEmpty ? null : 'Ojo, se superponen: ${warnings.join(' ')}';
 
   /// Link nuevo de una invitación pendiente o vencida.
   Future<String> resend(SetupInstructor instructor) async {

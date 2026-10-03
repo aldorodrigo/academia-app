@@ -1,11 +1,11 @@
 {
-    "name": "Academia",
-    "short_name": "Academia",
+    "name": "Tuku",
+    "short_name": "Tuku",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "App de la plataforma para academias, clubes y escuelas",
+    "background_color": "#F6F9F3",
+    "theme_color": "#167A3A",
+    "description": "Las actividades de tus hijos, en un solo lugar.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

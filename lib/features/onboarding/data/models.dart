@@ -224,6 +224,17 @@ class SlugCheck {
   String? get usable => available ? slug : suggestion;
 }
 
+/// Género de un término del club (Categoría / Grupo, Técnico / Profesora),
+/// para que los textos concuerden: "la categoría" / "el grupo".
+bool isFeminine(String word) {
+  final lower = word.trim().toLowerCase();
+  return lower == 'clase' || lower.endsWith('a') || lower.endsWith('dad');
+}
+
+/// La forma según el género: gendered('Grupo', 'otro', 'otra') → "otro".
+String gendered(String word, String masculine, String feminine) =>
+    isFeminine(word) ? feminine : masculine;
+
 /// Plural en español de los términos habituales (categoría → categorías).
 String pluralize(String word) {
   final lower = word.toLowerCase();
@@ -312,6 +323,7 @@ class WeeklyTime {
     this.weekdays = const {},
     this.startsAt = '17:00',
     this.endsAt = '18:30',
+    this.venueId,
   });
 
   /// Los horarios de una categoría, si todos son a la misma hora.
@@ -321,18 +333,28 @@ class WeeklyTime {
           weekdays: {for (final s in schedules) s.weekday},
           startsAt: schedules.first.startsAt,
           endsAt: schedules.first.endsAt,
+          venueId: schedules.first.venueId,
         );
 
   final Set<int> weekdays;
   final String startsAt;
   final String endsAt;
 
-  WeeklyTime copyWith({Set<int>? weekdays, String? startsAt, String? endsAt}) =>
-      WeeklyTime(
-        weekdays: weekdays ?? this.weekdays,
-        startsAt: startsAt ?? this.startsAt,
-        endsAt: endsAt ?? this.endsAt,
-      );
+  /// La cancha (sala, aula) de un lugar; null = sin cancha.
+  final int? venueId;
+
+  WeeklyTime copyWith({
+    Set<int>? weekdays,
+    String? startsAt,
+    String? endsAt,
+    int? venueId,
+    bool clearVenue = false,
+  }) => WeeklyTime(
+    weekdays: weekdays ?? this.weekdays,
+    startsAt: startsAt ?? this.startsAt,
+    endsAt: endsAt ?? this.endsAt,
+    venueId: clearVenue ? null : (venueId ?? this.venueId),
+  );
 
   bool get isEmpty => weekdays.isEmpty;
 
@@ -351,7 +373,7 @@ class WeeklyTime {
         weekday: day,
         startsAt: startsAt,
         endsAt: endsAt,
-        venueId: venueId,
+        venueId: venueId ?? this.venueId,
       ),
   ];
 
@@ -376,6 +398,47 @@ String describeSchedules(List<GroupSchedule> schedules) {
   return byTime.values
       .map((list) => WeeklyTime.of(list).toString())
       .join(' · ');
+}
+
+/// Cancha, sala o aula de un lugar.
+class Space {
+  const Space({required this.id, required this.name, required this.label});
+
+  factory Space.fromJson(Map<String, dynamic> json) => Space(
+    id: json['id'] as int,
+    name: json['name'] as String,
+    label: json['label'] as String? ?? json['name'] as String,
+  );
+
+  final int id;
+  final String name;
+
+  /// "Polideportivo · Cancha 2" (o solo el lugar si tiene una sola).
+  final String label;
+}
+
+/// Lugar donde entrena el club, con sus canchas.
+class Site {
+  const Site({
+    required this.id,
+    required this.name,
+    this.address,
+    this.spaces = const [],
+  });
+
+  factory Site.fromJson(Map<String, dynamic> json) => Site(
+    id: json['id'] as int,
+    name: json['name'] as String,
+    address: json['address'] as String?,
+    spaces: ((json['spaces'] as List?) ?? const [])
+        .map((s) => Space.fromJson(s as Map<String, dynamic>))
+        .toList(),
+  );
+
+  final int id;
+  final String name;
+  final String? address;
+  final List<Space> spaces;
 }
 
 class SetupGroup {

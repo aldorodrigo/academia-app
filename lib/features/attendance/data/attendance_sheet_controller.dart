@@ -210,8 +210,16 @@ class AttendanceSheetController extends AsyncNotifier<AttendanceSheet> {
 
   Future<void> resume() => _replaceSession(() => _repository.resume(classId));
 
-  Future<void> reschedule(RescheduleRequest request) =>
-      _replaceSession(() => _repository.reschedule(classId, request));
+  /// Reprograma y devuelve los avisos de choque (se reprograma igual).
+  Future<List<String>> reschedule(RescheduleRequest request) async {
+    var warnings = const <String>[];
+    await _replaceSession(() async {
+      final (session, found) = await _repository.reschedule(classId, request);
+      warnings = found;
+      return session;
+    });
+    return warnings;
+  }
 
   Future<void> cancelReschedule() =>
       _replaceSession(() => _repository.cancelReschedule(classId));

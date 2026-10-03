@@ -54,8 +54,9 @@ class _ProgramsStepScreenState extends ConsumerState<ProgramsStepScreen>
       stepKey: 'programs',
       title: '¿Qué enseñan?',
       description:
-          'Elegí una o más ${pluralize(program).toLowerCase()}. '
-          'Después podés agregar otras.',
+          'Elegí ${gendered(program, 'uno o más', 'una o más')} '
+          '${pluralize(program).toLowerCase()}. '
+          'Después podés agregar ${gendered(program, 'otros', 'otras')}.',
       primaryLabel: value != null && value.selected.isEmpty && ready
           ? 'Seguir'
           : 'Guardar y seguir',
@@ -98,14 +99,15 @@ class _ProgramsStepScreenState extends ConsumerState<ProgramsStepScreen>
                     ),
                   ActionChip(
                     avatar: const Icon(Icons.add, size: 18),
-                    label: const Text('Otra'),
+                    label: Text(gendered(program, 'Otro', 'Otra')),
                     onPressed: () => _addCustom(program),
                   ),
                 ],
               ),
               if (step.selected.isNotEmpty) ...[
                 StepSection(
-                  '¿Cómo se arman las ${pluralize(group).toLowerCase()}?',
+                  '¿Cómo se arman ${gendered(group, 'los', 'las')} '
+                  '${pluralize(group).toLowerCase()}?',
                   help:
                       'Por edad (Sub-8, Sub-10…) o por nivel (Inicial, Avanzado…). '
                       'Lo sugerimos según la disciplina.',
@@ -160,7 +162,9 @@ class _CustomProgramDialogState extends State<_CustomProgramDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Otra ${widget.term.toLowerCase()}'),
+      title: Text(
+        '${gendered(widget.term, 'Otro', 'Otra')} ${widget.term.toLowerCase()}',
+      ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,

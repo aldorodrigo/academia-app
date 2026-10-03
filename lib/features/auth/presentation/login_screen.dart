@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/theme/brand.dart';
 import '../../../core/utils/validators.dart';
 import '../data/session_controller.dart';
 
@@ -62,6 +63,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    const Center(child: TukuLogo()),
+                    const SizedBox(height: 24),
                     Text(
                       'Iniciar sesión',
                       style: theme.textTheme.headlineMedium,

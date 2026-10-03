@@ -142,12 +142,20 @@ class AttendanceRepository {
   }
 
   /// Pasa la clase a otro día u horario (crea la recuperación).
-  Future<ClassSession> reschedule(int id, RescheduleRequest request) async {
+  /// La clase y los avisos (si ese día otra categoría usa la cancha a esa hora).
+  Future<(ClassSession, List<String>)> reschedule(
+    int id,
+    RescheduleRequest request,
+  ) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/classes/$id/reschedule',
       data: request.toJson(),
     );
-    return ClassSession.fromJson(_data(response.data!));
+    final warnings = response.data!['warnings'];
+    return (
+      ClassSession.fromJson(_data(response.data!)),
+      warnings is List ? List<String>.from(warnings) : const <String>[],
+    );
   }
 
   Future<ClassSession> cancelReschedule(int id) async {

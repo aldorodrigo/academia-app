@@ -126,15 +126,11 @@ class OnboardingRepository {
     ),
   ).map(GroupDraft.fromJson).toList();
 
-  /// Crea las categorías con sus horarios; [venueId] o el lugar nuevo va en
-  /// todos los horarios.
+  /// Crea las categorías con sus horarios (cada horario con su cancha).
   Future<List<SetupGroup>> createGroups({
     required int programId,
     required List<GroupDraft> groups,
     int? capacity,
-    int? venueId,
-    String? venueName,
-    String? venueAddress,
   }) async => _list(
     await _dio.post<Object?>(
       '/setup/groups',
@@ -154,17 +150,54 @@ class OnboardingRepository {
               ],
             },
         ],
-        if (venueId != null)
-          'venue': {'id': venueId}
-        else if (venueName != null && venueName.trim().isNotEmpty)
-          'venue': {
-            'name': venueName.trim(),
-            if (venueAddress != null && venueAddress.trim().isNotEmpty)
-              'address': venueAddress.trim(),
-          },
       },
     ),
   ).map(SetupGroup.fromJson).toList();
+
+  // Lugares y canchas.
+
+  Future<List<Site>> sites() async =>
+      _list(await _dio.get<Object?>('/setup/sites'))
+          .map(Site.fromJson)
+          .toList();
+
+  /// Lugar nuevo; sin [spaces], con una cancha del mismo nombre.
+  Future<Site> createSite({
+    required String name,
+    String? address,
+    List<String> spaces = const [],
+  }) async => Site.fromJson(
+    _data(
+      await _dio.post(
+        '/setup/sites',
+        data: {
+          'name': name,
+          if (address != null && address.trim().isNotEmpty) 'address': address,
+          if (spaces.isNotEmpty) 'spaces': spaces,
+        },
+      ),
+    ),
+  );
+
+  Future<Site> addSpace(int siteId, String name) async => Site.fromJson(
+    _data(await _dio.post('/setup/sites/$siteId/spaces', data: {'name': name})),
+  );
+
+  /// Choques de los horarios que se están cargando: clave → avisos.
+  Future<Map<String, List<String>>> scheduleConflicts(
+    List<Map<String, Object?>> schedules,
+  ) async {
+    final data = _data(
+      await _dio.post(
+        '/setup/schedules/conflicts',
+        data: {'schedules': schedules},
+      ),
+    );
+    return {
+      for (final entry in data.entries)
+        entry.key: List<String>.from(entry.value as List),
+    };
+  }
 
   Future<SetupGroup> updateGroup(
     SetupGroup group,
@@ -228,29 +261,36 @@ class OnboardingRepository {
     ),
   );
 
-  Future<SetupInstructors> setTeaching({
+  /// Devuelve el equipo y los avisos (ej. dos categorías a la misma hora).
+  Future<(SetupInstructors, List<String>)> setTeaching({
     required bool teaches,
     required List<int> groupIds,
-  }) async => SetupInstructors.fromJson(
-    _data(
-      await _dio.put(
-        '/setup/instructors/me',
-        data: {'teaches': teaches, 'group_ids': groupIds},
-      ),
-    ),
-  );
+  }) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      '/setup/instructors/me',
+      data: {'teaches': teaches, 'group_ids': groupIds},
+    );
+    return (SetupInstructors.fromJson(_data(response)), _warnings(response));
+  }
 
-  Future<SetupInstructor> setInstructorGroups(
+  List<String> _warnings(Response<Object?> response) {
+    final body = response.data;
+    return body is Map && body['warnings'] is List
+        ? List<String>.from(body['warnings'] as List)
+        : const [];
+  }
+
+  /// Devuelve el técnico y los avisos (dos categorías a la misma hora).
+  Future<(SetupInstructor, List<String>)> setInstructorGroups(
     int userId,
     List<int> groupIds,
-  ) async => SetupInstructor.fromJson(
-    _data(
-      await _dio.put(
-        '/setup/instructors/$userId',
-        data: {'group_ids': groupIds},
-      ),
-    ),
-  );
+  ) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      '/setup/instructors/$userId',
+      data: {'group_ids': groupIds},
+    );
+    return (SetupInstructor.fromJson(_data(response)), _warnings(response));
+  }
 
   /// Token nuevo para una invitación pendiente o vencida; devuelve el link.
   Future<String> resendInvitation(int id) async {

@@ -139,7 +139,7 @@ class _NextClassCardState extends ConsumerState<NextClassCard> {
                         ? Icons.check_circle
                         : Icons.event_busy,
                     color: item.response == GuardianResponse.going
-                        ? const Color(0xFF059669)
+                        ? theme.colorScheme.primary
                         : theme.colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 8),

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Colores de la marca Tuku: surface y verde. -->
+    <color name="splash_background">#F6F9F3</color>
+    <color name="ic_launcher_background">#167A3A</color>
+    <color name="notification_color">#167A3A</color>
+</resources>

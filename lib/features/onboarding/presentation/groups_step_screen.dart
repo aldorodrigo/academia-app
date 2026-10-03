@@ -26,16 +26,12 @@ class _GroupsStepScreenState extends ConsumerState<GroupsStepScreen>
   /// 0 = la lista, 1 = los horarios.
   int _page = 0;
   bool _saving = false;
-  final _venueName = TextEditingController();
-  final _venueAddress = TextEditingController();
   final _capacity = TextEditingController();
 
   GroupsStepController get _controller => ref.read(groupsStepProvider.notifier);
 
   @override
   void dispose() {
-    _venueName.dispose();
-    _venueAddress.dispose();
     _capacity.dispose();
     super.dispose();
   }
@@ -61,8 +57,6 @@ class _GroupsStepScreenState extends ConsumerState<GroupsStepScreen>
       showMessage(context, error);
       return;
     }
-    _venueName.clear();
-    _venueAddress.clear();
     final next = ref.read(groupsStepProvider).value;
     if (next?.programId != step.programId && next?.program != null) {
       // Queda otra disciplina sin categorías: se sigue en esta pantalla.
@@ -119,6 +113,31 @@ class _GroupsStepScreenState extends ConsumerState<GroupsStepScreen>
     return name == null || name.trim().isEmpty ? null : name.trim();
   }
 
+  /// "Nuevo lugar": nombre, dirección y sus canchas (opcional).
+  Future<void> _newSite(String space) async {
+    final result = await showDialog<(String, String, List<String>)>(
+      context: context,
+      builder: (_) => _SiteDialog(space: space),
+    );
+    if (result == null || !mounted) return;
+    final error = await _controller.createSite(
+      name: result.$1,
+      address: result.$2,
+      spaces: result.$3,
+    );
+    if (error != null && mounted) showMessage(context, error);
+  }
+
+  Future<void> _addSpace(Site site, String space) async {
+    final name = await _askName(
+      title: 'En ${site.name}',
+      hint: '$space ${site.spaces.length + 1}',
+    );
+    if (name == null) return;
+    final error = await _controller.addSpace(site, name);
+    if (error != null && mounted) showMessage(context, error);
+  }
+
   Future<void> _existingTime(SetupGroup group) async {
     final choice = await showDialog<WeeklyTimeChoice>(
       context: context,
@@ -160,6 +179,9 @@ class _GroupsStepScreenState extends ConsumerState<GroupsStepScreen>
     final organization = ref.watch(currentOrganizationProvider).value;
     final term = organization?.term('group') ?? 'Categoría';
     final plural = pluralize(term).toLowerCase();
+    // Concordancia con el término del club: "cada una" (categoría) / "cada uno" (grupo).
+    String g(String masculine, String feminine) =>
+        gendered(term, masculine, feminine);
     final step = async.value;
     final drafts = step?.drafts ?? const <GroupDraft>[];
     final hasAny = step != null && step.groups.isNotEmpty;
@@ -188,10 +210,10 @@ class _GroupsStepScreenState extends ConsumerState<GroupsStepScreen>
             ? '¿Qué $plural tienen?'
             : '¿Cuándo entrena cada ${term.toLowerCase()}?',
         description: _page == 0
-            ? 'Las familias eligen la ${term.toLowerCase()} al inscribirse. '
+            ? 'Las familias eligen ${g('el', 'la')} ${term.toLowerCase()} al inscribirse. '
                   'Te sugerimos una lista: cambiá lo que haga falta.'
-            : 'Elegí los días y el horario de cada una. Si entrenan igual, '
-                  'cargá una y tocá «Copiar a todas».',
+            : 'Elegí los días y el horario de cada ${g('uno', 'una')}. Si entrenan igual, '
+                  'cargá ${g('uno', 'una')} y tocá «Copiar a ${g('todos', 'todas')}».',
         primaryLabel: label,
         onPrimary: step == null ? null : action,
         loading: _saving,
@@ -244,7 +266,9 @@ class _GroupsStepScreenState extends ConsumerState<GroupsStepScreen>
           ),
         ],
         if (existing.isNotEmpty) ...[
-          StepSection('Ya creadas en ${program.name}'),
+          StepSection(
+            '${gendered(term, 'Ya creados', 'Ya creadas')} en ${program.name}',
+          ),
           for (final group in existing)
             Card(
               child: ListTile(
@@ -280,7 +304,9 @@ class _GroupsStepScreenState extends ConsumerState<GroupsStepScreen>
         ],
         if (existing.isEmpty || step.drafts.isNotEmpty) ...[
           StepSection(
-            existing.isEmpty ? 'Nuevas en ${program.name}' : 'Agregar',
+            existing.isEmpty
+                ? '${gendered(term, 'Nuevos', 'Nuevas')} en ${program.name}'
+                : 'Agregar',
             help: step.byAge
                 ? 'Por edad: la que cumplen en el año de la temporada.'
                 : 'Por nivel.',
@@ -353,7 +379,7 @@ class _GroupsStepScreenState extends ConsumerState<GroupsStepScreen>
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
               icon: const Icon(Icons.add),
-              label: const Text('Agregar otra'),
+              label: Text('Agregar ${gendered(term, 'otro', 'otra')}'),
               onPressed: () async {
                 final name = await _askName(
                   title: 'Agregar',
@@ -386,9 +412,51 @@ class _GroupsStepScreenState extends ConsumerState<GroupsStepScreen>
   Widget _schedules(GroupsStep step, String term) {
     final theme = Theme.of(context);
 
+    final space =
+        ref.read(currentOrganizationProvider).value?.term('space') ?? 'Cancha';
+    final spaces = pluralize(space).toLowerCase();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // Los lugares (con sus canchas) primero: cada horario elige su cancha.
+        StepSection(
+          '¿Dónde entrenan?',
+          help: 'Opcional. Un lugar puede tener varias $spaces.',
+        ),
+        for (final site in step.sites)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.place_outlined),
+            title: Text(site.name),
+            subtitle: Text(
+              [
+                if (site.address != null && site.address!.isNotEmpty)
+                  site.address!,
+                if (site.spaces.length > 1 ||
+                    (site.spaces.isNotEmpty &&
+                        site.spaces.first.name != site.name))
+                  site.spaces.map((s) => s.name).join(', '),
+              ].join(' · '),
+            ),
+            trailing: IconButton(
+              tooltip:
+                  'Agregar ${gendered(space, 'un', 'una')} '
+                  '${space.toLowerCase()} en ${site.name}',
+              icon: const Icon(Icons.add),
+              onPressed: () => _addSpace(site, space),
+            ),
+          ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            key: const Key('new-site'),
+            icon: const Icon(Icons.add_location_alt_outlined),
+            label: const Text('Nuevo lugar'),
+            onPressed: () => _newSite(space),
+          ),
+        ),
+        const SizedBox(height: 8),
         for (var i = 0; i < step.drafts.length; i++)
           Card(
             key: ValueKey('schedule-$i'),
@@ -418,10 +486,13 @@ class _GroupsStepScreenState extends ConsumerState<GroupsStepScreen>
                             _controller.copySlotsToAll(i);
                             showMessage(
                               context,
-                              'Horario de ${step.drafts[i].name} copiado a todas.',
+                              'Horario de ${step.drafts[i].name} copiado a '
+                              '${gendered(term, 'todos', 'todas')}.',
                             );
                           },
-                          child: const Text('Copiar a todas'),
+                          child: Text(
+                            'Copiar a ${gendered(term, 'todos', 'todas')}',
+                          ),
                         ),
                     ],
                   ),
@@ -432,11 +503,79 @@ class _GroupsStepScreenState extends ConsumerState<GroupsStepScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
-                            child: WeeklyTimeEditor(
-                              key: ValueKey('slot-$i-$j'),
-                              value: step.drafts[i].slots[j],
-                              onChanged: (time) =>
-                                  _controller.setSlot(i, j, time),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                WeeklyTimeEditor(
+                                  key: ValueKey('slot-$i-$j'),
+                                  value: step.drafts[i].slots[j],
+                                  onChanged: (time) =>
+                                      _controller.setSlot(i, j, time),
+                                ),
+                                if (step.spaces.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  DropdownButtonFormField<int?>(
+                                    key: ValueKey(
+                                      'space-$i-$j-${step.drafts[i].slots[j].venueId}',
+                                    ),
+                                    initialValue:
+                                        step.drafts[i].slots[j].venueId,
+                                    isExpanded: true,
+                                    decoration: InputDecoration(
+                                      labelText: space,
+                                    ),
+                                    items: [
+                                      DropdownMenuItem(
+                                        value: null,
+                                        child: Text(
+                                          'Sin ${space.toLowerCase()}',
+                                        ),
+                                      ),
+                                      for (final option in step.spaces)
+                                        DropdownMenuItem(
+                                          value: option.id,
+                                          child: Text(option.label),
+                                        ),
+                                    ],
+                                    onChanged: (id) => _controller.setSlot(
+                                      i,
+                                      j,
+                                      step.drafts[i].slots[j].copyWith(
+                                        venueId: id,
+                                        clearVenue: id == null,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                                // Choques: misma cancha, mismo día y hora.
+                                for (final warning
+                                    in step.conflicts['$i-$j'] ?? const [])
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 6),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Icon(
+                                          Icons.warning_amber_rounded,
+                                          size: 18,
+                                          color: theme.colorScheme.error,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: Text(
+                                            warning,
+                                            style: theme.textTheme.bodySmall
+                                                ?.copyWith(
+                                                  color:
+                                                      theme.colorScheme.error,
+                                                ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                           if (step.drafts[i].slots.length > 1)
@@ -460,51 +599,94 @@ class _GroupsStepScreenState extends ConsumerState<GroupsStepScreen>
               ),
             ),
           ),
-        const StepSection(
-          '¿Dónde entrenan?',
-          help: 'Opcional. Vale para todos los horarios.',
-        ),
-        if (step.venues.isNotEmpty)
-          Wrap(
-            spacing: 8,
-            children: [
-              for (final venue in step.venues)
-                ChoiceChip(
-                  label: Text(venue.name),
-                  selected: step.venueId == venue.id,
-                  onSelected: (selected) =>
-                      _controller.selectVenue(selected ? venue.id : null),
-                ),
-              ChoiceChip(
-                label: const Text('Otro lugar'),
-                selected: step.venueId == null,
-                onSelected: (_) => _controller.selectVenue(null),
-              ),
-            ],
-          ),
-        if (step.venueId == null) ...[
-          const SizedBox(height: 8),
-          TextField(
-            key: const Key('venue-name'),
-            controller: _venueName,
-            decoration: const InputDecoration(
-              labelText: 'Lugar',
-              hintText: 'Cancha del club, Polideportivo…',
-            ),
-            onChanged: (v) => _controller.setNewVenue(name: v),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _venueAddress,
-            decoration: const InputDecoration(labelText: 'Dirección'),
-            onChanged: (v) => _controller.setNewVenue(address: v),
-          ),
-        ],
         const SizedBox(height: 8),
         Text(
-          'Quién da cada una lo elegís en el paso de '
+          'Quién da cada ${gendered(term, 'uno', 'una')} lo elegís en el paso de '
           '${pluralize(ref.read(currentOrganizationProvider).value?.term('instructor') ?? 'Técnico').toLowerCase()}.',
           style: theme.textTheme.bodySmall,
+        ),
+      ],
+    );
+  }
+}
+
+class _SiteDialog extends StatefulWidget {
+  const _SiteDialog({required this.space});
+
+  final String space;
+
+  @override
+  State<_SiteDialog> createState() => _SiteDialogState();
+}
+
+class _SiteDialogState extends State<_SiteDialog> {
+  final _name = TextEditingController();
+  final _address = TextEditingController();
+  final _spaces = TextEditingController();
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _address.dispose();
+    _spaces.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final plural = pluralize(widget.space);
+    return AlertDialog(
+      title: const Text('Nuevo lugar'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            key: const Key('site-name'),
+            controller: _name,
+            autofocus: true,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              labelText: 'Lugar',
+              hintText: 'Polideportivo, Cancha del club…',
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _address,
+            decoration: const InputDecoration(labelText: 'Dirección'),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            key: const Key('site-spaces'),
+            controller: _spaces,
+            decoration: InputDecoration(
+              labelText: '$plural (opcional)',
+              helperText:
+                  'Separadas por coma: ${widget.space} 1, ${widget.space} 2. '
+                  'Vacío si tiene una sola.',
+              helperMaxLines: 2,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () {
+            if (_name.text.trim().isEmpty) return;
+            Navigator.pop(context, (
+              _name.text.trim(),
+              _address.text.trim(),
+              [
+                for (final name in _spaces.text.split(','))
+                  if (name.trim().isNotEmpty) name.trim(),
+              ],
+            ));
+          },
+          child: const Text('Agregar'),
         ),
       ],
     );

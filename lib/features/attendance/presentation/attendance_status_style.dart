@@ -11,9 +11,10 @@ extension AttendanceStatusStyle on AttendanceStatus {
   };
 
   Color color(ColorScheme scheme) => switch (this) {
-    AttendanceStatus.present => const Color(0xFF059669),
+    AttendanceStatus.present => scheme.primary,
     AttendanceStatus.absent => scheme.error,
-    AttendanceStatus.justified => const Color(0xFFB45309),
+    // aviso en el tema de Tuku.
+    AttendanceStatus.justified => scheme.tertiary,
   };
 }
 

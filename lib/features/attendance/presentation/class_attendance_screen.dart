@@ -113,10 +113,27 @@ class _ClassAttendanceScreenState extends ConsumerState<ClassAttendanceScreen> {
       builder: (_) => RescheduleSheet(session: session, reason: reason),
     );
     if (request == null) return;
+    var warnings = const <String>[];
     await _run(
-      () => _controller.reschedule(request),
+      () async => warnings = await _controller.reschedule(request),
       'Clase reprogramada. Se avisó a los tutores.',
     );
+    // Ese día otra categoría usa la cancha a esa hora: se avisa (ya quedó reprogramada).
+    if (warnings.isNotEmpty && mounted) {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Ojo, se superponen'),
+          content: Text(warnings.join('\n')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Entendido'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   void _onMenu(String action, ClassSession session) {
