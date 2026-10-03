@@ -13,6 +13,11 @@ import 'features/auth/presentation/login_screen.dart';
 import 'features/home/presentation/home_screen.dart';
 import 'features/invitations/presentation/invitation_code_screen.dart';
 import 'features/invitations/presentation/invitation_screen.dart';
+import 'features/lessons/presentation/book_lesson_screen.dart';
+import 'features/lessons/presentation/bookings_screen.dart';
+import 'features/lessons/presentation/lesson_profile_screen.dart';
+import 'features/lessons/presentation/teacher_agenda_screen.dart';
+import 'features/lessons/presentation/teacher_students_screen.dart';
 import 'features/notifications/presentation/notification_settings_screen.dart';
 import 'features/organizations/presentation/organization_picker_screen.dart';
 import 'features/reports/presentation/reports_screen.dart';
@@ -118,6 +123,26 @@ final routerProvider = Provider<GoRouter>((ref) {
                 GroupScreen(id: int.parse(state.pathParameters['id']!)),
           ),
         ],
+      ),
+      GoRoute(path: '/reservas', builder: (_, _) => const BookingsScreen()),
+      GoRoute(
+        path: '/particulares/agenda',
+        builder: (_, _) => const TeacherAgendaScreen(),
+      ),
+      GoRoute(
+        path: '/particulares/alumnos',
+        builder: (_, _) => const TeacherStudentsScreen(),
+      ),
+      GoRoute(
+        path: '/particulares/ajustes',
+        builder: (_, _) => const LessonProfileScreen(),
+      ),
+      GoRoute(
+        path: '/particulares/:teacherId/reservar',
+        builder: (_, state) => BookLessonScreen(
+          teacherId: int.parse(state.pathParameters['teacherId']!),
+          studentId: int.tryParse(state.uri.queryParameters['alumno'] ?? ''),
+        ),
       ),
       GoRoute(
         path: '/invitacion',

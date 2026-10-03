@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../auth/data/session_controller.dart';
+import '../../organizations/data/organization_repository.dart';
 import '../../organizations/presentation/roles_list.dart';
 
 class AccountScreen extends ConsumerWidget {
@@ -12,6 +13,11 @@ class AccountScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(sessionControllerProvider).value;
     final theme = Theme.of(context);
+    final organization = ref.watch(currentOrganizationProvider).value;
+    final teaches =
+        (organization?.hasFeature('private_lessons') ?? false) &&
+        (organization!.can('teach_lessons') ||
+            organization.hasRole('instructor'));
 
     return Scaffold(
       appBar: AppBar(
@@ -47,6 +53,13 @@ class AccountScreen extends ConsumerWidget {
             subtitle: const Text('Avisos de los días de clase'),
             onTap: () => context.push('/notificaciones'),
           ),
+          if (teaches)
+            ListTile(
+              leading: const Icon(Icons.school_outlined),
+              title: const Text('Clases particulares'),
+              subtitle: const Text('Precios, paquetes y disponibilidad'),
+              onTap: () => context.push('/particulares/ajustes'),
+            ),
           if ((session?.organizations.length ?? 0) > 1)
             ListTile(
               leading: const Icon(Icons.swap_horiz),
