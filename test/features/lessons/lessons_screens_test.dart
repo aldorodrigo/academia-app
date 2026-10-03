@@ -118,7 +118,9 @@ void main() {
 
       expect(find.text('Clases con Carlos Gómez'), findsOneWidget);
       expect(
-        find.text('Paquete: te quedan 3 de 4 · válido del 20/9 al 18/11'),
+        find.text(
+          'Paquete: te quedan 3 de 4 (1 reservada) · válido del 20/9 al 18/11',
+        ),
         findsOneWidget,
       );
       expect(find.text('Reservar clase'), findsOneWidget);

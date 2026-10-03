@@ -38,7 +38,7 @@ void main() {
     test('texto de la tarjeta según el estado', () {
       expect(
         describePack(ClassPack.fromJson(packJson()), teacher, today),
-        'Paquete: te quedan 3 de 4 · válido del 20/9 al 18/11',
+        'Paquete: te quedan 3 de 4 (1 reservada) · válido del 20/9 al 18/11',
       );
       expect(
         describePack(

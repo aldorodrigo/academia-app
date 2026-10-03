@@ -82,6 +82,14 @@ lib/
   "Recupera la clase de…") y, la primera vez,
   "¿Querés que te avise los días de clase?"; en la ficha, asistencia del mes e interruptor del aviso.
   Acciones en `GuardianActions`. Activar el aviso pide permiso de push (`pushServiceProvider`, reemplazable en tests).
+- **Clases particulares** (módulo `private_lessons`, `features/lessons/`): el alumno adulto o el tutor ve en el inicio
+  `LessonsCard` (una tarjeta por profesor de `GET lessons/teachers` con el paquete, la próxima clase, "Reservar clase"
+  y "Comprar paquete"), reserva en `/particulares/:teacherId/reservar?alumno=` (`BookingController`: día, hora y
+  resumen con `previewBooking`, lo mismo que decide la API) y ve `/reservas` (cancelar y cambiar). El profesor
+  (permiso `teach_lessons`) tiene `TodayLessonsCard` con la ficha rápida (`showBookingSheet`: Vino / No vino, Cobrar,
+  Cancelar), `/particulares/agenda`, `/particulares/alumnos` (cobrar, vender y extender paquetes) y
+  `/particulares/ajustes` (precio, duración, paquetes con validez y disponibilidad; `LessonProfileController`, entrada
+  en "Mi cuenta" también para instructores sin perfil). Acciones en `StudentLessonActions` y `TeacherLessonActions`.
 - **Organización activa:** `currentOrganizationProvider` (`GET /organization`) da vocabulario
   (`term('group')`), módulos (`hasFeature`) y perfiles del usuario con mandato (`roles`).
 - **Contrato de API:** `academia-api/docs/API_V1.md`. La app se construye primero contra el

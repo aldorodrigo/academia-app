@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../organizations/data/organization_repository.dart';
 import 'lessons_repository.dart';
 import 'models.dart';
 
@@ -310,7 +311,10 @@ class LessonProfileController extends AsyncNotifier<LessonProfile> {
     final error = profile.validate();
     if (error != null) return error;
     try {
-      state = AsyncData(await _repository.saveProfile(profile));
+      final saved = await _repository.saveProfile(profile);
+      state = AsyncData(saved);
+      // Activar o pausar las reservas cambia el permiso `teach_lessons` (tarjeta del inicio).
+      ref.invalidate(currentOrganizationProvider);
       return null;
     } catch (error) {
       return apiErrorMessage(error);
