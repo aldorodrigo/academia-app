@@ -47,3 +47,6 @@ app.*.map.json
 # Widget Preview related
 .widget_preview/
 /tool/brand_icons/node_modules/
+
+# Copias de trabajo de Claude Code
+/.claude/worktrees/
