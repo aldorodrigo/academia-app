@@ -1045,12 +1045,12 @@ void main() {
       expect(find.byKey(const Key('terminology-suggestion')), findsOneWidget);
       expect(
         find.textContaining(
-          'En fútbol se suele decir categoría, técnico y cancha.',
+          'En fútbol se suele decir jugador, técnico, categoría y cancha.',
         ),
         findsOneWidget,
       );
       expect(
-        find.text('Dejar como estaba (grupo, profesor y sala)'),
+        find.text('Dejar como estaba (alumno, profesor, grupo y sala)'),
         findsOneWidget,
       );
       // Decide: categoría y cancha, pero siguen siendo profesores.
@@ -1066,6 +1066,7 @@ void main() {
           .data;
       expect(body, {
         'terminology': {
+          'student': 'Jugador',
           'group': 'Categoría',
           'instructor': 'Profesor',
           'space': 'Cancha',
@@ -1101,6 +1102,75 @@ void main() {
         {'terminology': <String, String>{}},
       );
       expect(find.text('¿Qué grupos tienen?'), findsOneWidget);
+    });
+
+    testWidgets('"Después" sigue y el inicio la recuerda hasta contestar', (
+      tester,
+    ) async {
+      var saved = false;
+      final requests = <RequestOptions>[];
+      final container = await _pumpApp(
+        tester,
+        {
+          ...academyRoutes(saved: () => saved, onSave: () => saved = true),
+          'GET /organization': (_) => academy(sport: saved),
+        },
+        location: '/configurar/disciplinas',
+        requests: requests,
+      );
+
+      await tester.tap(find.text('Fútbol'));
+      await _settle(tester);
+      await tester.tap(find.byKey(const Key('step-primary')));
+      await _settle(tester);
+      await tester.tap(find.byKey(const Key('terminology-later')));
+      await _settle(tester);
+
+      // No decidió nada: sigue al paso 2 con las palabras de antes.
+      expect(
+        requests.where((r) => r.path == '/organization/terminology'),
+        isEmpty,
+      );
+      expect(find.text('¿Qué grupos tienen?'), findsOneWidget);
+
+      container.read(routerProvider).go('/inicio');
+      await _settle(tester);
+      expect(find.text('Configurá tu academia'), findsOneWidget);
+      expect(find.text('Elegí cómo les dicen'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('setup-terminology')));
+      await _settle(tester);
+      await tester.tap(find.byKey(const Key('terminology-use')));
+      await _settle(tester);
+
+      expect(saved, isTrue);
+      expect(find.text('Elegí cómo les dicen'), findsNothing);
+    });
+
+    testWidgets('con la guía completa queda solo el recordatorio', (
+      tester,
+    ) async {
+      await _pumpApp(tester, {
+        ..._admin(
+          onboarding: () => onboardingJson(
+            programs: 'done',
+            groups: 'done',
+            season: 'done',
+            instructors: 'done',
+            terminologySuggestion: sportSuggestionJson,
+          ),
+        ),
+        'GET /organization': (_) => academy(),
+      });
+
+      expect(find.byKey(const Key('setup-terminology-only')), findsOneWidget);
+      expect(find.byKey(const Key('setup-guide')), findsNothing);
+      expect(
+        find.text(
+          'En fútbol se suele decir jugador, técnico, categoría y cancha.',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('sin propuesta sigue directo', (tester) async {

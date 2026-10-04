@@ -302,8 +302,8 @@ void main() {
     );
     final suggestion = onboarding.terminologySuggestion!;
     expect(suggestion.programsText, 'fútbol');
-    expect(suggestion.suggestedText, 'categoría, técnico y cancha');
-    expect(suggestion.currentText, 'grupo, profesor y sala');
+    expect(suggestion.suggestedText, 'jugador, técnico, categoría y cancha');
+    expect(suggestion.currentText, 'alumno, profesor, grupo y sala');
     expect(joinWords(['Fútbol', 'Básquet']), 'fútbol y básquet');
   });
 

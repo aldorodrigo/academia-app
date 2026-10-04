@@ -84,10 +84,16 @@ Map<String, Object?> onboardingJson({
 /// Propuesta de vocabulario de deporte (`terminology_suggestion`).
 const sportSuggestionJson = {
   'programs': ['Fútbol'],
-  'current': {'group': 'Grupo', 'instructor': 'Profesor', 'space': 'Sala'},
+  'current': {
+    'student': 'Alumno',
+    'instructor': 'Profesor',
+    'group': 'Grupo',
+    'space': 'Sala',
+  },
   'suggested': {
-    'group': 'Categoría',
+    'student': 'Jugador',
     'instructor': 'Técnico',
+    'group': 'Categoría',
     'space': 'Cancha',
   },
 };

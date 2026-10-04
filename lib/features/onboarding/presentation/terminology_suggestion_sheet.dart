@@ -6,17 +6,16 @@ import '../../organizations/presentation/term_choices.dart';
 import '../data/models.dart';
 import '../data/onboarding_controller.dart';
 
-/// Propone las palabras de deporte (Categoría, Técnico, Cancha) después del
-/// paso 1. No se cierra tocando afuera: o usa las elegidas o deja las de antes.
+/// Propone las palabras de cada deporte (fútbol: Jugador, Técnico, Categoría,
+/// Cancha; natación: Nivel, Pileta…) después del paso 1 o desde el recordatorio
+/// de la guía. Cerrarla sin contestar no decide nada: la guía la sigue
+/// recordando hasta que use las elegidas o deje las de antes.
 Future<void> showTerminologySuggestion(
   BuildContext context,
   TerminologySuggestion suggestion,
 ) => showModalBottomSheet<void>(
   context: context,
-  isDismissible: false,
-  enableDrag: false,
   isScrollControlled: true,
-  showDragHandle: false,
   builder: (_) => TerminologySuggestionSheet(suggestion: suggestion),
 );
 
@@ -104,6 +103,11 @@ class _TerminologySuggestionSheetState
               key: const Key('terminology-keep'),
               onPressed: _saving ? null : () => _save(const {}),
               child: Text('Dejar como estaba (${suggestion.currentText})'),
+            ),
+            TextButton(
+              key: const Key('terminology-later'),
+              onPressed: _saving ? null : () => Navigator.pop(context),
+              child: const Text('Después'),
             ),
           ],
         ),

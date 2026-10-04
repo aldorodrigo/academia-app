@@ -107,9 +107,10 @@ lib/
   (`/configurar/disciplinas|categorias|temporada|tecnicos`, `StepScaffold` + `StepEntry`, controllers en
   `step_controllers.dart`) → `/configurar/listo`. No se abre sola. La API decide todo (pasos hechos,
   sugerencias de categorías, fechas y montos de la temporada): la app no calcula.
-- **Vocabulario** (`term()`): al guardar el paso 1, si `GET onboarding` trae `terminology_suggestion` (una academia
-  que enseña un deporte: Categoría, Técnico, Cancha) se abre `TerminologySuggestionSheet` ("Usar estas palabras" o
-  "Dejar como estaba"); después se cambia en "Mi cuenta" → "Cómo les dicen" (`/vocabulario`, permiso
+- **Vocabulario** (`term()`): al guardar el paso 1, si `GET onboarding` trae `terminology_suggestion` (cada deporte
+  con lo suyo, la decide la API: fútbol Jugador/Técnico/Categoría/Cancha, natación Nivel/Pileta…) se abre
+  `TerminologySuggestionSheet` ("Usar estas palabras", "Dejar como estaba" o "Después"); sin contestar, `SetupCard`
+  la recuerda ("Elegí cómo les dicen", `TerminologyReminder`, también con la guía completa). Después se cambia en "Mi cuenta" → "Cómo les dicen" (`/vocabulario`, permiso
   `configure_organization`, `PUT organization/terminology`, `VocabularyController`). Los textos de la guía usan el
   tipo (`typeNoun`: "Configurá tu academia").
 - **Botones del inicio:** `QuickActionsBar` con `quickActionsFor()` (`features/home/data/quick_actions.dart`) según
