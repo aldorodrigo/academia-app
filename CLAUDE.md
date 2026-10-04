@@ -106,7 +106,9 @@ lib/
   la achica a una barra, completa desaparece; `/configurar` redirige al inicio) y un paso por pantalla
   (`/configurar/disciplinas|categorias|temporada|tecnicos`, `StepScaffold` + `StepEntry`, controllers en
   `step_controllers.dart`) → `/configurar/listo`. No se abre sola. La API decide todo (pasos hechos,
-  sugerencias de categorías, fechas y montos de la temporada): la app no calcula.
+  sugerencias de categorías, fechas y montos de la temporada): la app no calcula. El paso 2 "se guarda solo": cada
+  cambio va como borrador a `onboarding/steps/groups/draft` (`draftSaveDelayProvider`, 800 ms; cero en tests) y se
+  retoma al volver, también lo que quedó en el panel. Cantidades con `countOf()` y temporadas con `seasonLabel()`.
 - **Vocabulario** (`term()`): al guardar el paso 1, si `GET onboarding` trae `terminology_suggestion` (cada deporte
   con lo suyo, la decide la API: fútbol Jugador/Técnico/Categoría/Cancha, natación Nivel/Pileta…) se abre
   `TerminologySuggestionSheet` ("Usar estas palabras", "Dejar como estaba" o "Después"); sin contestar, `SetupCard`
