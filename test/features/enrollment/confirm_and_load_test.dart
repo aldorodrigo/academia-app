@@ -6,6 +6,7 @@ import 'package:academia_app/core/utils/clock.dart';
 import 'package:academia_app/core/utils/launcher.dart';
 import 'package:academia_app/features/attendance/data/models.dart';
 import 'package:academia_app/features/attendance/presentation/class_attendance_screen.dart';
+import 'package:academia_app/features/attendance/presentation/group_screen.dart';
 import 'package:academia_app/features/enrollment/data/models.dart';
 import 'package:academia_app/features/enrollment/presentation/add_student_screen.dart';
 import 'package:academia_app/features/enrollment/presentation/enroll_child_screen.dart';
@@ -225,6 +226,105 @@ void main() {
 
       expect(find.text('Nuevo, por confirmar'), findsOneWidget);
       expect(find.text('Confirmar inscripción'), findsNothing);
+    });
+  });
+
+  group('lista del mes del grupo', () {
+    Map<String, Object?> groupJson({required bool pending}) => {
+      'data': {
+        'id': 3,
+        'name': 'Sub-8',
+        'program': {'id': 1, 'name': 'Fútbol'},
+        'month': '2026-10',
+        'classes': <Object>[],
+        'students': [
+          {
+            'id': 12,
+            'full_name': 'Mateo Benítez',
+            'present': 3,
+            'absent': 0,
+            'justified': 0,
+            'rate': 100,
+          },
+          if (pending)
+            {
+              'id': 40,
+              'full_name': 'Sofía Benítez',
+              'present': 1,
+              'absent': 0,
+              'justified': 0,
+              'rate': 100,
+              'enrollment_request': {'id': 18, 'can_review': true},
+            },
+        ],
+      },
+    };
+
+    testWidgets('muestra al nuevo por confirmar y se confirma desde ahí', (
+      tester,
+    ) async {
+      final requests = <RequestOptions>[];
+      var confirmed = false;
+      await tester.pumpWidget(
+        _app(
+          {
+            ..._base(permissions: ['take_attendance']),
+            'GET /groups/3': (_) => groupJson(pending: !confirmed),
+            'POST /enrollment-requests/18/approve': (_) {
+              confirmed = true;
+              return {'data': requestJson(status: 'aprobada')};
+            },
+          },
+          const GroupScreen(id: 3),
+          requests: requests,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nuevo, por confirmar'), findsOneWidget);
+      final summary = StudentAttendanceSummary.fromJson(
+        (groupJson(pending: true)['data']! as Map)['students'][1]
+            as Map<String, dynamic>,
+      );
+      expect(summary.isPendingConfirmation, isTrue);
+
+      await tester.tap(find.text('Confirmar inscripción'));
+      await tester.pumpAndSettle();
+
+      expect(
+        requests.where((r) => r.path == '/enrollment-requests/18/approve'),
+        hasLength(1),
+      );
+      expect(find.text('Nuevo, por confirmar'), findsNothing);
+      expect(find.text('Sofía Benítez'), findsNothing);
+    });
+
+    testWidgets('rechazar pide el motivo', (tester) async {
+      final requests = <RequestOptions>[];
+      await tester.pumpWidget(
+        _app(
+          {
+            ..._base(permissions: ['take_attendance']),
+            'GET /groups/3': (_) => groupJson(pending: true),
+            'POST /enrollment-requests/18/reject': (_) => {
+              'data': requestJson(status: 'rechazada', reason: 'Sin lugar.'),
+            },
+          },
+          const GroupScreen(id: 3),
+          requests: requests,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Rechazar'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField), 'Sin lugar.');
+      await tester.tap(find.widgetWithText(FilledButton, 'Rechazar'));
+      await tester.pumpAndSettle();
+
+      expect(requests.lastWhere((r) => r.method == 'POST').data, {
+        'reason': 'Sin lugar.',
+      });
     });
   });
 
