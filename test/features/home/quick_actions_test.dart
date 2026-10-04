@@ -58,7 +58,18 @@ void main() {
           permissions: ['view_reports', 'review_payment_reports'],
         ),
       ),
-      ['Comprobantes', 'Informes'],
+      ['Comprobantes', 'Efectivo', 'Informes'],
+    );
+
+    // Técnico que cobra en efectivo.
+    expect(
+      _labels(
+        _organization(
+          roles: ['instructor'],
+          permissions: ['take_attendance', 'collect_payments'],
+        ),
+      ),
+      ['Mis grupos', 'Cobrar', 'Mi caja'],
     );
   });
 }

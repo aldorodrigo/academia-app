@@ -69,6 +69,14 @@ lib/
   ("Informar transferencia", `/estado-de-cuenta/informar-pago`: cuotas, monto, fecha, cuenta y foto o PDF elegido con
   `proofPickerProvider`, reemplazable en tests); queda en revisión hasta que se aprueba. Quien tiene el permiso
   `review_payment_reports` ve `PaymentReportsCard` en el inicio y `/comprobantes` (aprobar o rechazar con motivo).
+- **Cobro en efectivo y caja del técnico** (`features/cash/`, plan en `academia-api/docs/PLAN_COBRO_EFECTIVO.md`):
+  quien tiene `collect_payments` cobra desde `/cobrar` (alumnos de sus grupos, o todos para la comisión) o tocando un
+  alumno en `/grupos/:id`; `/cobrar/:id` muestra las cuotas pendientes de la familia (elegidas las de ahora, sin las
+  próximas ni las que tienen una transferencia en revisión), el monto prellenado con `settle_amount` (pronto pago lo
+  calcula la API) y el recibo. Cada cobro manda un `request_id` (`collectionRequestIdProvider`, reemplazable en tests)
+  para que un reintento no lo duplique. El pago entra en su caja personal: `/mi-caja` (saldo en su poder, movimientos y
+  "Depositar", que queda por confirmar). Quien valida comprobantes (`review_payment_reports`) ve `/efectivo` (cajas de
+  cada uno y depósitos para confirmar o rechazar). Cobrar y depositar requieren conexión.
 - **Informes** (comisión): `/informes` (balance del mes, saldos por familia, morosos; PDF/Excel por link firmado)
   y tarjeta en el inicio, solo si `currentOrganizationProvider` trae el permiso `view_reports` (`can()`).
 - **Fecha de hoy:** `todayProvider` y `nowProvider` (con hora) en `core/utils/clock.dart`, reemplazables en los tests.
@@ -108,7 +116,8 @@ lib/
   `step_controllers.dart`) → `/configurar/listo`. No se abre sola. La API decide todo (pasos hechos,
   sugerencias de categorías, fechas y montos de la temporada): la app no calcula.
 - **Botones del inicio:** `QuickActionsBar` con `quickActionsFor()` (`features/home/data/quick_actions.dart`) según
-  permisos y roles: Mis grupos, Estado de cuenta, Mis reservas, Agenda, Alumnos particulares, Informes.
+  permisos y roles: Mis grupos, Cobrar, Mi caja, Estado de cuenta, Mis reservas, Agenda, Alumnos particulares,
+  Comprobantes, Efectivo, Informes.
 - **Organización activa:** `currentOrganizationProvider` (`GET /organization`) da vocabulario
   (`term('group')`), módulos (`hasFeature`) y perfiles del usuario con mandato (`roles`).
 - **Contrato de API:** `academia-api/docs/API_V1.md`. La app se construye primero contra el

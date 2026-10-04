@@ -9,6 +9,10 @@ import 'features/attendance/presentation/group_screen.dart';
 import 'features/attendance/presentation/groups_screen.dart';
 import 'features/auth/data/models.dart';
 import 'features/billing/presentation/balance_screen.dart';
+import 'features/cash/presentation/cash_box_screen.dart';
+import 'features/cash/presentation/cash_overview_screen.dart';
+import 'features/cash/presentation/collect_screen.dart';
+import 'features/cash/presentation/collect_students_screen.dart';
 import 'features/auth/data/session_controller.dart';
 import 'features/auth/presentation/create_account_screen.dart';
 import 'features/auth/presentation/forgot_password_screen.dart';
@@ -174,6 +178,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/comprobantes',
         builder: (_, _) => const PaymentReportsScreen(),
       ),
+      GoRoute(
+        path: '/cobrar',
+        builder: (_, _) => const CollectStudentsScreen(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            builder: (_, state) => CollectScreen(
+              studentId: int.parse(state.pathParameters['id']!),
+            ),
+          ),
+        ],
+      ),
+      GoRoute(path: '/mi-caja', builder: (_, _) => const CashBoxScreen()),
+      GoRoute(path: '/efectivo', builder: (_, _) => const CashOverviewScreen()),
       GoRoute(
         path: '/hijos',
         builder: (_, _) => const StudentsScreen(),

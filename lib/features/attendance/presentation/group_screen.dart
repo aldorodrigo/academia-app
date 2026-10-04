@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/utils/clock.dart';
 import '../../../core/utils/format.dart';
+import '../../organizations/data/organization_repository.dart';
 import '../data/attendance_repository.dart';
 import '../data/models.dart';
 import 'attendance_status_style.dart';
@@ -84,6 +85,10 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
     DateTime today,
   ) {
     final theme = Theme.of(context);
+    // Quien cobra en efectivo toca un alumno para cobrarle.
+    final canCollect =
+        ref.watch(currentOrganizationProvider).value?.can('collect_payments') ??
+        false;
     return [
       const SizedBox(height: 8),
       Text('Clases', style: theme.textTheme.titleMedium),
@@ -146,6 +151,9 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
             student.rate == null ? '—' : '${student.rate}%',
             style: theme.textTheme.titleMedium,
           ),
+          onTap: canCollect
+              ? () => context.push('/cobrar/${student.id}')
+              : null,
         ),
     ];
   }
