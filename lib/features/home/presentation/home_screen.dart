@@ -6,6 +6,9 @@ import '../../attendance/presentation/next_class_card.dart';
 import '../../attendance/presentation/today_classes_card.dart';
 import '../../auth/data/session_controller.dart';
 import '../../billing/presentation/account_summary_card.dart';
+import '../../enrollment/data/enrollment_repository.dart';
+import '../../enrollment/presentation/enrollment_requests_card.dart';
+import '../../enrollment/presentation/my_requests.dart';
 import '../../lessons/presentation/lessons_card.dart';
 import '../../lessons/presentation/today_lessons_card.dart';
 import '../../onboarding/presentation/setup_card.dart';
@@ -28,6 +31,7 @@ class HomeScreen extends ConsumerWidget {
         ref.watch(currentOrganizationProvider).value?.hasRole('tutor') ?? false;
     final students = ref.watch(studentsProvider).value ?? const [];
     final onlySelf = students.isNotEmpty && students.every((s) => s.isSelf);
+    final requests = ref.watch(myEnrollmentRequestsProvider).value ?? const [];
 
     return Scaffold(
       appBar: AppBar(
@@ -56,9 +60,10 @@ class HomeScreen extends ConsumerWidget {
           const TodayClassesCard(),
           const TodayLessonsCard(),
           const PaymentReportsCard(),
+          const EnrollmentRequestsCard(),
           const ReportsCard(),
           const LessonsCard(),
-          if (isGuardian || students.isNotEmpty) ...[
+          if (isGuardian || students.isNotEmpty || requests.isNotEmpty) ...[
             const SizedBox(height: 32),
             Text(
               onlySelf ? 'Mis inscripciones' : 'Mis hijos',
@@ -68,7 +73,9 @@ class HomeScreen extends ConsumerWidget {
             const NextClassesList(),
             const AccountSummaryCard(),
             const SizedBox(height: 8),
+            const MyEnrollmentRequests(),
             const StudentsList(),
+            if (!onlySelf) const EnrollChildButton(),
           ],
         ],
       ),

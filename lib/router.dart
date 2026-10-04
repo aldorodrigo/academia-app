@@ -9,6 +9,8 @@ import 'features/attendance/presentation/group_screen.dart';
 import 'features/attendance/presentation/groups_screen.dart';
 import 'features/auth/data/models.dart';
 import 'features/billing/presentation/balance_screen.dart';
+import 'features/enrollment/presentation/enroll_child_screen.dart';
+import 'features/enrollment/presentation/enrollment_requests_screen.dart';
 import 'features/auth/data/session_controller.dart';
 import 'features/auth/presentation/create_account_screen.dart';
 import 'features/auth/presentation/forgot_password_screen.dart';
@@ -175,9 +177,18 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const PaymentReportsScreen(),
       ),
       GoRoute(
+        path: '/solicitudes',
+        builder: (_, _) => const EnrollmentRequestsScreen(),
+      ),
+      GoRoute(
         path: '/hijos',
         builder: (_, _) => const StudentsScreen(),
         routes: [
+          // Antes que `:id`: "inscribir" no es un número.
+          GoRoute(
+            path: 'inscribir',
+            builder: (_, _) => const EnrollChildScreen(),
+          ),
           GoRoute(
             path: ':id',
             builder: (_, state) =>

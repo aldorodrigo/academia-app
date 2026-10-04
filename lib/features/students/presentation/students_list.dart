@@ -21,9 +21,7 @@ class StudentsList extends ConsumerWidget {
       error: (error, _) => Text(apiErrorMessage(error)),
       data: (students) {
         if (students.isEmpty) {
-          return const Text(
-            'Todavía no hay hijos cargados. Si falta alguno, avisá al club.',
-          );
+          return const Text('Todavía no hay hijos cargados.');
         }
         return Column(
           children: [for (final student in students) StudentCard(student)],

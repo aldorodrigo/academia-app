@@ -69,6 +69,12 @@ lib/
   ("Informar transferencia", `/estado-de-cuenta/informar-pago`: cuotas, monto, fecha, cuenta y foto o PDF elegido con
   `proofPickerProvider`, reemplazable en tests); queda en revisión hasta que se aprueba. Quien tiene el permiso
   `review_payment_reports` ve `PaymentReportsCard` en el inicio y `/comprobantes` (aprobar o rechazar con motivo).
+- **Inscribir a un hijo** (`features/enrollment/`): desde "Mis hijos" ("Inscribir a otro hijo") o "Mi cuenta",
+  `/hijos/inscribir` (datos, fecha dd/mm/aaaa, la API trae disciplinas, temporadas y la categoría sugerida con
+  `GET enrollment-requests/options`; ficha médica opcional) → solicitud en revisión (`MyEnrollmentRequests` arriba de
+  los hijos, se puede cancelar). Quien tiene `manage_enrollment_requests` ve `EnrollmentRequestsCard` y
+  `/solicitudes` (aprobar con categoría, mitad de mes y confirmación de cupo; rechazar con motivo). Plan:
+  `academia-api/docs/PLAN_INSCRIPCION_TUTOR.md` (5e le suma el link público).
 - **Informes** (comisión): `/informes` (balance del mes, saldos por familia, morosos; PDF/Excel por link firmado)
   y tarjeta en el inicio, solo si `currentOrganizationProvider` trae el permiso `view_reports` (`can()`).
 - **Fecha de hoy:** `todayProvider` y `nowProvider` (con hora) en `core/utils/clock.dart`, reemplazables en los tests.
