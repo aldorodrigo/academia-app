@@ -211,31 +211,7 @@ void main() {
     });
   });
 
-  group('apertura de la guía', () {
-    test('se abre sola una vez si está incompleta y no se cerró', () {
-      final pending = _onboarding();
-      expect(shouldAutoOpen(pending, const {}, 'jakare'), isTrue);
-      expect(shouldAutoOpen(pending, const {'jakare'}, 'jakare'), isFalse);
-      expect(
-        shouldAutoOpen(_onboarding(dismissed: true), const {}, 'jakare'),
-        isFalse,
-      );
-      expect(
-        shouldAutoOpen(
-          _onboarding(
-            programs: 'done',
-            groups: 'done',
-            season: 'done',
-            instructors: 'skipped',
-          ),
-          const {},
-          'jakare',
-        ),
-        isFalse,
-      );
-      expect(shouldAutoOpen(null, const {}, 'jakare'), isFalse);
-    });
-
+  group('pasos de la guía', () {
     test('después de guardar va al siguiente o a "¡Listo!"', () {
       expect(
         nextRoute(
@@ -252,8 +228,8 @@ void main() {
       );
       // Se completó en este paso (aunque haya sido antes de tocar "Seguir").
       expect(nextRoute(complete, wasCompleted: false), '/configurar/listo');
-      // Si ya estaba completa, vuelve a la lista.
-      expect(nextRoute(complete, wasCompleted: true), '/configurar');
+      // Si ya estaba completa, vuelve al inicio.
+      expect(nextRoute(complete, wasCompleted: true), '/inicio');
     });
   });
 

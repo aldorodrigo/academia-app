@@ -8,7 +8,6 @@ import '../../auth/data/session_controller.dart';
 import '../../billing/presentation/account_summary_card.dart';
 import '../../lessons/presentation/lessons_card.dart';
 import '../../lessons/presentation/today_lessons_card.dart';
-import '../../onboarding/data/onboarding_controller.dart';
 import '../../onboarding/presentation/setup_card.dart';
 import '../../organizations/data/organization_repository.dart';
 import '../../organizations/presentation/roles_list.dart';
@@ -16,6 +15,7 @@ import '../../payment_reports/presentation/payment_reports_card.dart';
 import '../../reports/presentation/reports_card.dart';
 import '../../students/data/students_repository.dart';
 import '../../students/presentation/students_list.dart';
+import 'quick_actions_bar.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -28,20 +28,6 @@ class HomeScreen extends ConsumerWidget {
         ref.watch(currentOrganizationProvider).value?.hasRole('tutor') ?? false;
     final students = ref.watch(studentsProvider).value ?? const [];
     final onlySelf = students.isNotEmpty && students.every((s) => s.isSelf);
-
-    // La guía se abre sola una vez por sesión mientras esté incompleta.
-    ref.listen(onboardingProvider, (_, next) {
-      final slug = session?.organizationSlug;
-      if (!shouldAutoOpen(
-        next.value,
-        ref.read(setupAutoOpenedProvider),
-        slug,
-      )) {
-        return;
-      }
-      ref.read(setupAutoOpenedProvider.notifier).mark(slug!);
-      context.go('/configurar');
-    });
 
     return Scaffold(
       appBar: AppBar(
@@ -64,7 +50,9 @@ class HomeScreen extends ConsumerWidget {
           const SizedBox(height: 16),
           const RolesList(),
           const SizedBox(height: 16),
+          // La guía del administrador, arriba de todo hasta completarla.
           const SetupCard(),
+          const QuickActionsBar(),
           const TodayClassesCard(),
           const TodayLessonsCard(),
           const PaymentReportsCard(),

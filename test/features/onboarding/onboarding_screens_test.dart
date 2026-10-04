@@ -295,44 +295,23 @@ void main() {
     expect(find.text('Contanos de tu club'), findsOneWidget);
   });
 
-  group('lista de pasos', () {
-    testWidgets('se abre sola una vez desde el inicio', (tester) async {
-      final container = await _pumpApp(tester, _admin());
+  group('guía en el inicio', () {
+    testWidgets('está en el inicio con los pasos; no abre otra pantalla', (
+      tester,
+    ) async {
+      await _pumpApp(tester, _admin());
 
+      expect(find.text('Hola, Laura.'), findsOneWidget);
+      expect(find.byKey(const Key('setup-guide')), findsOneWidget);
       expect(find.text('Configurá tu club'), findsOneWidget);
       expect(find.text('0 de 4'), findsOneWidget);
       // Bloqueado: dice qué falta antes.
       expect(find.text('Primero: ¿Qué enseñan?'), findsNWidgets(2));
       expect(find.text('Primero: Categorías y horarios'), findsOneWidget);
-
-      container.read(routerProvider).go('/inicio');
-      await _settle(tester);
-      // Ya se abrió en esta sesión: queda la tarjeta del inicio.
-      expect(find.text('Hola, Laura.'), findsOneWidget);
-      expect(find.text('Sigue: ¿Qué enseñan?'), findsOneWidget);
+      expect(find.text('Empezar'), findsOneWidget);
     });
 
-    testWidgets('cerrada no se abre sola, pero sigue la tarjeta', (
-      tester,
-    ) async {
-      await _pumpApp(
-        tester,
-        _admin(onboarding: () => onboardingJson(dismissed: true)),
-      );
-
-      expect(find.text('Hola, Laura.'), findsOneWidget);
-      expect(find.text('Configurá tu club'), findsOneWidget);
-      expect(find.text('0 de 4'), findsOneWidget);
-    });
-
-    testWidgets('sin permiso no hay guía ni tarjeta', (tester) async {
-      await _pumpApp(tester, _admin(permissions: const []));
-
-      expect(find.text('Hola, Laura.'), findsOneWidget);
-      expect(find.text('Configurá tu club'), findsNothing);
-    });
-
-    testWidgets('"Seguir después" la cierra y vuelve al inicio', (
+    testWidgets('"Seguir después" la achica y "Seguir" la vuelve a abrir', (
       tester,
     ) async {
       var dismissed = false;
@@ -345,22 +324,52 @@ void main() {
         },
       }, requests: requests);
 
+      await tester.ensureVisible(find.text('Seguir después'));
       await tester.tap(find.text('Seguir después'));
       await _settle(tester);
 
       expect(requests.last.data, {'dismissed': true});
-      expect(find.text('Hola, Laura.'), findsOneWidget);
-      expect(
-        find.text('La retomás desde el inicio cuando quieras.'),
-        findsOneWidget,
+      expect(find.byKey(const Key('setup-compact')), findsOneWidget);
+      expect(find.text('Sigue: ¿Qué enseñan?'), findsOneWidget);
+      expect(find.text('Primero: Categorías y horarios'), findsNothing);
+      expect(find.text('La retomás desde acá cuando quieras.'), findsOneWidget);
+
+      await tester.tap(find.text('Seguir'));
+      await _settle(tester);
+
+      expect(requests.last.data, {'dismissed': false});
+      expect(find.byKey(const Key('setup-guide')), findsOneWidget);
+    });
+
+    testWidgets('completa desaparece', (tester) async {
+      await _pumpApp(
+        tester,
+        _admin(
+          onboarding: () => onboardingJson(
+            programs: 'done',
+            groups: 'done',
+            season: 'done',
+            instructors: 'skipped',
+          ),
+        ),
       );
+
+      expect(find.text('Hola, Laura.'), findsOneWidget);
+      expect(find.text('Configurá tu club'), findsNothing);
+    });
+
+    testWidgets('sin permiso no hay guía', (tester) async {
+      await _pumpApp(tester, _admin(permissions: const []));
+
+      expect(find.text('Hola, Laura.'), findsOneWidget);
+      expect(find.text('Configurá tu club'), findsNothing);
     });
 
     testWidgets('un paso bloqueado lleva al que falta', (tester) async {
       await _pumpApp(tester, {
         ..._admin(),
         'GET /setup/programs': (_) => {'data': <Object?>[]},
-      }, location: '/configurar');
+      });
 
       await tester.tap(find.text('Temporada y cuotas'));
       await _settle(tester);

@@ -30,7 +30,6 @@ import 'features/onboarding/presentation/instructors_step_screen.dart';
 import 'features/onboarding/presentation/programs_step_screen.dart';
 import 'features/onboarding/presentation/season_step_screen.dart';
 import 'features/onboarding/presentation/setup_done_screen.dart';
-import 'features/onboarding/presentation/setup_screen.dart';
 import 'features/organizations/presentation/organization_picker_screen.dart';
 import 'features/payment_reports/presentation/payment_reports_screen.dart';
 import 'features/payment_reports/presentation/report_payment_screen.dart';
@@ -131,7 +130,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/configurar',
-        builder: (_, _) => const SetupScreen(),
+        // La guía está en el inicio; acá viven sus pasos.
+        redirect: (_, state) =>
+            state.uri.path == '/configurar' ? '/inicio' : null,
         routes: [
           GoRoute(
             path: 'disciplinas',

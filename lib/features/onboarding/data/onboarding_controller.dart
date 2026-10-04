@@ -54,36 +54,15 @@ final onboardingProvider =
       retry: (_, _) => null,
     );
 
-/// Organizaciones donde la guía ya se abrió sola en esta sesión de la app.
-class SetupAutoOpened extends Notifier<Set<String>> {
-  @override
-  Set<String> build() => const {};
-
-  void mark(String slug) => state = {...state, slug};
-}
-
-final setupAutoOpenedProvider = NotifierProvider<SetupAutoOpened, Set<String>>(
-  SetupAutoOpened.new,
-);
-
-/// La guía se abre sola si está incompleta, no se cerró y todavía no se
-/// abrió en esta sesión.
-bool shouldAutoOpen(Onboarding? onboarding, Set<String> opened, String? slug) =>
-    onboarding != null &&
-    slug != null &&
-    !onboarding.completed &&
-    !onboarding.dismissed &&
-    !opened.contains(slug);
-
 /// Adónde ir después de guardar un paso: "¡Listo!" si la guía estaba
 /// incompleta al entrar al paso y ahora está completa; si no, el siguiente
-/// pendiente (o la lista).
+/// pendiente (o el inicio, donde está la guía).
 String nextRoute(Onboarding? after, {required bool wasCompleted}) {
   if (after == null) return '/inicio';
   if (after.completed) {
-    return wasCompleted ? '/configurar' : '/configurar/listo';
+    return wasCompleted ? '/inicio' : '/configurar/listo';
   }
-  return stepRoutes[after.next] ?? '/configurar';
+  return stepRoutes[after.next] ?? '/inicio';
 }
 
 // ---------------------------------------------------------------------------
@@ -232,8 +211,6 @@ class ClubFormController extends AsyncNotifier<ClubDraft> {
         slug: draft.slug!,
         terminology: draft.terminology,
       );
-      // La guía se abre ahora: no hace falta que se abra sola otra vez.
-      ref.read(setupAutoOpenedProvider.notifier).mark(slug);
       await ref.read(sessionControllerProvider.notifier).reload(select: slug);
       return null;
     } catch (error) {
