@@ -1,3 +1,6 @@
+import 'features/withdrawals/presentation/dropout_reports.dart';
+import 'features/withdrawals/presentation/manage_student_screen.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -160,6 +163,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/inicio', builder: (_, _) => const HomeScreen()),
       GoRoute(path: '/cuenta', builder: (_, _) => const AccountScreen()),
       GoRoute(path: '/informes', builder: (_, _) => const ReportsScreen()),
+      GoRoute(path: '/bajas', builder: (_, _) => const DropoutReportsScreen()),
+      GoRoute(
+        path: '/alumnos/:id',
+        builder: (_, state) =>
+            ManageStudentScreen(id: int.parse(state.pathParameters['id']!)),
+      ),
       GoRoute(
         path: '/estado-de-cuenta',
         builder: (_, _) => const BalanceScreen(),

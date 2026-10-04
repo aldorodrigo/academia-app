@@ -5,7 +5,8 @@ enum ChargeStatus {
   pending('pendiente', 'Pendiente'),
   overdue('vencido', 'Vencido'),
   paid('pagado', 'Pagado'),
-  voided('anulado', 'Anulado');
+  voided('anulado', 'Anulado'),
+  waived('condonado', 'Condonado');
 
   const ChargeStatus(this.value, this.label);
 

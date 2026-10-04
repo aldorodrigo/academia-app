@@ -5,9 +5,13 @@ import 'package:go_router/go_router.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/utils/clock.dart';
 import '../../../core/utils/format.dart';
+import '../../organizations/data/organization_repository.dart';
 import '../data/attendance_repository.dart';
 import '../data/models.dart';
 import 'attendance_status_style.dart';
+
+/// Menú de cada alumno del grupo.
+enum _StudentAction { report, cancel, open }
 
 /// Grupo del técnico: clases del mes y asistencia por alumno.
 class GroupScreen extends ConsumerStatefulWidget {
@@ -84,6 +88,10 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
     DateTime today,
   ) {
     final theme = Theme.of(context);
+    final organization = ref.watch(currentOrganizationProvider).value;
+    final manages =
+        (organization?.can('withdraw_students') ?? false) ||
+        (organization?.can('waive_charges') ?? false);
     return [
       const SizedBox(height: 8),
       Text('Clases', style: theme.textTheme.titleMedium),
@@ -162,20 +170,27 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
                 student.rate == null ? '—' : '${student.rate}%',
                 style: theme.textTheme.titleMedium,
               ),
-              PopupMenuButton<bool>(
+              PopupMenuButton<_StudentAction>(
                 tooltip: 'Más opciones de ${student.fullName}',
-                onSelected: (report) => report
-                    ? _reportDropout(data, student)
-                    : _cancelDropout(data, student),
+                onSelected: (action) => switch (action) {
+                  _StudentAction.report => _reportDropout(data, student),
+                  _StudentAction.cancel => _cancelDropout(data, student),
+                  _StudentAction.open => context.push('/alumnos/${student.id}'),
+                },
                 itemBuilder: (_) => [
+                  if (manages)
+                    const PopupMenuItem(
+                      value: _StudentAction.open,
+                      child: Text('Ver ficha (baja y cuenta)'),
+                    ),
                   if (student.dropoutReportedOn == null)
                     const PopupMenuItem(
-                      value: true,
+                      value: _StudentAction.report,
                       child: Text('Avisar que dejó de venir'),
                     )
                   else
                     const PopupMenuItem(
-                      value: false,
+                      value: _StudentAction.cancel,
                       child: Text('Sigue viniendo'),
                     ),
                 ],
