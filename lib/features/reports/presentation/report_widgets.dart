@@ -121,3 +121,33 @@ class ReportBody<T> extends StatelessWidget {
     ),
   );
 }
+
+/// "Matías: baja el 03/06/2026": la deuda de un hijo que ya dejó el club.
+class WithdrawalLabel extends StatelessWidget {
+  const WithdrawalLabel(this.withdrawal, {super.key});
+
+  final Withdrawal withdrawal;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final on = withdrawal.on;
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Row(
+        children: [
+          Icon(Icons.logout, size: 14, color: theme.colorScheme.tertiary),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              '${withdrawal.student}: baja${on == null ? '' : ' el ${formatDate(on)}'}',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.tertiary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

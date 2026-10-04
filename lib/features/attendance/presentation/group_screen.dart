@@ -126,27 +126,155 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
             child: Text(student.initials),
           ),
           title: Text(student.fullName),
-          subtitle: Row(
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              for (final (status, count) in [
-                (AttendanceStatus.present, student.present),
-                (AttendanceStatus.absent, student.absent),
-                (AttendanceStatus.justified, student.justified),
-              ]) ...[
-                Icon(
-                  status.icon,
-                  size: 16,
-                  color: status.color(theme.colorScheme),
+              Row(
+                children: [
+                  for (final (status, count) in [
+                    (AttendanceStatus.present, student.present),
+                    (AttendanceStatus.absent, student.absent),
+                    (AttendanceStatus.justified, student.justified),
+                  ]) ...[
+                    Icon(
+                      status.icon,
+                      size: 16,
+                      color: status.color(theme.colorScheme),
+                    ),
+                    Text(' $count   '),
+                  ],
+                ],
+              ),
+              if (student.dropoutReportedOn != null)
+                Text(
+                  'Avisaste que dejó de venir el '
+                  '${formatDate(student.dropoutReportedOn!)}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.tertiary,
+                  ),
                 ),
-                Text(' $count   '),
-              ],
             ],
           ),
-          trailing: Text(
-            student.rate == null ? '—' : '${student.rate}%',
-            style: theme.textTheme.titleMedium,
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                student.rate == null ? '—' : '${student.rate}%',
+                style: theme.textTheme.titleMedium,
+              ),
+              PopupMenuButton<bool>(
+                tooltip: 'Más opciones de ${student.fullName}',
+                onSelected: (report) => report
+                    ? _reportDropout(data, student)
+                    : _cancelDropout(data, student),
+                itemBuilder: (_) => [
+                  if (student.dropoutReportedOn == null)
+                    const PopupMenuItem(
+                      value: true,
+                      child: Text('Avisar que dejó de venir'),
+                    )
+                  else
+                    const PopupMenuItem(
+                      value: false,
+                      child: Text('Sigue viniendo'),
+                    ),
+                ],
+              ),
+            ],
           ),
         ),
     ];
   }
+
+  Future<void> _reportDropout(
+    GroupAttendance data,
+    StudentAttendanceSummary student,
+  ) async {
+    final note = await showDialog<String>(
+      context: context,
+      builder: (_) => _DropoutDialog(name: student.fullName),
+    );
+    if (note == null || !mounted) return;
+    await _run(
+      () => ref
+          .read(attendanceRepositoryProvider)
+          .reportDropout(data.group.id, student.id, note: note),
+      'Listo: le avisamos al club.',
+    );
+  }
+
+  Future<void> _cancelDropout(
+    GroupAttendance data,
+    StudentAttendanceSummary student,
+  ) => _run(
+    () => ref
+        .read(attendanceRepositoryProvider)
+        .cancelDropout(data.group.id, student.id),
+    'Listo: sacamos el aviso.',
+  );
+
+  Future<void> _run(Future<Object?> Function() action, String done) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await action();
+      ref.invalidate(groupAttendanceProvider);
+      messenger.showSnackBar(SnackBar(content: Text(done)));
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(apiErrorMessage(error))));
+    }
+  }
+}
+
+/// Aviso del técnico: nota opcional. Devuelve la nota ('' sin nota) o null si se cancela.
+class _DropoutDialog extends StatefulWidget {
+  const _DropoutDialog({required this.name});
+
+  final String name;
+
+  @override
+  State<_DropoutDialog> createState() => _DropoutDialogState();
+}
+
+class _DropoutDialogState extends State<_DropoutDialog> {
+  final _note = TextEditingController();
+
+  @override
+  void dispose() {
+    _note.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('¿Dejó de venir?'),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Le avisamos al club que ${widget.name} dejó de venir. '
+          'La baja la decide el club.',
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _note,
+          decoration: const InputDecoration(
+            labelText: 'Nota (opcional)',
+            hintText: 'Ej.: se mudó, no viene hace 3 semanas',
+          ),
+          maxLength: 255,
+        ),
+      ],
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Cancelar'),
+      ),
+      FilledButton(
+        onPressed: () => Navigator.pop(context, _note.text),
+        child: const Text('Avisar'),
+      ),
+    ],
+  );
 }

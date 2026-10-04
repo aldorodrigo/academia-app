@@ -34,10 +34,16 @@ class ReportsRepository {
     );
   }
 
-  Future<DelinquentsReport> delinquents({int minMonths = 1}) async {
+  Future<DelinquentsReport> delinquents({
+    int minMonths = 1,
+    WithdrawnFilter withdrawn = WithdrawnFilter.all,
+  }) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '/reports/delinquents',
-      queryParameters: {'min_months': minMonths},
+      queryParameters: {
+        'min_months': minMonths,
+        if (withdrawn.value != null) 'withdrawn': withdrawn.value,
+      },
     );
     return DelinquentsReport.fromJson(
       response.data!['data'] as Map<String, dynamic>,
@@ -64,7 +70,11 @@ final balancesReportProvider = FutureProvider.autoDispose<BalancesReport>(
   retry: (_, _) => null,
 );
 
-final delinquentsReportProvider = FutureProvider.autoDispose<DelinquentsReport>(
-  (ref) => ref.watch(reportsRepositoryProvider).delinquents(),
-  retry: (_, _) => null,
-);
+/// Morosos; con [WithdrawnFilter] se ven solo los que siguen o solo los dados de baja.
+final delinquentsReportProvider = FutureProvider.autoDispose
+    .family<DelinquentsReport, WithdrawnFilter>(
+      (ref, withdrawn) => ref
+          .watch(reportsRepositoryProvider)
+          .delinquents(withdrawn: withdrawn),
+      retry: (_, _) => null,
+    );

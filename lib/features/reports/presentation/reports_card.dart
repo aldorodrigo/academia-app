@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/utils/clock.dart';
 import '../../../core/utils/format.dart';
 import '../../organizations/data/organization_repository.dart';
+import '../data/models.dart';
 import '../data/reports_repository.dart';
 
 /// Tarjeta del inicio para la comisión: caja y bancos, y morosos.
@@ -22,7 +23,9 @@ class ReportsCard extends ConsumerWidget {
     final balanceValue = ref.watch(
       balanceReportProvider(DateTime(today.year, today.month)),
     );
-    final delinquentsValue = ref.watch(delinquentsReportProvider);
+    final delinquentsValue = ref.watch(
+      delinquentsReportProvider(WithdrawnFilter.all),
+    );
     final balance = balanceValue.value;
     final delinquents = delinquentsValue.value;
     final loading = balanceValue.isLoading || delinquentsValue.isLoading;

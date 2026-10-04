@@ -190,6 +190,27 @@ class AttendanceRepository {
     return GroupAttendance.fromJson(_data(response.data!));
   }
 
+  /// Avisa al club que el alumno dejó de venir (el club decide si le da la baja).
+  /// Devuelve la fecha del aviso.
+  Future<DateTime> reportDropout(
+    int groupId,
+    int studentId, {
+    String? note,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/groups/$groupId/students/$studentId/dropout',
+      data: {if (note != null && note.trim().isNotEmpty) 'note': note.trim()},
+    );
+    return DateTime.parse(
+      _data(response.data!)['dropout_reported_on'] as String,
+    );
+  }
+
+  /// Deshace el aviso: el alumno sigue viniendo.
+  Future<void> cancelDropout(int groupId, int studentId) async {
+    await _dio.delete<void>('/groups/$groupId/students/$studentId/dropout');
+  }
+
   /// Próxima clase de cada alumno a cargo del tutor.
   Future<List<AgendaItem>> agenda() async {
     if (await _storage.readOrganization() == null) return const [];
