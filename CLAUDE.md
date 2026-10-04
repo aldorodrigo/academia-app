@@ -98,11 +98,13 @@ lib/
 - **Alta autoservicio y "Primeros pasos"** (Sprint 5d, `features/onboarding/`): login → "Crear cuenta" (`/crear-cuenta`
   separa club de familia) → `/registro` (celular o correo) → `/registro/codigo` (código de 6 dígitos por WhatsApp o
   correo; `sessionRedirect` lo fuerza si `verified` es false) → `/registro/club` ("Tu club"; también desde la lista de organizaciones vacía) →
-  `/configurar` (checklist de `GET onboarding`, permiso `configure_organization`) y un paso por pantalla
+  la guía en el inicio (`SetupCard`: checklist de `GET onboarding`, permiso `configure_organization`; "Seguir después"
+  la achica a una barra, completa desaparece; `/configurar` redirige al inicio) y un paso por pantalla
   (`/configurar/disciplinas|categorias|temporada|tecnicos`, `StepScaffold` + `StepEntry`, controllers en
-  `step_controllers.dart`) → `/configurar/listo`. Se abre sola una vez por sesión desde el inicio (`shouldAutoOpen`)
-  mientras esté incompleta y no cerrada; `SetupCard` en el inicio hasta completarla. La API decide todo (pasos hechos,
+  `step_controllers.dart`) → `/configurar/listo`. No se abre sola. La API decide todo (pasos hechos,
   sugerencias de categorías, fechas y montos de la temporada): la app no calcula.
+- **Botones del inicio:** `QuickActionsBar` con `quickActionsFor()` (`features/home/data/quick_actions.dart`) según
+  permisos y roles: Mis grupos, Estado de cuenta, Mis reservas, Agenda, Alumnos particulares, Informes.
 - **Organización activa:** `currentOrganizationProvider` (`GET /organization`) da vocabulario
   (`term('group')`), módulos (`hasFeature`) y perfiles del usuario con mandato (`roles`).
 - **Contrato de API:** `academia-api/docs/API_V1.md`. La app se construye primero contra el

@@ -45,9 +45,9 @@ class StepScaffold extends ConsumerWidget {
           number > 0 ? 'Paso $number de $total' : 'Configurá tu club',
         ),
         leading: IconButton(
-          tooltip: 'Volver a la lista',
+          tooltip: 'Volver al inicio',
           icon: const Icon(Icons.close),
-          onPressed: () => context.go('/configurar'),
+          onPressed: () => context.go('/inicio'),
         ),
         bottom: total == 0
             ? null

@@ -76,7 +76,8 @@ class _ClubFormScreenState extends ConsumerState<ClubFormScreen> {
       });
       return;
     }
-    context.go('/configurar');
+    // La guía está en el inicio.
+    context.go('/inicio');
   }
 
   @override

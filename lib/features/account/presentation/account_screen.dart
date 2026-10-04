@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../auth/data/session_controller.dart';
+import '../../onboarding/data/onboarding_controller.dart';
 import '../../organizations/data/organization_repository.dart';
 import '../../organizations/presentation/roles_list.dart';
 
@@ -14,6 +15,7 @@ class AccountScreen extends ConsumerWidget {
     final session = ref.watch(sessionControllerProvider).value;
     final theme = Theme.of(context);
     final organization = ref.watch(currentOrganizationProvider).value;
+    final onboarding = ref.watch(onboardingProvider).value;
     final teaches =
         (organization?.hasFeature('private_lessons') ?? false) &&
         (organization!.can('teach_lessons') ||
@@ -52,12 +54,20 @@ class AccountScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
           const Divider(),
-          if (organization?.can('configure_organization') ?? false)
+          // La guía vive en el inicio; acá se vuelve a abrir si se achicó.
+          if (onboarding != null && !onboarding.completed)
             ListTile(
               leading: const Icon(Icons.tune),
               title: const Text('Configurar el club'),
-              subtitle: const Text('Guía de primeros pasos'),
-              onTap: () => context.go('/configurar'),
+              subtitle: Text(
+                'Guía de primeros pasos · ${onboarding.done} de ${onboarding.total}',
+              ),
+              onTap: () async {
+                if (onboarding.dismissed) {
+                  await ref.read(onboardingProvider.notifier).reopen();
+                }
+                if (context.mounted) context.go('/inicio');
+              },
             ),
           ListTile(
             leading: const Icon(Icons.notifications_outlined),
