@@ -266,8 +266,10 @@ void main() {
     );
     expect(
       text,
-      'Hola Marta, te invito a sumarte como técnico de Club Jakare. '
-      'Creá tu cuenta desde este link: https://app.test/invitacion/abc',
+      'Hola Marta, te invito a sumarte como técnico de *Club Jakare* en '
+      '*Tuku*, la app de cuotas, asistencia y avisos de clase.\n\n'
+      'Creá tu cuenta desde este link:\nhttps://app.test/invitacion/abc\n\n'
+      'Vence en 14 días y sirve una sola vez.',
     );
     expect(whatsappUri(text).host, 'wa.me');
     expect(whatsappUri(text).queryParameters['text'], text);

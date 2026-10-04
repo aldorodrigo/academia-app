@@ -1052,7 +1052,8 @@ class SetupInstructors {
   final List<SetupInstructor> instructors;
 }
 
-/// Texto armado para mandar una invitación por WhatsApp.
+/// Texto con la marca Tuku para mandar una invitación por WhatsApp (con el
+/// formato de WhatsApp; igual que el de la API en `Invitation::whatsappText`).
 String invitationMessage({
   required String name,
   required String organization,
@@ -1062,7 +1063,9 @@ String invitationMessage({
   final first = name.trim().split(' ').first;
   final greeting = first.isEmpty ? 'Hola' : 'Hola $first';
   return '$greeting, te invito a sumarte como ${role.toLowerCase()} de '
-      '$organization. Creá tu cuenta desde este link: $link';
+      '*$organization* en *Tuku*, la app de cuotas, asistencia y avisos de '
+      'clase.\n\nCreá tu cuenta desde este link:\n$link\n\n'
+      'Vence en 14 días y sirve una sola vez.';
 }
 
 /// Link de WhatsApp con el texto ya escrito: al [phone] (formato
