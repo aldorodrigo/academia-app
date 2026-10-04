@@ -100,6 +100,7 @@ class PaymentReport {
     this.reportedBy,
     this.pendingBalance,
     this.moneyAccounts = const [],
+    this.registeredBy,
   });
 
   factory PaymentReport.fromJson(Map<String, dynamic> json) {
@@ -129,6 +130,7 @@ class PaymentReport {
       moneyAccounts: ((json['money_accounts'] as List?) ?? const [])
           .map((a) => TransferAccount.fromJson(a as Map<String, dynamic>))
           .toList(),
+      registeredBy: json['registered_by'] as String?,
     );
   }
 
@@ -161,6 +163,10 @@ class PaymentReport {
   final String? reportedBy;
   final int? pendingBalance;
   final List<TransferAccount> moneyAccounts;
+
+  /// Quién lo registró, si lo cargó el club (la captura que le mandó la
+  /// familia por WhatsApp); `null` si lo informó la familia.
+  final String? registeredBy;
 
   bool get isPending => status == PaymentReportStatus.pending;
 

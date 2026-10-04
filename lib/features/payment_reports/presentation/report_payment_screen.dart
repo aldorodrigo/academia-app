@@ -11,6 +11,7 @@ import '../../billing/data/models.dart';
 import '../data/models.dart';
 import '../data/payment_reports_repository.dart';
 import '../data/report_form.dart';
+import 'proof_field.dart';
 
 /// El tutor informa una transferencia: datos para transferir, qué cuotas paga,
 /// monto, fecha y el comprobante (foto o PDF). Queda en revisión.
@@ -239,7 +240,7 @@ class _ReportFormState extends ConsumerState<_ReportForm> {
             ),
           ),
           const SizedBox(height: 16),
-          _ProofField(
+          ProofField(
             proof: _proof,
             error: _proofError,
             onPick: _sending ? null : _pickProof,
@@ -315,73 +316,4 @@ class _TransferAccountCard extends StatelessWidget {
       ),
     ),
   );
-}
-
-/// Botón para adjuntar el comprobante y el archivo elegido.
-class _ProofField extends StatelessWidget {
-  const _ProofField({
-    required this.proof,
-    required this.error,
-    required this.onPick,
-  });
-
-  final PickedProof? proof;
-  final String? error;
-  final VoidCallback? onPick;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final file = proof;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (file == null)
-          OutlinedButton.icon(
-            icon: const Icon(Icons.attach_file),
-            label: const Text('Adjuntar comprobante'),
-            onPressed: onPick,
-          )
-        else
-          Card(
-            child: ListTile(
-              leading: Icon(
-                file.name.toLowerCase().endsWith('.pdf')
-                    ? Icons.picture_as_pdf_outlined
-                    : Icons.image_outlined,
-              ),
-              title: Text(file.name),
-              subtitle: Text(_size(file.bytes.length)),
-              trailing: TextButton(
-                onPressed: onPick,
-                child: const Text('Cambiar'),
-              ),
-            ),
-          ),
-        if (error != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 4, left: 12),
-            child: Text(
-              error!,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.error,
-              ),
-            ),
-          )
-        else if (file == null)
-          Padding(
-            padding: const EdgeInsets.only(top: 4, left: 12),
-            child: Text(
-              'Captura o PDF de la transferencia, hasta 5 MB.',
-              style: theme.textTheme.bodySmall,
-            ),
-          ),
-      ],
-    );
-  }
-
-  static String _size(int bytes) => bytes < 1024 * 1024
-      ? '${(bytes / 1024).ceil()} KB'
-      : '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
 }

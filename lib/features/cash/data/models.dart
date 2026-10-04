@@ -1,4 +1,6 @@
 import '../../billing/data/models.dart';
+import '../../payment_reports/data/models.dart';
+import '../../payment_reports/data/report_form.dart';
 
 /// Modelos del cobro en efectivo y la caja del técnico (`API_V1.md`, «Cobro en
 /// efectivo y caja del técnico»).
@@ -143,6 +145,8 @@ class CollectionTarget {
     this.credit = 0,
     this.charges = const [],
     this.cashBox,
+    this.transferAccounts = const [],
+    this.approvesTransfers = false,
   });
 
   factory CollectionTarget.fromJson(Map<String, dynamic> json) {
@@ -164,6 +168,10 @@ class CollectionTarget {
           .map((c) => CollectableCharge.fromJson(c as Map<String, dynamic>))
           .toList(),
       cashBox: box == null ? null : CashBoxSummary.fromJson(box),
+      transferAccounts: ((json['transfer_accounts'] as List?) ?? const [])
+          .map((a) => TransferAccount.fromJson(a as Map<String, dynamic>))
+          .toList(),
+      approvesTransfers: json['approves_transfers'] as bool? ?? false,
     );
   }
 
@@ -179,6 +187,13 @@ class CollectionTarget {
 
   /// `null` si todavía no cobró nunca (la caja se crea con el primer cobro).
   final CashBoxSummary? cashBox;
+
+  /// Bancos y billeteras del club donde pudo entrar una transferencia.
+  final List<TransferAccount> transferAccounts;
+
+  /// Quien cobra valida comprobantes: la transferencia queda aprobada al
+  /// registrarla (si no, en revisión del tesorero).
+  final bool approvesTransfers;
 
   bool get canCollect => cashBox?.active ?? true;
 
@@ -208,6 +223,38 @@ class CollectionDraft {
   final List<int> chargeIds;
   final int? guardianId;
   final String? notes;
+}
+
+/// Transferencia que la familia le mandó a quien cobra (la captura de
+/// WhatsApp), registrada en su nombre.
+class TransferRegistrationDraft {
+  const TransferRegistrationDraft({
+    required this.studentId,
+    required this.amount,
+    required this.paidOn,
+    required this.proof,
+    this.chargeIds = const [],
+    this.moneyAccountId,
+    this.guardianId,
+    this.reference,
+  });
+
+  final int studentId;
+  final int amount;
+  final DateTime paidOn;
+  final PickedProof proof;
+  final List<int> chargeIds;
+  final int? moneyAccountId;
+  final int? guardianId;
+  final String? reference;
+}
+
+/// La transferencia registrada: aprobada con recibo o en revisión.
+class TransferRegistration {
+  const TransferRegistration({required this.report, required this.message});
+
+  final PaymentReport report;
+  final String message;
 }
 
 /// Cobro registrado: el pago con su recibo y cómo quedó la caja.

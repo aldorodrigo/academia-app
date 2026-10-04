@@ -74,7 +74,10 @@ lib/
   alumno en `/grupos/:id`; `/cobrar/:id` muestra las cuotas pendientes de la familia (elegidas las de ahora, sin las
   próximas ni las que tienen una transferencia en revisión), el monto prellenado con `settle_amount` (pronto pago lo
   calcula la API) y el recibo. Cada cobro manda un `request_id` (`collectionRequestIdProvider`, reemplazable en tests)
-  para que un reintento no lo duplique. El pago entra en su caja personal: `/mi-caja` (saldo en su poder, movimientos y
+  para que un reintento no lo duplique. En la misma pantalla, "Transferencia" registra la que la familia le mandó por
+  WhatsApp (`POST collections/transfers`, captura o PDF con `proofPickerProvider` y `ProofField`): queda aprobada con
+  recibo si quien la registra valida comprobantes (`approves_transfers`), si no en revisión; la familia la ve con
+  "Registrado por …" (`PaymentReport.registeredBy`, sin "Retirar"). El efectivo entra en su caja personal: `/mi-caja` (saldo en su poder, movimientos y
   "Depositar", que queda por confirmar). Quien valida comprobantes (`review_payment_reports`) ve `/efectivo` (cajas de
   cada uno y depósitos para confirmar o rechazar). Cobrar y depositar requieren conexión.
 - **Informes** (comisión): `/informes` (balance del mes, saldos por familia, morosos; PDF/Excel por link firmado)

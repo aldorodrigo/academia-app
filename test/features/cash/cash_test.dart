@@ -9,6 +9,12 @@ import 'package:academia_app/features/cash/presentation/cash_box_screen.dart';
 import 'package:academia_app/features/cash/presentation/cash_overview_screen.dart';
 import 'package:academia_app/features/cash/presentation/collect_screen.dart';
 import 'package:academia_app/features/cash/presentation/collect_students_screen.dart';
+import 'package:academia_app/features/payment_reports/data/models.dart';
+
+import 'dart:typed_data';
+
+import 'package:academia_app/features/payment_reports/data/report_form.dart';
+import 'package:academia_app/features/payment_reports/presentation/payment_report_tile.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -59,6 +65,7 @@ Map<String, Object?> _target({
     'active': true,
   },
   int credit = 0,
+  bool approves = false,
 }) => {
   'student': {'id': 12, 'full_name': 'Mateo Benítez'},
   'family': {
@@ -99,6 +106,41 @@ Map<String, Object?> _target({
         ),
       ],
   'cash_box': box,
+  'transfer_accounts': [
+    {'id': 2, 'name': 'Banco Itaú'},
+    {'id': 3, 'name': 'Ueno'},
+  ],
+  'approves_transfers': approves,
+};
+
+/// Comprobante registrado por el club (`POST collections/transfers`).
+Map<String, Object?> _staffReport({String status = 'pendiente'}) => {
+  'id': 40,
+  'amount': 135000,
+  'paid_on': '2026-10-03',
+  'reference': '99812',
+  'notes': null,
+  'status': status,
+  'status_label': status,
+  'rejection_reason': null,
+  'money_account': {'id': 3, 'name': 'Ueno'},
+  'charges': [
+    {
+      'id': 501,
+      'description': 'Cuota octubre 2026',
+      'student_first_name': 'Sofía',
+      'pending_amount': 150000,
+    },
+  ],
+  'proof_url': 'https://api.test/comprobantes-de-pago/40?signature=x',
+  'proof_name': 'captura.jpg',
+  'created_at': '2026-10-04T10:00:00-03:00',
+  'reviewed_at': null,
+  'receipt_number': status == 'aprobado' ? '000125' : null,
+  'receipt_url': status == 'aprobado'
+      ? 'https://api.test/recibos/125?signature=y'
+      : null,
+  'registered_by': 'Juan Pérez',
 };
 
 Map<String, Object?> _payment({int amount = 285000}) => {
@@ -219,6 +261,7 @@ Widget _app(
   Widget home, {
   List<RequestOptions>? requests,
   List<Uri>? opened,
+  PickedProof? picked,
 }) => ProviderScope(
   overrides: [
     sessionStorageProvider.overrideWithValue(
@@ -233,6 +276,7 @@ Widget _app(
       return true;
     }),
     collectionRequestIdProvider.overrideWithValue(() => 'req-0001'),
+    proofPickerProvider.overrideWithValue(() async => picked),
   ],
   child: MaterialApp.router(
     routerConfig: GoRouter(
@@ -282,8 +326,17 @@ Future<void> _settle(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _scrollTo(WidgetTester tester, Finder finder) => tester
-    .scrollUntilVisible(finder, 200, scrollable: find.byType(Scrollable).first);
+/// El formulario es una lista perezosa: se desplaza hasta construirlo y
+/// después lo centra para que el toque no caiga en el borde.
+Future<void> _scrollTo(WidgetTester tester, Finder finder) async {
+  await tester.scrollUntilVisible(
+    finder,
+    200,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.ensureVisible(finder);
+  await tester.pumpAndSettle();
+}
 
 void main() {
   group('modelos', () {
@@ -307,6 +360,30 @@ void main() {
       expect(early.earlyPaymentAmount, 15000);
       expect(early.earlyPaymentLabel, 'Pronto pago −10 %');
       expect(target.charges[2].underReview, isTrue);
+    });
+
+    test('trae las cuentas para la transferencia y si se aprueba al toque', () {
+      final target = CollectionTarget.fromJson(_target(approves: true));
+
+      expect(target.transferAccounts.map((a) => a.name), [
+        'Banco Itaú',
+        'Ueno',
+      ]);
+      expect(target.approvesTransfers, isTrue);
+      expect(
+        CollectionTarget.fromJson({
+          ..._target(),
+          'transfer_accounts': null,
+          'approves_transfers': null,
+        }).approvesTransfers,
+        isFalse,
+      );
+    });
+
+    test('el comprobante dice quién lo registró', () {
+      final report = PaymentReport.fromJson(_staffReport());
+
+      expect(report.registeredBy, 'Juan Pérez');
     });
 
     test('sin caja todavía puede cobrar; con la caja cerrada, no', () {
@@ -511,6 +588,52 @@ void main() {
       expect((await repository.cashBox()).balance, 585000);
     });
 
+    test(
+      'registra la transferencia que mandó la familia (multipart)',
+      () async {
+        final requests = <RequestOptions>[];
+        final repository = CashRepository(
+          fakeDio({
+            'POST /collections/transfers': (_) => {
+              'data': _staffReport(),
+              'message': 'Transferencia registrada. Queda en revisión hasta que la apruebe el tesorero.',
+            },
+          }, requests: requests),
+          InMemorySessionStorage()..organization = 'jakare',
+        );
+
+        final result = await repository.registerTransfer(
+          TransferRegistrationDraft(
+            studentId: 12,
+            amount: 135000,
+            paidOn: DateTime(2026, 10, 3),
+            proof: PickedProof(name: 'captura.jpg', bytes: Uint8List(10)),
+            chargeIds: const [501],
+            moneyAccountId: 3,
+            guardianId: 3,
+            reference: ' 99812 ',
+          ),
+        );
+
+        expect(result.report.isPending, isTrue);
+        expect(result.message, startsWith('Transferencia registrada.'));
+        final form = requests.single.data as FormData;
+        expect(
+          form.fields.map((f) => '${f.key}=${f.value}'),
+          containsAll([
+            'student_id=12',
+            'amount=135000',
+            'paid_on=2026-10-03',
+            'charge_ids[]=501',
+            'money_account_id=3',
+            'guardian_id=3',
+            'reference=99812',
+          ]),
+        );
+        expect(form.files.single.key, 'proof');
+      },
+    );
+
     test('depositar, retirar, confirmar y rechazar', () async {
       final requests = <RequestOptions>[];
       final repository = CashRepository(
@@ -655,6 +778,142 @@ void main() {
       await tester.tap(find.text('Listo'));
       await tester.pumpAndSettle();
       expect(find.text('Lista de cobro'), findsOneWidget);
+    });
+
+    testWidgets('transferencia: pide el comprobante y queda en revisión', (
+      tester,
+    ) async {
+      final requests = <RequestOptions>[];
+      await tester.pumpWidget(
+        _app(
+          {
+            ..._session(),
+            'GET /collections/students/12': (_) => {'data': _target()},
+            'GET /collections/students': (_) => {'data': _students},
+            'POST /collections/transfers': (_) => {
+              'data': _staffReport(),
+              'message': 'Transferencia registrada. Queda en revisión hasta que la apruebe el tesorero.',
+            },
+          },
+          const CollectScreen(studentId: 12),
+          requests: requests,
+          picked: PickedProof(name: 'captura.jpg', bytes: Uint8List(10)),
+        ),
+      );
+      await _settle(tester);
+
+      await tester.tap(find.text('Transferencia'));
+      await tester.pumpAndSettle();
+      expect(find.text('Monto transferido'), findsOneWidget);
+      // Sin la vencida: solo octubre de Sofía.
+      await tester.tap(find.text('Mateo · Cuota agosto 2026'));
+      await tester.pump();
+
+      await _scrollTo(tester, find.text('Registrar transferencia'));
+      expect(
+        find.textContaining('Queda en revisión hasta que la apruebe'),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Registrar transferencia'));
+      await tester.pump();
+      expect(
+        find.text('Adjuntá el comprobante de la transferencia.'),
+        findsOneWidget,
+      );
+      expect(requests.where((r) => r.method == 'POST'), isEmpty);
+
+      await tester.tap(find.byKey(const Key('collect-account')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ueno').last);
+      await tester.pumpAndSettle();
+      await _scrollTo(tester, find.text('Adjuntar comprobante'));
+      await tester.tap(find.text('Adjuntar comprobante'));
+      await tester.pumpAndSettle();
+      expect(find.text('captura.jpg'), findsOneWidget);
+
+      await _scrollTo(tester, find.text('Registrar transferencia'));
+      await tester.tap(find.text('Registrar transferencia'));
+      await tester.pumpAndSettle();
+
+      final form =
+          requests.firstWhere((r) => r.method == 'POST').data as FormData;
+      expect(
+        form.fields.map((f) => '${f.key}=${f.value}'),
+        containsAll([
+          'student_id=12',
+          'amount=135000',
+          'paid_on=2026-10-04',
+          'charge_ids[]=501',
+          'money_account_id=3',
+        ]),
+      );
+      expect(find.text('Enviada a revisión'), findsOneWidget);
+      expect(find.text('Ver recibo'), findsNothing);
+
+      await tester.tap(find.text('Listo'));
+      await tester.pumpAndSettle();
+      expect(find.text('Lista de cobro'), findsOneWidget);
+    });
+
+    testWidgets('transferencia del tesorero: aprobada con recibo', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _app(
+          {
+            ..._session(),
+            'GET /collections/students/12': (_) => {
+              'data': _target(approves: true),
+            },
+            'POST /collections/transfers': (_) => {
+              'data': _staffReport(status: 'aprobado'),
+              'message': 'Transferencia registrada. Recibo N° 000125.',
+            },
+          },
+          const CollectScreen(studentId: 12),
+          picked: PickedProof(name: 'captura.jpg', bytes: Uint8List(10)),
+        ),
+      );
+      await _settle(tester);
+
+      await tester.tap(find.text('Transferencia'));
+      await tester.pumpAndSettle();
+      await _scrollTo(tester, find.text('Adjuntar comprobante'));
+      await tester.tap(find.text('Adjuntar comprobante'));
+      await tester.pumpAndSettle();
+      await _scrollTo(tester, find.text('Registrar transferencia'));
+      expect(
+        find.text(
+          'Se registra el pago con su recibo y le avisamos a la familia.',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Registrar transferencia'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Transferencia registrada'), findsOneWidget);
+      expect(
+        find.text('Transferencia registrada. Recibo N° 000125.'),
+        findsOneWidget,
+      );
+      expect(find.text('Ver recibo'), findsOneWidget);
+    });
+
+    testWidgets('la familia ve quién la registró y no la puede retirar', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _app(
+          _session(),
+          Scaffold(
+            body: PaymentReportTile(PaymentReport.fromJson(_staffReport())),
+          ),
+        ),
+      );
+      await _settle(tester);
+
+      expect(find.text('Registrado por Juan Pérez'), findsOneWidget);
+      expect(find.text('Retirar'), findsNothing);
     });
 
     testWidgets('el monto cambiado a mano no se pisa y avisa lo que sobra', (

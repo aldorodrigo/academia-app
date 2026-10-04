@@ -5,6 +5,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/storage/session_storage.dart';
 import '../../../core/utils/format.dart';
 import '../../auth/data/session_controller.dart';
+import '../../payment_reports/data/models.dart';
 import 'models.dart';
 
 /// Cobro en efectivo desde la app (permiso `collect_payments`), la caja de quien
@@ -56,6 +57,38 @@ class CashRepository {
     );
     return CollectionResult.fromJson(
       response.data!['data'] as Map<String, dynamic>,
+    );
+  }
+
+  /// Registra la transferencia que la familia le mandó, con la captura o el
+  /// PDF (multipart). Queda aprobada o en revisión según quien la registra.
+  Future<TransferRegistration> registerTransfer(
+    TransferRegistrationDraft draft,
+  ) async {
+    final reference = draft.reference?.trim();
+    final form = FormData.fromMap({
+      'student_id': draft.studentId,
+      'amount': draft.amount,
+      'paid_on': apiDate(draft.paidOn),
+      'charge_ids': draft.chargeIds,
+      'money_account_id': ?draft.moneyAccountId,
+      'guardian_id': ?draft.guardianId,
+      if (reference != null && reference.isNotEmpty) 'reference': reference,
+      'proof': MultipartFile.fromBytes(
+        draft.proof.bytes,
+        filename: draft.proof.name,
+      ),
+    }, ListFormat.multiCompatible);
+
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/collections/transfers',
+      data: form,
+    );
+    return TransferRegistration(
+      report: PaymentReport.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      ),
+      message: response.data!['message'] as String? ?? '',
     );
   }
 

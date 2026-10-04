@@ -6,14 +6,18 @@ import 'package:go_router/go_router.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/utils/format.dart';
 import '../../../core/utils/launcher.dart';
+import '../../../core/utils/clock.dart';
 import '../../billing/data/models.dart';
+import '../../payment_reports/data/report_form.dart';
+import '../../payment_reports/presentation/proof_field.dart';
 import '../data/cash_form.dart';
 import '../data/cash_repository.dart';
 import '../data/models.dart';
 
-/// Cobrar en efectivo a un alumno: cuotas pendientes de su familia, monto
-/// prellenado con lo elegido, quién pagó y el recibo. Entra en la caja de
-/// quien cobra.
+/// Cobrar a un alumno: cuotas pendientes de su familia, monto prellenado con
+/// lo elegido, quién pagó y el recibo. En efectivo entra en la caja de quien
+/// cobra; con "Transferencia" se registra la captura que la familia le mandó
+/// (aprobada con recibo si valida comprobantes, si no en revisión).
 class CollectScreen extends ConsumerWidget {
   const CollectScreen({super.key, required this.studentId});
 
@@ -70,6 +74,16 @@ class _CollectFormState extends ConsumerState<_CollectForm> {
   bool _sending = false;
   String? _error;
 
+  /// Efectivo o la transferencia que la familia le mandó.
+  bool _transfer = false;
+  late DateTime _paidOn = ref.read(todayProvider);
+  late int? _accountId = widget.target.transferAccounts.length == 1
+      ? widget.target.transferAccounts.single.id
+      : null;
+  final _reference = TextEditingController();
+  PickedProof? _proof;
+  String? _proofError;
+
   @override
   void initState() {
     super.initState();
@@ -80,6 +94,7 @@ class _CollectFormState extends ConsumerState<_CollectForm> {
   void dispose() {
     _amount.dispose();
     _notes.dispose();
+    _reference.dispose();
     super.dispose();
   }
 
@@ -142,6 +157,73 @@ class _CollectFormState extends ConsumerState<_CollectForm> {
     }
   }
 
+  Future<void> _pickDate() async {
+    final today = ref.read(todayProvider);
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _paidOn,
+      firstDate: DateTime(today.year - 1, today.month, today.day),
+      lastDate: today,
+    );
+    if (date != null) setState(() => _paidOn = date);
+  }
+
+  Future<void> _pickProof() async {
+    final proof = await ref.read(proofPickerProvider)();
+    if (proof == null) return;
+    setState(() {
+      _proof = proof;
+      _proofError = validateProof(proof);
+    });
+  }
+
+  Future<void> _registerTransfer() async {
+    final proofError = validateProof(_proof);
+    final valid = _formKey.currentState!.validate();
+    setState(() => _proofError = proofError);
+    if (!valid || proofError != null) return;
+
+    setState(() {
+      _sending = true;
+      _error = null;
+    });
+    try {
+      final result = await ref
+          .read(cashRepositoryProvider)
+          .registerTransfer(
+            TransferRegistrationDraft(
+              studentId: widget.target.studentId,
+              amount: int.parse(_amount.text.trim()),
+              paidOn: _paidOn,
+              proof: _proof!,
+              chargeIds: [
+                for (final c in widget.target.charges)
+                  if (_selected.contains(c.id)) c.id,
+              ],
+              moneyAccountId: _accountId,
+              guardianId: _guardianId,
+              reference: _reference.text,
+            ),
+          );
+      ref
+        ..invalidate(collectableStudentsProvider)
+        ..invalidate(collectionTargetProvider(widget.target.studentId));
+      if (!mounted) return;
+      setState(() => _sending = false);
+      await showDialog<void>(
+        context: context,
+        builder: (_) => TransferDoneDialog(result),
+      );
+      if (mounted) _back(context);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _sending = false;
+        _error = apiErrorMessage(error);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -174,6 +256,28 @@ class _CollectFormState extends ConsumerState<_CollectForm> {
               ),
             ),
           const SizedBox(height: 16),
+          SegmentedButton<bool>(
+            segments: const [
+              ButtonSegment(
+                value: false,
+                label: Text('Efectivo'),
+                icon: Icon(Icons.payments_outlined),
+              ),
+              ButtonSegment(
+                value: true,
+                label: Text('Transferencia'),
+                icon: Icon(Icons.account_balance_outlined),
+              ),
+            ],
+            selected: {_transfer},
+            onSelectionChanged: _sending
+                ? null
+                : (value) => setState(() {
+                    _transfer = value.single;
+                    _error = null;
+                  }),
+          ),
+          const SizedBox(height: 16),
           Text('¿Qué paga?', style: theme.textTheme.titleMedium),
           if (target.charges.isEmpty)
             const Padding(
@@ -195,19 +299,23 @@ class _CollectFormState extends ConsumerState<_CollectForm> {
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             decoration: InputDecoration(
-              labelText: 'Monto cobrado en efectivo',
+              labelText: _transfer
+                  ? 'Monto transferido'
+                  : 'Monto cobrado en efectivo',
               prefixText: '₲ ',
               helperText: hint,
               helperMaxLines: 3,
             ),
-            validator: validateCollectAmount,
+            validator: _transfer ? validateReportAmount : validateCollectAmount,
             onChanged: (_) => setState(() => _amountEdited = true),
           ),
           if (target.guardians.length > 1) ...[
             const SizedBox(height: 16),
             DropdownButtonFormField<int>(
               initialValue: _guardianId,
-              decoration: const InputDecoration(labelText: '¿Quién pagó?'),
+              decoration: InputDecoration(
+                labelText: _transfer ? '¿Quién la mandó?' : '¿Quién pagó?',
+              ),
               items: [
                 for (final guardian in target.guardians)
                   DropdownMenuItem(
@@ -218,18 +326,42 @@ class _CollectFormState extends ConsumerState<_CollectForm> {
               onChanged: (value) => setState(() => _guardianId = value),
             ),
           ],
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _notes,
-            maxLength: 500,
-            decoration: const InputDecoration(labelText: 'Nota (opcional)'),
-          ),
+          if (_transfer)
+            ..._transferFields()
+          else ...[
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _notes,
+              maxLength: 500,
+              decoration: const InputDecoration(labelText: 'Nota (opcional)'),
+            ),
+          ],
           if (_error != null) ...[
             const SizedBox(height: 8),
             Text(_error!, style: TextStyle(color: theme.colorScheme.error)),
           ],
           const SizedBox(height: 16),
-          if (!target.canCollect)
+          if (_transfer) ...[
+            FilledButton.icon(
+              icon: _sending
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.check),
+              label: const Text('Registrar transferencia'),
+              onPressed: _sending ? null : _registerTransfer,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              target.approvesTransfers
+                  ? 'Se registra el pago con su recibo y le avisamos a la familia.'
+                  : 'Queda en revisión hasta que la apruebe el tesorero. '
+                        'La familia la ve en su estado de cuenta.',
+              style: theme.textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+          ] else if (!target.canCollect)
             Text(
               'Tu caja está cerrada. Hablá con el tesorero.',
               style: TextStyle(color: theme.colorScheme.error),
@@ -250,19 +382,69 @@ class _CollectFormState extends ConsumerState<_CollectForm> {
               ),
               onPressed: _sending ? null : _collect,
             ),
-          const SizedBox(height: 8),
-          Text(
-            box == null
-                ? 'Queda en tu caja hasta que lo deposites en la cuenta del club. '
-                      'La familia recibe el recibo.'
-                : 'Queda en tu caja (${formatMoney(box.balance)} en tu poder) '
-                      'hasta que lo deposites. La familia recibe el recibo.',
-            style: theme.textTheme.bodySmall,
-            textAlign: TextAlign.center,
-          ),
+          if (!_transfer) ...[
+            const SizedBox(height: 8),
+            Text(
+              box == null
+                  ? 'Queda en tu caja hasta que lo deposites en la cuenta del club. '
+                        'La familia recibe el recibo.'
+                  : 'Queda en tu caja (${formatMoney(box.balance)} en tu poder) '
+                        'hasta que lo deposites. La familia recibe el recibo.',
+              style: theme.textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  /// Fecha, cuenta, N° de operación y la captura o el PDF.
+  List<Widget> _transferFields() {
+    final accounts = widget.target.transferAccounts;
+    return [
+      const SizedBox(height: 16),
+      InkWell(
+        onTap: _sending ? null : _pickDate,
+        child: InputDecorator(
+          decoration: const InputDecoration(
+            labelText: 'Fecha de la transferencia',
+            suffixIcon: Icon(Icons.calendar_today_outlined),
+          ),
+          child: Text(formatDate(_paidOn)),
+        ),
+      ),
+      if (accounts.length > 1) ...[
+        const SizedBox(height: 16),
+        DropdownButtonFormField<int>(
+          key: const Key('collect-account'),
+          initialValue: _accountId,
+          decoration: const InputDecoration(
+            labelText: '¿A qué cuenta transfirió?',
+          ),
+          items: [
+            for (final account in accounts)
+              DropdownMenuItem(value: account.id, child: Text(account.name)),
+          ],
+          onChanged: (value) => setState(() => _accountId = value),
+        ),
+      ],
+      const SizedBox(height: 16),
+      TextFormField(
+        controller: _reference,
+        maxLength: 100,
+        decoration: const InputDecoration(
+          labelText: 'N° de operación (opcional)',
+        ),
+      ),
+      const SizedBox(height: 8),
+      ProofField(
+        proof: _proof,
+        error: _proofError,
+        onPick: _sending ? null : _pickProof,
+        hint: 'La captura que te mandaron por WhatsApp o el PDF, hasta 5 MB.',
+      ),
+    ];
   }
 
   Widget _chargeTile(CollectableCharge item, bool showStudent) {
@@ -323,6 +505,47 @@ class CollectionDoneDialog extends ConsumerWidget {
             Text('En tu caja: ${formatMoney(result.cashBox!.balance)}.'),
           const SizedBox(height: 8),
           const Text('Le avisamos a la familia con el recibo.'),
+        ],
+      ),
+      actions: [
+        if (url != null)
+          TextButton(
+            onPressed: () => ref.read(urlLauncherProvider)(Uri.parse(url)),
+            child: const Text('Ver recibo'),
+          ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Listo'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Resultado de registrar la transferencia: aprobada con recibo o en revisión.
+class TransferDoneDialog extends ConsumerWidget {
+  const TransferDoneDialog(this.result, {super.key});
+
+  final TransferRegistration result;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final report = result.report;
+    final url = report.receiptUrl;
+    return AlertDialog(
+      icon: Icon(
+        report.isPending ? Icons.hourglass_top : Icons.check_circle_outline,
+      ),
+      title: Text(
+        report.isPending ? 'Enviada a revisión' : 'Transferencia registrada',
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('${formatMoney(report.amount)} · ${report.chargesSummary}'),
+          const SizedBox(height: 8),
+          Text(result.message),
         ],
       ),
       actions: [
