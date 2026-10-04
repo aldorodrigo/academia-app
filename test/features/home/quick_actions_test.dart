@@ -49,5 +49,16 @@ void main() {
       _labels(_organization(permissions: ['teach_lessons', 'view_reports'])),
       ['Agenda', 'Alumnos particulares', 'Informes'],
     );
+
+    // Tesorero: valida comprobantes y ve informes.
+    expect(
+      _labels(
+        _organization(
+          roles: ['tesorero'],
+          permissions: ['view_reports', 'review_payment_reports'],
+        ),
+      ),
+      ['Comprobantes', 'Informes'],
+    );
   });
 }

@@ -15,8 +15,9 @@ class QuickAction {
 }
 
 /// Los botones según lo que hace cada uno en la organización: el técnico, sus
-/// grupos; la comisión, los informes; la familia, su estado de cuenta y sus
-/// reservas; el profesor de clases particulares, su agenda y sus alumnos.
+/// grupos; la comisión, los comprobantes y los informes; la familia, su estado
+/// de cuenta y sus reservas; el profesor de clases particulares, su agenda y sus
+/// alumnos.
 List<QuickAction> quickActionsFor(
   OrganizationDetails? organization, {
   required bool hasStudents,
@@ -51,6 +52,12 @@ List<QuickAction> quickActionsFor(
         '/particulares/alumnos',
       ),
     ],
+    if (organization.can('review_payment_reports'))
+      const QuickAction(
+        'Comprobantes',
+        Icons.fact_check_outlined,
+        '/comprobantes',
+      ),
     if (organization.can('view_reports'))
       const QuickAction('Informes', Icons.bar_chart_outlined, '/informes'),
   ];
