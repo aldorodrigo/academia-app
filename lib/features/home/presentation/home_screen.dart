@@ -12,6 +12,7 @@ import '../../onboarding/data/onboarding_controller.dart';
 import '../../onboarding/presentation/setup_card.dart';
 import '../../organizations/data/organization_repository.dart';
 import '../../organizations/presentation/roles_list.dart';
+import '../../payment_reports/presentation/payment_reports_card.dart';
 import '../../reports/presentation/reports_card.dart';
 import '../../students/data/students_repository.dart';
 import '../../students/presentation/students_list.dart';
@@ -66,6 +67,7 @@ class HomeScreen extends ConsumerWidget {
           const SetupCard(),
           const TodayClassesCard(),
           const TodayLessonsCard(),
+          const PaymentReportsCard(),
           const ReportsCard(),
           const LessonsCard(),
           if (isGuardian || students.isNotEmpty) ...[

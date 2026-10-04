@@ -32,6 +32,8 @@ class AccountSummaryCard extends ConsumerWidget {
                   'Vencido ${formatMoney(account.overdue)}',
                   style: TextStyle(color: theme.colorScheme.error),
                 )
+              : account.pendingReportsAmount > 0
+              ? Text('En revisión ${formatMoney(account.pendingReportsAmount)}')
               : account.credit > 0
               ? Text('Saldo a favor ${formatMoney(account.credit)}')
               : account.upcoming > 0

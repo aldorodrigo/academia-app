@@ -1,3 +1,5 @@
+import '../../payment_reports/data/models.dart';
+
 /// Estado de un cargo, calculado por la API.
 enum ChargeStatus {
   pending('pendiente', 'Pendiente'),
@@ -246,6 +248,9 @@ class Account {
     this.payments = const [],
     int? dueNow,
     this.upcoming = 0,
+    this.transferAccounts = const [],
+    this.paymentReports = const [],
+    this.pendingReportsAmount = 0,
   }) : dueNow = dueNow ?? balance;
 
   factory Account.fromJson(Map<String, dynamic> json) => Account(
@@ -263,6 +268,13 @@ class Account {
     charges: ((json['charges'] as List?) ?? const [])
         .map((c) => Charge.fromJson(c as Map<String, dynamic>))
         .toList(),
+    transferAccounts: ((json['transfer_accounts'] as List?) ?? const [])
+        .map((a) => TransferAccount.fromJson(a as Map<String, dynamic>))
+        .toList(),
+    paymentReports: ((json['payment_reports'] as List?) ?? const [])
+        .map((r) => PaymentReport.fromJson(r as Map<String, dynamic>))
+        .toList(),
+    pendingReportsAmount: json['pending_reports_amount'] as int? ?? 0,
   );
 
   static const empty = Account(
@@ -287,6 +299,27 @@ class Account {
   /// Saldo a favor de la familia.
   final int credit;
   final List<Payment> payments;
+
+  /// Cuentas con los datos para transferir.
+  final List<TransferAccount> transferAccounts;
+
+  /// Comprobantes de transferencia informados.
+  final List<PaymentReport> paymentReports;
+
+  /// Suma de los comprobantes en revisión.
+  final int pendingReportsAmount;
+
+  /// En revisión o rechazados: lo que el tutor tiene que ver arriba de sus pagos.
+  List<PaymentReport> get openReports => paymentReports
+      .where((r) => r.status != PaymentReportStatus.approved)
+      .toList();
+
+  /// Cuotas que ya están en un comprobante en revisión (no se vuelven a informar).
+  Set<int> get chargesUnderReview => {
+    for (final report in paymentReports)
+      if (report.isPending)
+        for (final charge in report.charges) charge.id,
+  };
 
   List<Charge> get unpaid => charges.where((c) => c.status.isUnpaid).toList();
 

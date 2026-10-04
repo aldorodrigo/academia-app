@@ -65,6 +65,10 @@ lib/
   "A pagar ahora" (`due_now`) separado de "Próximas cuotas" (`upcoming`, cuotas creadas por adelantado,
   `Charge.isUpcoming`); cada cuota trae su temporada y, en el cobro por día, cantidad × monto.
   Pagos, saldo a favor y recibos (PDF por link firmado, se abre con `urlLauncherProvider`, reemplazable en tests).
+- **Comprobantes de transferencia** (`features/payment_reports/`): el tutor informa un pago desde el estado de cuenta
+  ("Informar transferencia", `/estado-de-cuenta/informar-pago`: cuotas, monto, fecha, cuenta y foto o PDF elegido con
+  `proofPickerProvider`, reemplazable en tests); queda en revisión hasta que se aprueba. Quien tiene el permiso
+  `review_payment_reports` ve `PaymentReportsCard` en el inicio y `/comprobantes` (aprobar o rechazar con motivo).
 - **Informes** (comisión): `/informes` (balance del mes, saldos por familia, morosos; PDF/Excel por link firmado)
   y tarjeta en el inicio, solo si `currentOrganizationProvider` trae el permiso `view_reports` (`can()`).
 - **Fecha de hoy:** `todayProvider` y `nowProvider` (con hora) en `core/utils/clock.dart`, reemplazables en los tests.

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/utils/format.dart';
+import '../../payment_reports/presentation/payment_report_tile.dart';
 import '../data/account_repository.dart';
 import '../data/models.dart';
 import 'charge_tile.dart';
@@ -29,6 +30,11 @@ class _BalanceScreenState extends ConsumerState<BalanceScreen> {
         title: const Text('Estado de cuenta'),
         leading: BackButton(onPressed: () => context.go('/inicio')),
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        icon: const Icon(Icons.upload_file_outlined),
+        label: const Text('Informar transferencia'),
+        onPressed: () => context.go('/estado-de-cuenta/informar-pago'),
+      ),
       body: account.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(
@@ -53,7 +59,8 @@ class _BalanceScreenState extends ConsumerState<BalanceScreen> {
     final upcoming = account.upcomingCharges;
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      // Abajo, lugar para el botón "Informar transferencia".
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
       children: [
         Text('A pagar ahora', style: theme.textTheme.labelLarge),
         Text(
@@ -72,6 +79,13 @@ class _BalanceScreenState extends ConsumerState<BalanceScreen> {
           ),
         if (account.upcoming > 0)
           Text('Próximas cuotas ${formatMoney(account.upcoming)}'),
+        if (account.pendingReportsAmount > 0)
+          Text('En revisión ${formatMoney(account.pendingReportsAmount)}'),
+        if (account.openReports.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Text('Comprobantes informados', style: theme.textTheme.titleSmall),
+          for (final report in account.openReports) PaymentReportTile(report),
+        ],
         if (account.students.length > 1) ...[
           const SizedBox(height: 16),
           for (final student in account.students)

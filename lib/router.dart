@@ -32,6 +32,8 @@ import 'features/onboarding/presentation/season_step_screen.dart';
 import 'features/onboarding/presentation/setup_done_screen.dart';
 import 'features/onboarding/presentation/setup_screen.dart';
 import 'features/organizations/presentation/organization_picker_screen.dart';
+import 'features/payment_reports/presentation/payment_reports_screen.dart';
+import 'features/payment_reports/presentation/report_payment_screen.dart';
 import 'features/reports/presentation/reports_screen.dart';
 import 'features/students/presentation/student_screen.dart';
 import 'features/students/presentation/students_screen.dart';
@@ -160,6 +162,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/estado-de-cuenta',
         builder: (_, _) => const BalanceScreen(),
+        routes: [
+          GoRoute(
+            path: 'informar-pago',
+            builder: (_, _) => const ReportPaymentScreen(),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/comprobantes',
+        builder: (_, _) => const PaymentReportsScreen(),
       ),
       GoRoute(
         path: '/hijos',
