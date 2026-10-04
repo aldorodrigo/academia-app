@@ -820,7 +820,7 @@ String describePack(ClassPack? pack, Teacher teacher, DateTime today) {
   }
   return switch (pack.status) {
     ClassPackStatus.pendingPayment =>
-      'Paquete de ${pack.classes} clases pendiente de pago: pagáselo al profesor o en la secretaría.',
+      'Paquete de ${countOf(pack.classes, 'clase', 'clases')} pendiente de pago: pagáselo al profesor o en la secretaría.',
     ClassPackStatus.active =>
       'Paquete: te ${pack.remaining == 1 ? 'queda 1' : 'quedan ${pack.remaining}'} de ${pack.classes}'
           '${pack.reserved > 0 ? ' (${pack.reserved == 1 ? '1 reservada' : '${pack.reserved} reservadas'})' : ''}'

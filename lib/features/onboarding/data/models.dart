@@ -409,6 +409,23 @@ class WeeklyTime {
 
   bool get isEmpty => weekdays.isEmpty;
 
+  /// Para el borrador del paso (`onboarding/steps/groups/draft`).
+  Map<String, Object?> toJson() => {
+    'weekdays': weekdays.toList()..sort(),
+    'starts_at': startsAt,
+    'ends_at': endsAt,
+    'venue_id': venueId,
+  };
+
+  factory WeeklyTime.fromJson(Map<String, dynamic> json) => WeeklyTime(
+    weekdays: {
+      for (final day in (json['weekdays'] as List?) ?? const []) day as int,
+    },
+    startsAt: json['starts_at'] as String? ?? '17:00',
+    endsAt: json['ends_at'] as String? ?? '18:30',
+    venueId: json['venue_id'] as int?,
+  );
+
   /// null si está bien; si no, el problema.
   String? validate() {
     if (weekdays.isEmpty) return 'Elegí al menos un día.';
@@ -565,12 +582,28 @@ class GroupDraft {
     this.slots = const [WeeklyTime()],
   });
 
-  factory GroupDraft.fromJson(Map<String, dynamic> json) => GroupDraft(
-    name: json['name'] as String,
-    minAge: json['min_age'] as int?,
-    maxAge: json['max_age'] as int?,
-    level: json['level'] as String?,
-  );
+  /// Sugerida por la API (sin horarios) o del borrador (con sus horarios).
+  factory GroupDraft.fromJson(Map<String, dynamic> json) {
+    final slots = (json['slots'] as List?)
+        ?.map((s) => WeeklyTime.fromJson(Map<String, dynamic>.from(s as Map)))
+        .toList();
+    return GroupDraft(
+      name: json['name'] as String,
+      minAge: json['min_age'] as int?,
+      maxAge: json['max_age'] as int?,
+      level: json['level'] as String?,
+      slots: slots == null || slots.isEmpty ? const [WeeklyTime()] : slots,
+    );
+  }
+
+  /// Para el borrador del paso, con sus horarios.
+  Map<String, Object?> toJson() => {
+    'name': name,
+    'min_age': minAge,
+    'max_age': maxAge,
+    'level': level,
+    'slots': [for (final slot in slots) slot.toJson()],
+  };
 
   final String name;
   final int? minAge;
@@ -888,17 +921,23 @@ class SeasonExample {
     required this.period,
     required this.dueOn,
     required this.amount,
+    this.dueNote,
   });
 
   factory SeasonExample.fromJson(Map<String, dynamic> json) => SeasonExample(
     period: json['period'] as String,
     dueOn: json['due_on'] as String,
     amount: json['amount'] as String,
+    dueNote: json['due_note'] as String?,
   );
 
   final String period;
   final String dueOn;
   final String amount;
+
+  /// "para los que se inscriben hoy": con la temporada empezada, la cuota en
+  /// curso vence más tarde para quien se inscribe ahora (la calcula la API).
+  final String? dueNote;
 }
 
 class SeasonKindOption {

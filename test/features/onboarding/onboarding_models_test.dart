@@ -330,4 +330,63 @@ void main() {
       'Los días con horario de la categoría.',
     );
   });
+
+  test('cuota de ejemplo con la fecha para los que se inscriben hoy', () {
+    final example = SeasonExample.fromJson({
+      'period': 'enero 2026',
+      'due_on': '12/01/2026',
+      'due_note': 'para los que se inscriben hoy',
+      'amount': '₲ 150.000',
+    });
+    expect(example.dueNote, 'para los que se inscriben hoy');
+    expect(
+      SeasonExample.fromJson({
+        'period': 'febrero 2026',
+        'due_on': '10/02/2026',
+        'amount': '₲ 150.000',
+      }).dueNote,
+      isNull,
+    );
+  });
+
+  test('borrador del paso 2: ida y vuelta', () {
+    final step = GroupsStep(
+      programs: [SetupProgram.fromJson(programJson(1, 'Fútbol'))],
+      groups: const [],
+      sites: const [],
+      levels: const ['Inicial'],
+      programId: 1,
+      capacity: 20,
+      drafts: const [
+        GroupDraft(
+          name: 'Sub-8',
+          minAge: 7,
+          maxAge: 8,
+          slots: [
+            WeeklyTime(weekdays: {4, 2}, venueId: 11),
+          ],
+        ),
+      ],
+    );
+    final json = step.toDraftJson()!;
+    expect(json['program_id'], 1);
+    expect(json['capacity'], 20);
+    expect(((json['groups']! as List).first as Map)['slots'], [
+      {
+        'weekdays': [2, 4],
+        'starts_at': '17:00',
+        'ends_at': '18:30',
+        'venue_id': 11,
+      },
+    ]);
+
+    final empty = step.copyWith(drafts: const []);
+    expect(empty.toDraftJson(), isNull);
+    final resumed = empty.withDraft(Map<String, dynamic>.from(json))!;
+    expect(resumed.drafts.single.name, 'Sub-8');
+    expect(resumed.drafts.single.slots.single.weekdays, {2, 4});
+    expect(resumed.capacity, 20);
+    // De una disciplina que ya no existe: se arranca de nuevo.
+    expect(empty.withDraft({...json, 'program_id': 99}), isNull);
+  });
 }

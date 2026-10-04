@@ -193,7 +193,10 @@ class _SeasonPage extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         TextFormField(
-          key: ValueKey('season-name-${draft.kind}-${draft.startsOn}'),
+          // Se vuelve a armar cuando cambia el nombre sugerido (duración o inicio).
+          key: ValueKey(
+            'season-name-${draft.kind}-${draft.startsOn}-${step.preview?.suggestedName}',
+          ),
           initialValue: draft.name,
           decoration: const InputDecoration(
             labelText: 'Nombre',
@@ -504,7 +507,18 @@ class _ReviewPage extends StatelessWidget {
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Text(example.dueOn),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(example.dueOn),
+                          // "para los que se inscriben hoy" (la API da la fecha real).
+                          if (example.dueNote != null)
+                            Text(
+                              example.dueNote!,
+                              style: theme.textTheme.bodySmall,
+                            ),
+                        ],
+                      ),
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -530,6 +544,11 @@ List<(int, String)> _dueOptions(BillingTerms? terms, int current) {
   if (options.any((o) => o.$1 == current)) return options;
   return [
     ...options,
-    (current, current == 0 ? 'El día que empieza' : '$current días después'),
+    (
+      current,
+      current == 0
+          ? 'El día que empieza'
+          : '${countOf(current, 'día', 'días')} después',
+    ),
   ]..sort((a, b) => a.$1.compareTo(b.$1));
 }

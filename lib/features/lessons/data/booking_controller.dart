@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/utils/format.dart';
 import '../../organizations/data/organization_repository.dart';
 import 'lessons_repository.dart';
 import 'models.dart';
@@ -153,7 +154,7 @@ final studentLessonActionsProvider = Provider<StudentLessonActions>(
 
 /// Mensaje al comprar un paquete.
 String packPurchasedMessage(ClassPack pack) => pack.isActive
-    ? 'Listo: tenés ${pack.classes} clases para reservar (lo pagaste con tu saldo a favor).'
+    ? 'Listo: tenés ${countOf(pack.classes, 'clase', 'clases')} para reservar (lo pagaste con tu saldo a favor).'
     : 'Paquete pedido. Pagáselo al profesor o en la secretaría y se activan tus clases.';
 
 /// Acciones del profesor: marcar, cobrar, cancelar, vender y extender paquetes.

@@ -106,9 +106,9 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
                 : session.suspended
                 ? 'Suspendida${session.suspensionReason == null ? '' : ': ${session.suspensionReason}'}'
                 : session.attendanceTaken
-                ? '${session.counts.present} presentes · '
-                      '${session.counts.absent} ausentes · '
-                      '${session.counts.justified} justificados'
+                ? '${countOf(session.counts.present, 'presente', 'presentes')} · '
+                      '${countOf(session.counts.absent, 'ausente', 'ausentes')} · '
+                      '${countOf(session.counts.justified, 'justificado', 'justificados')}'
                 : 'Asistencia sin tomar',
           ),
           trailing: const Icon(Icons.chevron_right),

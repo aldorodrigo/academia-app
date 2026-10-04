@@ -25,6 +25,10 @@ class _InstructorsStepScreenState extends ConsumerState<InstructorsStepScreen>
     with StepEntry {
   bool _saving = false;
 
+  /// "Yo también doy clases" encendido sin categorías elegidas todavía: se
+  /// guarda recién al elegir la primera (no se dan todas por defecto).
+  bool _choosingMine = false;
+
   InstructorsStepController get _controller =>
       ref.read(instructorsStepProvider.notifier);
 
@@ -33,7 +37,46 @@ class _InstructorsStepScreenState extends ConsumerState<InstructorsStepScreen>
       teaches: teaches,
       groupIds: groupIds,
     );
-    if (error != null && mounted) showMessage(context, error);
+    if (!mounted) return;
+    if (error != null) {
+      showMessage(context, error);
+    } else {
+      setState(() => _choosingMine = false);
+    }
+  }
+
+  /// Encender pide elegir; apagar deja de dar clases.
+  void _toggleTeaching(InstructorsStep step, bool on) {
+    if (on && step.groups.isNotEmpty) {
+      setState(() => _choosingMine = true);
+    } else if (on) {
+      _setTeaching(true, const []);
+    } else {
+      setState(() => _choosingMine = false);
+      if (step.team.teaches) _setTeaching(false, const []);
+    }
+  }
+
+  void _toggleMine(
+    InstructorsStep step,
+    int groupId,
+    bool selected,
+    String group,
+  ) {
+    final ids = [
+      for (final id in step.team.myGroupIds)
+        if (id != groupId) id,
+      if (selected) groupId,
+    ];
+    if (ids.isEmpty) {
+      showMessage(
+        context,
+        'Elegí al menos ${gendered(group, 'un', 'una')} ${group.toLowerCase()}; '
+        'si no das clases, apagá «Yo también doy clases».',
+      );
+      return;
+    }
+    _setTeaching(true, ids);
   }
 
   Future<void> _invite(InstructorsStep step, String role) async {
@@ -98,6 +141,7 @@ class _InstructorsStepScreenState extends ConsumerState<InstructorsStepScreen>
     final async = ref.watch(instructorsStepProvider);
     final organization = ref.watch(currentOrganizationProvider).value;
     final role = organization?.term('instructor') ?? 'Técnico';
+    final groupTerm = organization?.term('group') ?? 'Categoría';
     final plural = pluralize(role);
     final step = async.value;
     final anyone =
@@ -133,16 +177,23 @@ class _InstructorsStepScreenState extends ConsumerState<InstructorsStepScreen>
                 subtitle: const Text(
                   'Tomás asistencia desde la app con tu cuenta.',
                 ),
-                value: step.team.teaches,
-                onChanged: (on) => _setTeaching(
-                  on,
-                  on ? step.groups.map((g) => g.id).toList() : const [],
-                ),
+                value: step.team.teaches || _choosingMine,
+                onChanged: (on) => _toggleTeaching(step, on),
               ),
-              if (step.team.teaches && step.groups.isNotEmpty) ...[
+              if ((step.team.teaches || _choosingMine) &&
+                  step.groups.isNotEmpty) ...[
                 Text(
-                  '¿Cuáles das vos?',
-                  style: Theme.of(context).textTheme.bodySmall,
+                  step.team.myGroupIds.isEmpty
+                      ? '¿Cuáles das vos? Elegí al menos '
+                            '${gendered(groupTerm, 'un', 'una')} '
+                            '${groupTerm.toLowerCase()}.'
+                      : '¿Cuáles das vos?',
+                  key: const Key('i-teach-hint'),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: step.team.myGroupIds.isEmpty
+                        ? Theme.of(context).colorScheme.error
+                        : null,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Wrap(
@@ -153,11 +204,8 @@ class _InstructorsStepScreenState extends ConsumerState<InstructorsStepScreen>
                       FilterChip(
                         label: Text(group.name),
                         selected: step.team.myGroupIds.contains(group.id),
-                        onSelected: (selected) => _setTeaching(true, [
-                          for (final id in step.team.myGroupIds)
-                            if (id != group.id) id,
-                          if (selected) group.id,
-                        ]),
+                        onSelected: (selected) =>
+                            _toggleMine(step, group.id, selected, groupTerm),
                       ),
                   ],
                 ),

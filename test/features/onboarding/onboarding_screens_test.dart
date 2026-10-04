@@ -5,6 +5,7 @@ import 'package:academia_app/core/storage/offline_store.dart';
 import 'package:academia_app/core/storage/session_storage.dart';
 import 'package:academia_app/core/utils/clock.dart';
 import 'package:academia_app/core/utils/launcher.dart';
+import 'package:academia_app/features/onboarding/data/step_controllers.dart';
 import 'package:academia_app/router.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -42,6 +43,8 @@ Future<ProviderContainer> _pumpApp(
       offlineStoreProvider.overrideWithValue(InMemoryOfflineStore()),
       apiClientProvider.overrideWithValue(fakeDio(routes, requests: requests)),
       pushServiceProvider.overrideWithValue(FakePushService()),
+      // El borrador del paso 2 se guarda enseguida (sin temporizador).
+      draftSaveDelayProvider.overrideWithValue(Duration.zero),
       todayProvider.overrideWithValue(DateTime(2026, 10, 3)),
       nowProvider.overrideWithValue(DateTime(2026, 10, 3, 10)),
       urlLauncherProvider.overrideWithValue((uri) async {
@@ -663,6 +666,134 @@ void main() {
       {'weekday': 6, 'starts_at': '17:00', 'ends_at': '18:30', 'venue_id': 11},
     ]);
     expect(find.text('¿Cuándo es la temporada?'), findsOneWidget);
+  });
+
+  testWidgets('categorías: lo armado se guarda solo y se retoma', (
+    tester,
+  ) async {
+    Map<String, Object?>? stored;
+    final requests = <RequestOptions>[];
+    final container = await _pumpApp(
+      tester,
+      {
+        ..._admin(
+          onboarding: () => onboardingJson(programs: 'done', groups: 'pending'),
+        ),
+        'GET /setup/programs': (_) => {
+          'data': [programJson(1, 'Fútbol')],
+        },
+        'GET /setup/groups': (_) => {'data': <Object?>[]},
+        'GET /setup/sites': (_) => {'data': <Object?>[]},
+        'POST /setup/groups/suggestions': (_) => {
+          'data': [
+            {'name': 'Sub-8', 'min_age': 7, 'max_age': 8, 'level': null},
+            {'name': 'Sub-10', 'min_age': 9, 'max_age': 10, 'level': null},
+            {'name': 'Sub-12', 'min_age': 11, 'max_age': 12, 'level': null},
+          ],
+        },
+        'GET /onboarding/steps/groups/draft': (_) => {
+          'data': {'draft': stored, 'updated_at': null},
+        },
+        'PUT /onboarding/steps/groups/draft': (options) {
+          stored = Map<String, Object?>.from(
+            (options.data as Map)['draft'] as Map,
+          );
+          return {
+            'data': {'draft': stored},
+          };
+        },
+        'DELETE /onboarding/steps/groups/draft': (_) {
+          stored = null;
+          return null;
+        },
+      },
+      location: '/configurar/categorias',
+      requests: requests,
+    );
+
+    // Lo sugerido no es un cambio: todavía no hay borrador.
+    expect(stored, isNull);
+    await tester.tap(find.byTooltip('Quitar Sub-12'));
+    await _settle(tester);
+    expect((stored!['groups']! as List).map((g) => (g as Map)['name']), [
+      'Sub-8',
+      'Sub-10',
+    ]);
+    expect(stored!['program_id'], 1);
+
+    await tester.tap(find.text('Siguiente: horarios'));
+    await _settle(tester);
+    final sub8 = find.byKey(const ValueKey('schedule-0'));
+    await tester.tap(find.descendant(of: sub8, matching: find.text('Mar')));
+    await _settle(tester);
+    final slots = ((stored!['groups']! as List).first as Map)['slots'] as List;
+    expect((slots.first as Map)['weekdays'], [2]);
+
+    // Sale sin crear y vuelve (o lo abre en otro dispositivo): sigue ahí.
+    container.read(routerProvider).go('/inicio');
+    await _settle(tester);
+    container.read(routerProvider).go('/configurar/categorias');
+    await _settle(tester);
+
+    expect(find.text('Sub-8'), findsOneWidget);
+    expect(find.text('Sub-12'), findsNothing);
+    expect(
+      requests.where((r) => r.path == '/setup/groups/suggestions'),
+      hasLength(1),
+    );
+    await tester.tap(find.text('Siguiente: horarios'));
+    await _settle(tester);
+    expect(find.text('Falta el horario'), findsOneWidget);
+  });
+
+  testWidgets('"Yo también doy clases" arranca sin ninguna y pide elegir', (
+    tester,
+  ) async {
+    final requests = <RequestOptions>[];
+    await _pumpApp(
+      tester,
+      {
+        ..._admin(
+          onboarding: () => onboardingJson(
+            programs: 'done',
+            groups: 'done',
+            season: 'done',
+            instructors: 'pending',
+          ),
+        ),
+        'GET /setup/groups': (_) => {
+          'data': [groupJson(3, 'Sub-8'), groupJson(4, 'Sub-10')],
+        },
+        'GET /setup/instructors': (_) => instructorsJson(),
+        'PUT /setup/instructors/me': (_) => instructorsJson(teaches: true),
+      },
+      location: '/configurar/tecnicos',
+      requests: requests,
+    );
+
+    await tester.tap(find.byKey(const Key('i-teach')));
+    await _settle(tester);
+
+    // Todavía no se guardó nada: hay que elegir.
+    expect(requests.where((r) => r.path == '/setup/instructors/me'), isEmpty);
+    expect(
+      find.text('¿Cuáles das vos? Elegí al menos una categoría.'),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<FilterChip>(find.widgetWithText(FilterChip, 'Sub-8'))
+          .selected,
+      isFalse,
+    );
+
+    await tester.tap(find.widgetWithText(FilterChip, 'Sub-8'));
+    await _settle(tester);
+    expect(requests.firstWhere((r) => r.path == '/setup/instructors/me').data, {
+      'teaches': true,
+      'group_ids': [3],
+    });
+    expect(find.text('¿Cuáles das vos?'), findsOneWidget);
   });
 
   testWidgets('temporada: duración, monto y revisar antes de crear', (

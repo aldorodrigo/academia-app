@@ -223,7 +223,7 @@ class _DelinquentsTab extends ConsumerWidget {
           'Total vencido',
           children: [
             AmountRow(
-              '${r.families.length} familias',
+              countOf(r.families.length, 'familia', 'familias'),
               r.total,
               bold: true,
               color: theme.colorScheme.error,
