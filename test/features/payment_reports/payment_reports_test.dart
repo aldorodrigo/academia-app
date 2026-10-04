@@ -4,6 +4,7 @@ import 'package:academia_app/core/api/api_client.dart';
 import 'package:academia_app/core/storage/session_storage.dart';
 import 'package:academia_app/core/utils/clock.dart';
 import 'package:academia_app/core/utils/launcher.dart';
+import 'package:academia_app/features/billing/data/amount_hint.dart';
 import 'package:academia_app/features/billing/data/models.dart';
 import 'package:academia_app/features/billing/presentation/account_summary_card.dart';
 import 'package:academia_app/features/billing/presentation/balance_screen.dart';
@@ -248,6 +249,35 @@ void main() {
       expect(suggestedAmount(charges), 60000);
     });
 
+    test(
+      'un rechazado ya resuelto queda como historial (lo decide la API)',
+      () {
+        final account = Account.fromJson(
+          _account(
+            reports: [
+              {...reportJson(id: 32, status: 'aprobado'), 'open': false},
+              {
+                ...reportJson(
+                  id: 31,
+                  status: 'rechazado',
+                  reason: 'No se lee.',
+                ),
+                'open': false,
+              },
+              {
+                ...reportJson(id: 30, status: 'rechazado', reason: 'Borroso.'),
+                'open': true,
+              },
+              {...reportJson(id: 29), 'open': true},
+            ],
+          ),
+        );
+
+        expect(account.openReports.map((r) => r.id), [30, 29]);
+        expect(account.paymentReports, hasLength(4));
+      },
+    );
+
     test('las cuotas a informar van de la más vieja a la más nueva', () {
       final account = Account.fromJson({
         ...accountJson(),
@@ -284,6 +314,26 @@ void main() {
         validateProof(_proof(size: maxProofBytes + 1)),
         'El comprobante pesa más de 5 MB.',
       );
+    });
+
+    test('aviso del monto: parcial o lo que sobra', () {
+      expect(reportAmountHint(210000, 210000), isNull);
+      expect(reportAmountHint(null, 210000), isNull);
+      expect(
+        reportAmountHint(150000, 210000),
+        'Pago parcial: faltan ₲ 60.000 para saldar lo elegido.',
+      );
+      expect(
+        reportAmountHint(300000, 210000),
+        'Sobran ₲ 90.000: quedan a favor.',
+      );
+      expect(reportAmountHint(50000, 0), startsWith('Sin cuotas elegidas'));
+    });
+
+    test('el monto sigue lo elegido hasta que se cambia a mano', () {
+      expect(amountEditedByHand('210000', 210000), isFalse);
+      expect(amountEditedByHand('', 210000), isFalse);
+      expect(amountEditedByHand('300000', 210000), isTrue);
     });
 
     test('motivo del rechazo', () {
@@ -544,6 +594,36 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets(
+      'tildar y destildar completa el monto aunque el campo repita el valor',
+      (tester) async {
+        await tester.pumpWidget(
+          _app(_routes(), const ReportPaymentScreen(), picked: _proof()),
+        );
+        await _settle(tester);
+
+        // En la web el campo puede avisar un cambio con el mismo valor: no lo congela.
+        await tester.enterText(
+          find.byKey(const Key('report-amount')),
+          '210000',
+        );
+        await tester.tap(find.text('Sofía · Cuota septiembre 2026'));
+        await tester.pump();
+        expect(find.text('150000'), findsOneWidget);
+
+        await tester.tap(find.text('Sofía · Cuota septiembre 2026'));
+        await tester.pump();
+        expect(find.text('210000'), findsOneWidget);
+
+        await tester.enterText(
+          find.byKey(const Key('report-amount')),
+          '300000',
+        );
+        await tester.pump();
+        expect(find.text('Sobran ₲ 90.000: quedan a favor.'), findsOneWidget);
+      },
+    );
 
     testWidgets('el monto cambiado a mano no se pisa', (tester) async {
       await tester.pumpWidget(

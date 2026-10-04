@@ -67,7 +67,10 @@ lib/
   Pagos, saldo a favor y recibos (PDF por link firmado, se abre con `urlLauncherProvider`, reemplazable en tests).
 - **Comprobantes de transferencia** (`features/payment_reports/`): el tutor informa un pago desde el estado de cuenta
   ("Informar transferencia", `/estado-de-cuenta/informar-pago`: cuotas, monto, fecha, cuenta y foto o PDF elegido con
-  `proofPickerProvider`, reemplazable en tests); queda en revisión hasta que se aprueba. Quien tiene el permiso
+  `proofPickerProvider`, reemplazable en tests); queda en revisión hasta que se aprueba. El monto sigue a las cuotas
+  elegidas hasta que se edita a mano y avisa si es parcial o sobra (`amountHint`, compartido con Cobrar). Arriba del
+  estado de cuenta van solo los comprobantes `open` (en revisión o rechazados con cuotas pendientes; lo decide la
+  API). Quien tiene el permiso
   `review_payment_reports` ve `PaymentReportsCard` en el inicio y `/comprobantes` (aprobar o rechazar con motivo).
 - **Cobro en efectivo y caja del técnico** (`features/cash/`, plan en `academia-api/docs/PLAN_COBRO_EFECTIVO.md`):
   quien tiene `collect_payments` cobra desde `/cobrar` (alumnos de sus grupos, o todos para la comisión) o tocando un

@@ -7,6 +7,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/utils/clock.dart';
 import '../../../core/utils/format.dart';
 import '../../billing/data/account_repository.dart';
+import '../../billing/data/amount_hint.dart';
 import '../../billing/data/models.dart';
 import '../data/models.dart';
 import '../data/payment_reports_repository.dart';
@@ -82,12 +83,13 @@ class _ReportFormState extends ConsumerState<_ReportForm> {
     super.dispose();
   }
 
+  int get _selectedTotal =>
+      suggestedAmount(_charges.where((c) => _selected.contains(c.id)));
+
   /// Mientras el tutor no lo cambie, el monto es lo que falta de las cuotas elegidas.
   void _syncAmount() {
     if (_amountEdited) return;
-    final total = suggestedAmount(
-      _charges.where((c) => _selected.contains(c.id)),
-    );
+    final total = _selectedTotal;
     _amount.text = total > 0 ? '$total' : '';
   }
 
@@ -197,12 +199,19 @@ class _ReportFormState extends ConsumerState<_ReportForm> {
             controller: _amount,
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Monto transferido',
               prefixText: '₲ ',
+              helperText: reportAmountHint(
+                int.tryParse(_amount.text),
+                _selectedTotal,
+              ),
+              helperMaxLines: 3,
             ),
             validator: validateReportAmount,
-            onChanged: (_) => _amountEdited = true,
+            onChanged: (value) => setState(
+              () => _amountEdited = amountEditedByHand(value, _selectedTotal),
+            ),
           ),
           const SizedBox(height: 16),
           InkWell(

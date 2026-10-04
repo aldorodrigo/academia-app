@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/format.dart';
+import '../../billing/data/amount_hint.dart';
 import 'models.dart';
 
 /// Cuotas elegidas al abrir el cobro: las que hay que pagar ahora, salvo las
@@ -18,21 +19,14 @@ int suggestedCollectAmount(Iterable<CollectableCharge> charges) =>
 
 /// Qué pasa con el monto frente a lo elegido: falta (pago parcial) o sobra
 /// (saldo a favor). `null` si coincide o no hay monto.
-String? collectHint(int? amount, int selected) {
-  if (amount == null || amount <= 0) return null;
-  if (selected == 0) {
-    return 'Se aplica a lo que deba la familia, de lo más viejo a lo más nuevo; '
-        'lo que sobre queda a favor.';
-  }
-  if (amount < selected) {
-    return 'Pago parcial: faltan ${formatMoney(selected - amount)} para '
-        'saldar lo elegido.';
-  }
-  if (amount > selected) {
-    return 'Sobran ${formatMoney(amount - selected)}: quedan a favor de la familia.';
-  }
-  return null;
-}
+String? collectHint(int? amount, int selected) => amountHint(
+  amount,
+  selected,
+  noneSelected:
+      'Se aplica a lo que deba la familia, de lo más viejo a lo más nuevo; '
+      'lo que sobre queda a favor.',
+  surplus: 'quedan a favor de la familia',
+);
 
 String? validateCollectAmount(String? value) {
   final amount = int.tryParse(value?.trim() ?? '');

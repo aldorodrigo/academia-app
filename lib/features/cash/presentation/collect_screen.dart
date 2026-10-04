@@ -7,6 +7,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/utils/format.dart';
 import '../../../core/utils/launcher.dart';
 import '../../../core/utils/clock.dart';
+import '../../billing/data/amount_hint.dart';
 import '../../billing/data/models.dart';
 import '../../payment_reports/data/report_form.dart';
 import '../../payment_reports/presentation/proof_field.dart';
@@ -307,7 +308,9 @@ class _CollectFormState extends ConsumerState<_CollectForm> {
               helperMaxLines: 3,
             ),
             validator: _transfer ? validateReportAmount : validateCollectAmount,
-            onChanged: (_) => setState(() => _amountEdited = true),
+            onChanged: (value) => setState(
+              () => _amountEdited = amountEditedByHand(value, _selectedTotal),
+            ),
           ),
           if (target.guardians.length > 1) ...[
             const SizedBox(height: 16),
