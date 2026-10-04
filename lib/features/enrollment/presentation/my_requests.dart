@@ -7,7 +7,7 @@ import '../../students/data/students_repository.dart';
 import '../data/enrollment_repository.dart';
 import '../data/models.dart';
 
-/// Las solicitudes propias (en revisión o no aprobadas), arriba de "Mis hijos".
+/// Las solicitudes propias (por confirmar o no aprobadas), arriba de "Mis hijos".
 class MyEnrollmentRequests extends ConsumerWidget {
   const MyEnrollmentRequests({super.key});
 
@@ -31,7 +31,8 @@ class _RequestCard extends ConsumerWidget {
       builder: (context) => AlertDialog(
         title: const Text('Cancelar la solicitud'),
         content: Text(
-          'El club ya no va a ver el pedido de ${request.child.firstName}.',
+          '${request.child.firstName} sale de la lista de ${request.group.name} '
+          'y el club ya no ve el pedido.',
         ),
         actions: [
           TextButton(
@@ -50,7 +51,9 @@ class _RequestCard extends ConsumerWidget {
     final messenger = ScaffoldMessenger.of(context);
     try {
       await ref.read(enrollmentRepositoryProvider).cancel(request.id);
-      ref.invalidate(myEnrollmentRequestsProvider);
+      ref
+        ..invalidate(myEnrollmentRequestsProvider)
+        ..invalidate(studentsProvider);
       messenger.showSnackBar(
         const SnackBar(content: Text('Solicitud cancelada.')),
       );
@@ -74,7 +77,7 @@ class _RequestCard extends ConsumerWidget {
         subtitle: Text(
           rejected
               ? 'No aprobada: ${request.rejectionReason ?? ''}'
-              : 'Solicitud en revisión · ${request.placeLabel}',
+              : 'Por confirmar · ${request.placeLabel}. Ya puede ir a clases.',
         ),
         trailing: request.isPending
             ? TextButton(

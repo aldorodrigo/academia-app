@@ -58,6 +58,12 @@ List<QuickAction> quickActionsFor(
         Icons.fact_check_outlined,
         '/comprobantes',
       ),
+    if (organization.can('create_students'))
+      const QuickAction(
+        'Cargar alumno',
+        Icons.person_add_alt_1_outlined,
+        '/alumnos/nuevo',
+      ),
     if (organization.can('manage_enrollment_requests'))
       const QuickAction(
         'Solicitudes',

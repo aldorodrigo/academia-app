@@ -66,10 +66,10 @@ void main() {
       _labels(
         _organization(
           roles: ['secretario'],
-          permissions: ['manage_enrollment_requests'],
+          permissions: ['manage_enrollment_requests', 'create_students'],
         ),
       ),
-      ['Solicitudes'],
+      ['Cargar alumno', 'Solicitudes'],
     );
   });
 }

@@ -215,7 +215,7 @@ void main() {
     test('lee la solicitud del tutor y la de quien aprueba', () {
       final mine = EnrollmentRequest.fromJson(requestJson());
       expect(mine.status, EnrollmentRequestStatus.pending);
-      expect(mine.status.label, 'En revisión');
+      expect(mine.status.label, 'Por confirmar');
       expect(mine.isPending, isTrue);
       expect(mine.child.fullName, 'Sofía Benítez');
       expect(mine.child.birthDate, DateTime(2018, 7, 2));
@@ -299,7 +299,7 @@ void main() {
     test('nombre, documento, categoría y motivo', () {
       expect(validateChildFirstName(' '), 'Ingresá el nombre.');
       expect(validateChildLastName(null), 'Ingresá el apellido.');
-      expect(validateDocument(''), isNull);
+      expect(validateDocument(''), 'Ingresá el número de documento.');
       expect(validateDocument('7.123.456'), isNull);
       expect(
         validateDocument('71 23'),
@@ -351,7 +351,7 @@ void main() {
           firstName: ' Sofía ',
           lastName: 'Benítez',
           birthDate: DateTime(2018, 7, 2),
-          document: ' ',
+          document: ' 7123456 ',
           seasonId: 1,
           groupId: 3,
           relationship: Relationship.mother,
@@ -362,6 +362,7 @@ void main() {
         'first_name': 'Sofía',
         'last_name': 'Benítez',
         'birth_date': '2018-07-02',
+        'document': '7123456',
         'relationship': 'madre',
         'season_id': 1,
         'group_id': 3,
@@ -441,6 +442,10 @@ void main() {
         find.widgetWithText(TextFormField, 'Fecha de nacimiento'),
         '02/07/2018',
       );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Número de documento'),
+        '7123456',
+      );
       await tester.pumpAndSettle();
 
       expect(requests.last.queryParameters, {
@@ -471,6 +476,7 @@ void main() {
         'first_name': 'Sofía',
         'last_name': 'Benítez',
         'birth_date': '2018-07-02',
+        'document': '7123456',
         'relationship': 'madre',
         'season_id': 1,
         'group_id': 3,
@@ -478,8 +484,8 @@ void main() {
       expect(find.text('Solicitud enviada'), findsOneWidget);
       expect(
         find.text(
-          'Pediste lugar para Sofía en Sub-8 · Fútbol (2026). Te avisamos '
-          'cuando el club la apruebe.',
+          'Sofía ya puede ir a las clases de Sub-8 · Fútbol (2026). Te avisamos '
+          'cuando el club confirme la inscripción.',
         ),
         findsOneWidget,
       );
@@ -527,6 +533,10 @@ void main() {
       await tester.enterText(
         find.widgetWithText(TextFormField, 'Fecha de nacimiento'),
         '02/07/2018',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Número de documento'),
+        '7123456',
       );
       await tester.pumpAndSettle();
 
@@ -578,7 +588,7 @@ void main() {
                 'message': 'Ya mandaste una solicitud.',
                 'errors': {
                   'first_name': [
-                    'Ya mandaste una solicitud para Sofía; esperá a que el club la revise.',
+                    'Ya mandaste una solicitud para Sofía; esperá a que el club la confirme.',
                   ],
                 },
               }),
@@ -609,6 +619,10 @@ void main() {
         find.widgetWithText(TextFormField, 'Fecha de nacimiento'),
         '02/07/2018',
       );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Número de documento'),
+        '7123456',
+      );
       await tester.pumpAndSettle();
       await _scrollTo(tester, find.text('Enviar solicitud'));
       await tester.tap(find.text('Enviar solicitud'));
@@ -616,7 +630,7 @@ void main() {
 
       expect(
         find.text(
-          'Ya mandaste una solicitud para Sofía; esperá a que el club la revise.',
+          'Ya mandaste una solicitud para Sofía; esperá a que el club la confirme.',
         ),
         findsOneWidget,
       );
@@ -631,6 +645,10 @@ void main() {
       await tester.enterText(
         find.widgetWithText(TextFormField, 'Fecha de nacimiento'),
         '02/07/2018',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Número de documento'),
+        '7123456',
       );
       await tester.pumpAndSettle();
 
@@ -673,7 +691,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('Solicitud en revisión · Sub-8 · Fútbol (2026)'),
+        find.text(
+          'Por confirmar · Sub-8 · Fútbol (2026). Ya puede ir a clases.',
+        ),
         findsOneWidget,
       );
       expect(find.text('No aprobada: No hay lugar este año.'), findsOneWidget);
@@ -756,13 +776,13 @@ void main() {
       );
       expect(find.text('Cargó la ficha médica.'), findsOneWidget);
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Aprobar'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Confirmar'));
       await tester.pumpAndSettle();
 
       final dialog = find.byType(AlertDialog);
       final approve = find.descendant(
         of: dialog,
-        matching: find.widgetWithText(FilledButton, 'Aprobar'),
+        matching: find.widgetWithText(FilledButton, 'Confirmar'),
       );
       expect(tester.widget<FilledButton>(approve).onPressed, isNull);
       expect(find.text('Se inscribe a mitad de mes: se cobra'), findsOneWidget);
@@ -780,7 +800,7 @@ void main() {
       });
       expect(
         find.text(
-          'Inscripción aprobada: Sofía en Sub-8 · Fútbol (2026). Le avisamos a la familia.',
+          'Inscripción confirmada: Sofía en Sub-8 · Fútbol (2026). Le avisamos a la familia.',
         ),
         findsOneWidget,
       );
@@ -809,7 +829,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Aprobar'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Confirmar'));
       await tester.pumpAndSettle();
       expect(find.text('Se inscribe a mitad de mes: se cobra'), findsNothing);
 
@@ -820,7 +840,7 @@ void main() {
       await tester.tap(
         find.descendant(
           of: find.byType(AlertDialog),
-          matching: find.widgetWithText(FilledButton, 'Aprobar'),
+          matching: find.widgetWithText(FilledButton, 'Confirmar'),
         ),
       );
       await tester.pumpAndSettle();

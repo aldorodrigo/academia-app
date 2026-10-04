@@ -9,8 +9,8 @@ import '../data/enrollment_repository.dart';
 import '../data/models.dart';
 import '../data/request_form.dart';
 
-/// Solicitudes de inscripción de las familias, para aprobarlas (da de alta al
-/// chico con sus cuotas) o rechazarlas con motivo.
+/// Inscripciones que pidieron las familias desde la app: el chico ya va a
+/// clases; confirmarla emite sus cuotas y rechazarla lo saca de la lista.
 class EnrollmentRequestsScreen extends ConsumerStatefulWidget {
   const EnrollmentRequestsScreen({super.key});
 
@@ -109,7 +109,7 @@ class _ReviewCard extends ConsumerWidget {
             overCapacity: result.overCapacity,
           ),
       (r) =>
-          'Inscripción aprobada: ${r.child.firstName} en ${r.placeLabel}. '
+          'Inscripción confirmada: ${r.child.firstName} en ${r.placeLabel}. '
           'Le avisamos a la familia.',
     );
   }
@@ -117,7 +117,7 @@ class _ReviewCard extends ConsumerWidget {
   Future<void> _reject(BuildContext context, WidgetRef ref) async {
     final reason = await showDialog<String>(
       context: context,
-      builder: (_) => const _RejectDialog(),
+      builder: (_) => const RejectRequestDialog(),
     );
     if (reason == null || !context.mounted) return;
     await _run(
@@ -178,9 +178,9 @@ class _ReviewCard extends ConsumerWidget {
               ),
             if (existing != null)
               Text(
-                'Ya está cargado: ${existing.fullName}'
+                'Ya estaba cargado: ${existing.fullName}'
                 '${existing.guardians.isEmpty ? '' : ' (tutores: ${existing.guardians.join(', ')})'}. '
-                'Al aprobar se le suma este tutor.',
+                'Al confirmar se le suma este tutor.',
                 style: TextStyle(color: theme.colorScheme.tertiary),
               ),
             if (request.hasMedical)
@@ -189,9 +189,16 @@ class _ReviewCard extends ConsumerWidget {
             if (!request.isPending) ...[
               const SizedBox(height: 4),
               Text(
-                request.status == EnrollmentRequestStatus.rejected
-                    ? 'No aprobada · ${request.rejectionReason ?? ''}'
-                    : request.status.label,
+                [
+                  if (request.status == EnrollmentRequestStatus.rejected)
+                    'No aprobada · ${request.rejectionReason ?? ''}'
+                  else
+                    request.status.label,
+                  if (request.selfApproved)
+                    'se confirmó sola'
+                  else if (request.reviewedBy != null)
+                    request.reviewedBy!,
+                ].join(' · '),
                 style: TextStyle(
                   color: request.status == EnrollmentRequestStatus.approved
                       ? theme.colorScheme.primary
@@ -211,7 +218,7 @@ class _ReviewCard extends ConsumerWidget {
                   ),
                   FilledButton(
                     onPressed: () => _approve(context, ref),
-                    child: const Text('Aprobar'),
+                    child: const Text('Confirmar'),
                   ),
                 ],
               ),
@@ -231,7 +238,7 @@ class _Approval {
   final bool overCapacity;
 }
 
-/// Confirma la categoría, qué se cobra del mes en curso y, si está llena, el cupo.
+/// La categoría, qué se cobra del mes en curso y, si está llena, el cupo.
 class _ApproveDialog extends StatefulWidget {
   const _ApproveDialog(this.request, {required this.groupTerm});
 
@@ -256,15 +263,16 @@ class _ApproveDialogState extends State<_ApproveDialog> {
     final midPeriod = request.midPeriod;
 
     return AlertDialog(
-      title: const Text('Aprobar inscripción'),
+      title: const Text('Confirmar inscripción'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Se da de alta a ${request.child.firstName} con sus cuotas '
-              'según el plan de la temporada ${request.season.name}.',
+              '${request.child.firstName} ya va a clases. Al confirmar se '
+              'emiten sus cuotas según el plan de la temporada '
+              '${request.season.name}.',
             ),
             const SizedBox(height: 16),
             if (options.isNotEmpty)
@@ -333,22 +341,22 @@ class _ApproveDialogState extends State<_ApproveDialog> {
                   context,
                   _Approval(_groupId, _midPeriod, _overCapacity),
                 ),
-          child: const Text('Aprobar'),
+          child: const Text('Confirmar'),
         ),
       ],
     );
   }
 }
 
-/// Pide el motivo, que le llega a la familia.
-class _RejectDialog extends StatefulWidget {
-  const _RejectDialog();
+/// Pide el motivo, que le llega a la familia. Lo usa también la planilla.
+class RejectRequestDialog extends StatefulWidget {
+  const RejectRequestDialog({super.key});
 
   @override
-  State<_RejectDialog> createState() => _RejectDialogState();
+  State<RejectRequestDialog> createState() => _RejectRequestDialogState();
 }
 
-class _RejectDialogState extends State<_RejectDialog> {
+class _RejectRequestDialogState extends State<RejectRequestDialog> {
   final _formKey = GlobalKey<FormState>();
   final _reason = TextEditingController();
 
@@ -360,7 +368,7 @@ class _RejectDialogState extends State<_RejectDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Rechazar solicitud'),
+    title: const Text('Rechazar inscripción'),
     content: Form(
       key: _formKey,
       child: TextFormField(

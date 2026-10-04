@@ -10,6 +10,8 @@ import '../../organizations/data/organization_repository.dart';
 import '../data/enrollment_repository.dart';
 import '../data/models.dart';
 import '../data/request_form.dart';
+import '../../students/data/students_repository.dart';
+import 'place_picker.dart';
 
 /// El tutor pide la inscripción de un hijo: datos, dónde (la API sugiere la
 /// categoría por edad) y ficha médica opcional. Queda en revisión del club.
@@ -122,7 +124,9 @@ class _EnrollChildScreenState extends ConsumerState<EnrollChildScreen> {
               ),
             ),
           );
-      ref.invalidate(myEnrollmentRequestsProvider);
+      ref
+        ..invalidate(myEnrollmentRequestsProvider)
+        ..invalidate(studentsProvider);
       if (mounted) setState(() => _sent = request);
     } catch (error) {
       messenger.showSnackBar(SnackBar(content: Text(apiErrorMessage(error))));
@@ -152,9 +156,7 @@ class _EnrollChildScreenState extends ConsumerState<EnrollChildScreen> {
         ? null
         : ref.watch(enrollmentOptionsProvider(birth));
     final loaded = options?.value;
-    final option = loaded == null || loaded.isEmpty
-        ? null
-        : loaded[_optionIndex.clamp(0, loaded.length - 1)];
+    final option = selectedOption(loaded, _optionIndex);
 
     return Form(
       key: _formKey,
@@ -162,8 +164,8 @@ class _EnrollChildScreenState extends ConsumerState<EnrollChildScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           Text(
-            'Completá los datos y el club revisa la solicitud. Te avisamos '
-            'cuando la apruebe.',
+            'Completá los datos: tu hijo ya puede ir a las clases y el club '
+            'confirma la inscripción.',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 16),
@@ -203,10 +205,7 @@ class _EnrollChildScreenState extends ConsumerState<EnrollChildScreen> {
           TextFormField(
             controller: _document,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Documento (opcional)',
-              helperText: 'Evita que quede cargado dos veces.',
-            ),
+            decoration: const InputDecoration(labelText: 'Número de documento'),
             validator: validateDocument,
           ),
           const SizedBox(height: 16),
@@ -225,7 +224,22 @@ class _EnrollChildScreenState extends ConsumerState<EnrollChildScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          ..._where(context, options, option, groupTerm, today),
+          PlacePicker(
+            options: options,
+            optionIndex: _optionIndex,
+            groupId: _groupId,
+            showError: _showGroupError,
+            groupTerm: groupTerm,
+            today: today,
+            onOptionChanged: (index) => setState(() {
+              _optionIndex = index;
+              _groupId = null;
+            }),
+            onGroupChanged: (id) => setState(() {
+              _groupId = id;
+              _showGroupError = false;
+            }),
+          ),
           const SizedBox(height: 8),
           ExpansionTile(
             title: const Text('Ficha médica (opcional)'),
@@ -290,115 +304,9 @@ class _EnrollChildScreenState extends ConsumerState<EnrollChildScreen> {
       ),
     );
   }
-
-  /// Disciplina, temporada y categoría, cuando ya hay fecha de nacimiento.
-  List<Widget> _where(
-    BuildContext context,
-    AsyncValue<List<EnrollmentOption>>? options,
-    EnrollmentOption? option,
-    String groupTerm,
-    DateTime today,
-  ) {
-    final theme = Theme.of(context);
-    if (options == null) {
-      return [
-        Text(
-          'Con la fecha de nacimiento te sugerimos la ${groupTerm.toLowerCase()}.',
-          style: theme.textTheme.bodySmall,
-        ),
-      ];
-    }
-    if (options.isLoading) return const [LinearProgressIndicator()];
-    if (options.hasError) return [Text(apiErrorMessage(options.error!))];
-
-    final loaded = options.value!;
-    if (loaded.isEmpty || option == null) {
-      return const [
-        Text(
-          'El club todavía no tiene inscripciones abiertas. Consultá con el club.',
-        ),
-      ];
-    }
-
-    final selected = _groupId ?? option.defaultGroupId;
-    return [
-      if (loaded.length > 1) ...[
-        Text('¿En qué lo inscribís?', style: theme.textTheme.titleSmall),
-        const SizedBox(height: 4),
-        Wrap(
-          spacing: 8,
-          children: [
-            for (final (index, o) in loaded.indexed)
-              ChoiceChip(
-                label: Text('${o.program.name} · ${o.season.name}'),
-                selected: o == option,
-                onSelected: (_) => setState(() {
-                  _optionIndex = index;
-                  _groupId = null;
-                }),
-              ),
-          ],
-        ),
-        const SizedBox(height: 8),
-      ],
-      Text(
-        '$groupTerm · ${option.program.name}',
-        style: theme.textTheme.titleSmall,
-      ),
-      if (option.season.startsAfter(today))
-        Text(
-          '${option.season.name}: empieza el ${formatDate(option.season.startsOn!)}',
-          style: theme.textTheme.bodySmall,
-        ),
-      if (option.groups.isEmpty)
-        const Text('Todavía no hay categorías abiertas.'),
-      RadioGroup<int>(
-        groupValue: selected,
-        onChanged: (id) => setState(() {
-          _groupId = id;
-          _showGroupError = false;
-        }),
-        child: Column(
-          children: [
-            for (final group in option.groups)
-              RadioListTile<int>(
-                contentPadding: EdgeInsets.zero,
-                value: group.id,
-                title: Text(group.name),
-                subtitle: _groupDetails(group, option, theme),
-              ),
-          ],
-        ),
-      ),
-      if (_showGroupError)
-        Text(
-          validateGroup(null)!,
-          style: TextStyle(color: theme.colorScheme.error),
-        ),
-    ];
-  }
-
-  Widget? _groupDetails(
-    GroupOption group,
-    EnrollmentOption option,
-    ThemeData theme,
-  ) {
-    final lines = [
-      if (group.id == option.suggestedGroupId) 'Le corresponde por la edad',
-      if (group.schedules.isNotEmpty)
-        group.schedules
-            .map((s) => '${weekdayShort(s.weekday)} ${s.startsAt}')
-            .join(', '),
-      if (group.full)
-        'Completo: el club decide si hay lugar'
-      else
-        ?group.spotsLabel,
-    ];
-    return lines.isEmpty ? null : Text(lines.join(' · '));
-  }
 }
 
-/// "Solicitud enviada", con lo que pasa después.
+/// "Listo": ya puede ir a clases; falta (o no) que el club la confirme.
 class _Sent extends StatelessWidget {
   const _Sent(this.request);
 
@@ -407,6 +315,9 @@ class _Sent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final name = request.child.firstName;
+    final confirmed = request.isApproved;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -414,16 +325,24 @@ class _Sent extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.mark_email_read_outlined,
+              confirmed
+                  ? Icons.check_circle_outline
+                  : Icons.how_to_reg_outlined,
               size: 56,
               color: theme.colorScheme.primary,
             ),
             const SizedBox(height: 16),
-            Text('Solicitud enviada', style: theme.textTheme.headlineSmall),
+            Text(
+              confirmed ? 'Inscripción confirmada' : 'Solicitud enviada',
+              style: theme.textTheme.headlineSmall,
+            ),
             const SizedBox(height: 8),
             Text(
-              'Pediste lugar para ${request.child.firstName} en '
-              '${request.placeLabel}. Te avisamos cuando el club la apruebe.',
+              confirmed
+                  ? '$name ya está en ${request.placeLabel}. Sus cuotas ya '
+                        'aparecen en el estado de cuenta.'
+                  : '$name ya puede ir a las clases de ${request.placeLabel}. '
+                        'Te avisamos cuando el club confirme la inscripción.',
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),

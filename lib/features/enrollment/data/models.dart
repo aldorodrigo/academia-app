@@ -3,7 +3,7 @@ library;
 
 /// Estado de una solicitud de inscripción.
 enum EnrollmentRequestStatus {
-  pending('pendiente', 'En revisión'),
+  pending('pendiente', 'Por confirmar'),
   approved('aprobada', 'Aprobada'),
   rejected('rechazada', 'No aprobada'),
   cancelled('cancelada', 'Cancelada');
@@ -268,6 +268,8 @@ class EnrollmentRequest {
     this.studentId,
     this.createdAt,
     this.reviewedAt,
+    this.reviewedBy,
+    this.selfApproved = false,
     this.requestedBy,
     this.age,
     this.existingStudent,
@@ -294,6 +296,8 @@ class EnrollmentRequest {
       studentId: json['student_id'] as int?,
       createdAt: _dateTime(json['created_at']),
       reviewedAt: _dateTime(json['reviewed_at']),
+      reviewedBy: json['reviewed_by'] as String?,
+      selfApproved: json['self_approved'] as bool? ?? false,
       requestedBy: requester == null ? null : Requester.fromJson(requester),
       age: json['age'] as int?,
       existingStudent: existing == null
@@ -322,7 +326,15 @@ class EnrollmentRequest {
   final DateTime? createdAt;
   final DateTime? reviewedAt;
 
-  // Solo para quien aprueba.
+  /// Quién la confirmó o la rechazó.
+  final String? reviewedBy;
+
+  /// La pidió quien puede confirmar: se confirmó sola.
+  final bool selfApproved;
+
+  bool get isApproved => status == EnrollmentRequestStatus.approved;
+
+  // Solo para quien confirma.
   final Requester? requestedBy;
   final int? age;
   final ExistingStudent? existingStudent;
@@ -406,3 +418,89 @@ DateTime? _date(Object? value) =>
 
 DateTime? _dateTime(Object? value) =>
     value is String ? DateTime.parse(value).toLocal() : null;
+
+/// Tutor del alumno que carga el admin desde la app.
+class GuardianDraft {
+  const GuardianDraft({
+    required this.firstName,
+    required this.phone,
+    this.lastName,
+    this.email,
+    this.relationship = Relationship.mother,
+  });
+
+  final String firstName;
+  final String? lastName;
+  final String phone;
+  final String? email;
+  final Relationship relationship;
+
+  Map<String, Object> toJson() => {
+    'first_name': firstName.trim(),
+    if (lastName?.trim().isNotEmpty ?? false) 'last_name': lastName!.trim(),
+    'phone': phone.trim(),
+    if (email?.trim().isNotEmpty ?? false) 'email': email!.trim(),
+    'relationship': relationship.value,
+  };
+}
+
+/// "Cargar alumno": alta directa (sin solicitud) por quien puede crear alumnos.
+class StudentRegistrationDraft {
+  const StudentRegistrationDraft({
+    required this.firstName,
+    required this.lastName,
+    required this.birthDate,
+    required this.document,
+    required this.seasonId,
+    required this.groupId,
+    required this.guardian,
+  });
+
+  final String firstName;
+  final String lastName;
+  final DateTime birthDate;
+  final String document;
+  final int seasonId;
+  final int groupId;
+  final GuardianDraft guardian;
+}
+
+/// Resultado del alta: el alumno y, si el tutor no usa la app, su invitación.
+class RegisteredStudent {
+  const RegisteredStudent({
+    required this.studentId,
+    required this.fullName,
+    required this.place,
+    this.guardianName,
+    this.guardianHasAccount = false,
+    this.invitationLink,
+    this.whatsappUrl,
+  });
+
+  factory RegisteredStudent.fromJson(Map<String, dynamic> json) {
+    final student = json['student'] as Map<String, dynamic>;
+    final guardian = json['guardian'] as Map<String, dynamic>?;
+    final invitation = json['invitation'] as Map<String, dynamic>?;
+    return RegisteredStudent(
+      studentId: student['id'] as int,
+      fullName: student['full_name'] as String,
+      place: student['place'] as String,
+      guardianName: guardian?['name'] as String?,
+      guardianHasAccount: guardian?['has_account'] as bool? ?? false,
+      invitationLink: invitation?['link'] as String?,
+      whatsappUrl: invitation?['whatsapp_url'] as String?,
+    );
+  }
+
+  final int studentId;
+  final String fullName;
+
+  /// "Sub-8 · Fútbol (2026)".
+  final String place;
+  final String? guardianName;
+  final bool guardianHasAccount;
+  final String? invitationLink;
+
+  /// Link `wa.me` con el mensaje de la invitación, para mandarla por WhatsApp.
+  final String? whatsappUrl;
+}

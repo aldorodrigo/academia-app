@@ -9,6 +9,7 @@ import 'features/attendance/presentation/group_screen.dart';
 import 'features/attendance/presentation/groups_screen.dart';
 import 'features/auth/data/models.dart';
 import 'features/billing/presentation/balance_screen.dart';
+import 'features/enrollment/presentation/add_student_screen.dart';
 import 'features/enrollment/presentation/enroll_child_screen.dart';
 import 'features/enrollment/presentation/enrollment_requests_screen.dart';
 import 'features/auth/data/session_controller.dart';
@@ -179,6 +180,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/solicitudes',
         builder: (_, _) => const EnrollmentRequestsScreen(),
+      ),
+      GoRoute(
+        path: '/alumnos/nuevo',
+        builder: (_, _) => const AddStudentScreen(),
       ),
       GoRoute(
         path: '/hijos',

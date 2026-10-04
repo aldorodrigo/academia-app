@@ -7,8 +7,9 @@ import '../../../core/utils/format.dart';
 import '../../auth/data/session_controller.dart';
 import 'models.dart';
 
-/// Solicitudes de inscripción: el tutor las pide y quien tiene el permiso
-/// `manage_enrollment_requests` las aprueba o rechaza.
+/// Inscripciones desde la app: el tutor las pide (el chico entra ya y va a
+/// clases), quien tiene `manage_enrollment_requests` las confirma o rechaza y
+/// quien tiene `create_students` carga alumnos directo.
 class EnrollmentRepository {
   EnrollmentRepository(this._dio, this._storage);
 
@@ -37,7 +38,7 @@ class EnrollmentRepository {
         'first_name': draft.firstName.trim(),
         'last_name': draft.lastName.trim(),
         'birth_date': apiDate(draft.birthDate),
-        if (document.isNotEmpty) 'document': document,
+        'document': document,
         'relationship': draft.relationship.value,
         'season_id': draft.seasonId,
         'group_id': draft.groupId,
@@ -101,6 +102,27 @@ class EnrollmentRepository {
       data: {'reason': reason.trim()},
     );
     return EnrollmentRequest.fromJson(
+      response.data!['data'] as Map<String, dynamic>,
+    );
+  }
+
+  /// "Cargar alumno": alta directa con la invitación del tutor.
+  Future<RegisteredStudent> registerStudent(
+    StudentRegistrationDraft draft,
+  ) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/students',
+      data: {
+        'first_name': draft.firstName.trim(),
+        'last_name': draft.lastName.trim(),
+        'birth_date': apiDate(draft.birthDate),
+        'document': draft.document.trim(),
+        'season_id': draft.seasonId,
+        'group_id': draft.groupId,
+        'guardian': draft.guardian.toJson(),
+      },
+    );
+    return RegisteredStudent.fromJson(
       response.data!['data'] as Map<String, dynamic>,
     );
   }

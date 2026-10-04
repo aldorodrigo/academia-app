@@ -69,12 +69,15 @@ lib/
   ("Informar transferencia", `/estado-de-cuenta/informar-pago`: cuotas, monto, fecha, cuenta y foto o PDF elegido con
   `proofPickerProvider`, reemplazable en tests); queda en revisión hasta que se aprueba. Quien tiene el permiso
   `review_payment_reports` ve `PaymentReportsCard` en el inicio y `/comprobantes` (aprobar o rechazar con motivo).
-- **Inscribir a un hijo** (`features/enrollment/`): desde "Mis hijos" ("Inscribir a otro hijo") o "Mi cuenta",
-  `/hijos/inscribir` (datos, fecha dd/mm/aaaa, la API trae disciplinas, temporadas y la categoría sugerida con
-  `GET enrollment-requests/options`; ficha médica opcional) → solicitud en revisión (`MyEnrollmentRequests` arriba de
-  los hijos, se puede cancelar). Quien tiene `manage_enrollment_requests` ve `EnrollmentRequestsCard` y
-  `/solicitudes` (aprobar con categoría, mitad de mes y confirmación de cupo; rechazar con motivo). Plan:
-  `academia-api/docs/PLAN_INSCRIPCION_TUTOR.md` (5e le suma el link público).
+- **Inscribir a un hijo** (`features/enrollment/`, "entra ya, se confirma después"): desde "Mis hijos" ("Inscribir a
+  otro hijo") o "Mi cuenta", `/hijos/inscribir` (datos, documento obligatorio, fecha dd/mm/aaaa; `PlacePicker` con
+  disciplina, temporada y la categoría sugerida de `GET enrollment-requests/options`; ficha médica opcional). El chico
+  ya va a clases (inscripción pendiente) y el club confirma; si quien pide puede confirmar, queda confirmada. Las
+  solicitudes propias arriba de los hijos (`MyEnrollmentRequests`, se pueden cancelar). Quien tiene
+  `manage_enrollment_requests` confirma o rechaza en `/solicitudes` (`EnrollmentRequestsCard`) y, el técnico, en la
+  planilla ("Nuevo, por confirmar", `confirmEnrollment`/`rejectEnrollment` en `enrollment_actions.dart`). Con
+  `create_students`, "Cargar alumno" (`/alumnos/nuevo`, `POST students`) con la invitación del tutor para mandar por
+  WhatsApp (`urlLauncherProvider`). Plan: `academia-api/docs/PLAN_INSCRIPCION_TUTOR.md` (5e le suma el link público).
 - **Informes** (comisión): `/informes` (balance del mes, saldos por familia, morosos; PDF/Excel por link firmado)
   y tarjeta en el inicio, solo si `currentOrganizationProvider` trae el permiso `view_reports` (`can()`).
 - **Fecha de hoy:** `todayProvider` y `nowProvider` (con hora) en `core/utils/clock.dart`, reemplazables en los tests.

@@ -78,16 +78,23 @@ class ClassStudent {
     this.status,
     this.guardianResponse,
     this.note,
+    this.enrollmentRequestId,
+    this.canConfirm = false,
   });
 
-  factory ClassStudent.fromJson(Map<String, dynamic> json) => ClassStudent(
-    id: json['id'] as int,
-    fullName: json['full_name'] as String,
-    photoUrl: json['photo_url'] as String?,
-    status: AttendanceStatus.parse(json['status']),
-    guardianResponse: GuardianResponse.parse(json['guardian_response']),
-    note: json['note'] as String?,
-  );
+  factory ClassStudent.fromJson(Map<String, dynamic> json) {
+    final request = json['enrollment_request'] as Map<String, dynamic>?;
+    return ClassStudent(
+      id: json['id'] as int,
+      fullName: json['full_name'] as String,
+      photoUrl: json['photo_url'] as String?,
+      status: AttendanceStatus.parse(json['status']),
+      guardianResponse: GuardianResponse.parse(json['guardian_response']),
+      note: json['note'] as String?,
+      enrollmentRequestId: request?['id'] as int?,
+      canConfirm: request?['can_review'] as bool? ?? false,
+    );
+  }
 
   final int id;
   final String fullName;
@@ -95,6 +102,14 @@ class ClassStudent {
   final AttendanceStatus? status;
   final GuardianResponse? guardianResponse;
   final String? note;
+
+  /// Nuevo que pidió lugar desde la app: va a clases mientras el club confirma.
+  final int? enrollmentRequestId;
+
+  /// Quien toma la asistencia lo puede confirmar o rechazar acá mismo.
+  final bool canConfirm;
+
+  bool get isPendingConfirmation => enrollmentRequestId != null;
 
   String get initials => _initials(fullName);
 }

@@ -37,10 +37,10 @@ String? validateBirthDate(String? text, DateTime today) {
   return null;
 }
 
-/// Documento opcional: hasta 20 caracteres, letras, números, puntos o guiones.
+/// Documento obligatorio: hasta 20 caracteres, letras, números, puntos o guiones.
 String? validateDocument(String? value) {
   final text = value?.trim() ?? '';
-  if (text.isEmpty) return null;
+  if (text.isEmpty) return 'Ingresá el número de documento.';
   if (text.length > 20 || !RegExp(r'^[\w.\-]+$').hasMatch(text)) {
     return 'Ingresá el número de documento, sin espacios.';
   }
@@ -54,4 +54,9 @@ String? validateGroup(int? groupId) =>
 String? validateRequestRejection(String? value) =>
     value == null || value.trim().isEmpty
     ? 'Contale a la familia por qué no la aprobás.'
+    : null;
+
+String? validateGuardianName(String? value) =>
+    value == null || value.trim().isEmpty
+    ? 'Ingresá el nombre del tutor.'
     : null;
