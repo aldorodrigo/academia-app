@@ -97,6 +97,7 @@ class FamilyBalance {
     required this.pending,
     required this.overdue,
     required this.credit,
+    this.upcoming = 0,
   });
 
   factory FamilyBalance.fromJson(Map<String, dynamic> json) => FamilyBalance(
@@ -105,13 +106,19 @@ class FamilyBalance {
     pending: json['pending'] as int,
     overdue: json['overdue'] as int,
     credit: json['credit'] as int? ?? 0,
+    upcoming: json['upcoming'] as int? ?? 0,
   );
 
   final String family;
   final List<String> students;
+
+  /// Pendiente sin las próximas cuotas.
   final int pending;
   final int overdue;
   final int credit;
+
+  /// Cuotas creadas por adelantado que todavía no empezaron.
+  final int upcoming;
 }
 
 /// Saldos por familia.
@@ -122,6 +129,7 @@ class BalancesReport {
     required this.credit,
     required this.families,
     required this.links,
+    this.upcoming = 0,
   });
 
   factory BalancesReport.fromJson(Map<String, dynamic> json) {
@@ -130,6 +138,7 @@ class BalancesReport {
       pending: totals['pending'] as int,
       overdue: totals['overdue'] as int,
       credit: totals['credit'] as int? ?? 0,
+      upcoming: totals['upcoming'] as int? ?? 0,
       families: ((json['families'] as List?) ?? const [])
           .map((f) => FamilyBalance.fromJson(f as Map<String, dynamic>))
           .toList(),
@@ -140,6 +149,7 @@ class BalancesReport {
   final int pending;
   final int overdue;
   final int credit;
+  final int upcoming;
   final List<FamilyBalance> families;
   final ReportLinks links;
 }

@@ -3,10 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/storage/session_storage.dart';
+import '../../../core/utils/format.dart';
 import 'models.dart';
-
-String _date(DateTime d) =>
-    '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
 class ReportsRepository {
   ReportsRepository(this._dio, this._storage);
@@ -22,7 +20,7 @@ class ReportsRepository {
     final to = DateTime(month.year, month.month + 1, 0);
     final response = await _dio.get<Map<String, dynamic>>(
       '/reports/balance',
-      queryParameters: {'from': _date(from), 'to': _date(to)},
+      queryParameters: {'from': apiDate(from), 'to': apiDate(to)},
     );
     return BalanceReport.fromJson(
       response.data!['data'] as Map<String, dynamic>,

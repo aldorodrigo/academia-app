@@ -5,11 +5,16 @@ import 'package:flutter_test/flutter_test.dart';
 
 const _jakare = Organization(slug: 'jakare', name: 'Club Jakare');
 
-Session _session({String? slug}) => Session(
+Session _session({
+  String? slug,
+  bool verified = true,
+  List<Organization> organizations = const [_jakare],
+}) => Session(
   name: 'Ana',
   email: 'ana@test.com',
-  organizations: const [_jakare],
+  organizations: organizations,
   organizationSlug: slug,
+  verified: verified,
 );
 
 void main() {
@@ -64,6 +69,22 @@ void main() {
     );
   });
 
+  test('asistencia y grupos requieren sesión y organización', () {
+    for (final path in [
+      '/clases/81',
+      '/grupos',
+      '/grupos/3',
+      '/notificaciones',
+    ]) {
+      expect(sessionRedirect(const AsyncData(null), path), '/ingresar');
+      expect(sessionRedirect(AsyncData(_session()), path), '/organizaciones');
+      expect(
+        sessionRedirect(AsyncData(_session(slug: 'jakare')), path),
+        isNull,
+      );
+    }
+  });
+
   test('el estado de cuenta requiere sesión', () {
     expect(
       sessionRedirect(const AsyncData(null), '/estado-de-cuenta'),
@@ -107,5 +128,88 @@ void main() {
 
   test('los informes requieren sesión', () {
     expect(sessionRedirect(const AsyncData(null), '/informes'), '/ingresar');
+  });
+
+  group('crear cuenta y club', () {
+    test('crear cuenta y registro se abren sin sesión', () {
+      expect(sessionRedirect(const AsyncData(null), '/crear-cuenta'), isNull);
+      expect(sessionRedirect(const AsyncData(null), '/registro'), isNull);
+      expect(
+        sessionRedirect(const AsyncData(null), '/registro/club'),
+        '/ingresar',
+      );
+      expect(
+        sessionRedirect(const AsyncData(null), '/registro/codigo'),
+        '/ingresar',
+      );
+    });
+
+    test('recuperar la contraseña se abre sin sesión', () {
+      expect(sessionRedirect(const AsyncData(null), '/recuperar'), isNull);
+      // Al cambiarla queda la sesión iniciada: sigue como al ingresar.
+      expect(
+        sessionRedirect(AsyncData(_session(slug: 'jakare')), '/recuperar'),
+        '/inicio',
+      );
+      expect(
+        sessionRedirect(
+          AsyncData(_session(organizations: const [])),
+          '/recuperar',
+        ),
+        '/registro/club',
+      );
+    });
+
+    test('sin verificar la cuenta solo se ingresa el código', () {
+      final session = AsyncData(
+        _session(verified: false, organizations: const []),
+      );
+      for (final path in [
+        '/registro',
+        '/inicio',
+        '/organizaciones',
+        '/registro/club',
+      ]) {
+        expect(sessionRedirect(session, path), '/registro/codigo');
+      }
+      expect(sessionRedirect(session, '/registro/codigo'), isNull);
+      // Una invitación se puede abrir igual.
+      expect(sessionRedirect(session, '/invitacion/abc'), isNull);
+    });
+
+    test('verificado y sin organizaciones sigue a "Tu club"', () {
+      final session = AsyncData(_session(organizations: const []));
+      expect(sessionRedirect(session, '/registro/codigo'), '/registro/club');
+      expect(sessionRedirect(session, '/registro'), '/registro/club');
+      expect(sessionRedirect(session, '/registro/club'), isNull);
+      // Sin organizaciones, el resto lleva a elegir (que ofrece registrar el club).
+      expect(sessionRedirect(session, '/inicio'), '/organizaciones');
+    });
+
+    test('con organizaciones, el registro lleva al inicio o a elegir', () {
+      expect(
+        sessionRedirect(AsyncData(_session(slug: 'jakare')), '/registro'),
+        '/inicio',
+      );
+      expect(
+        sessionRedirect(AsyncData(_session()), '/crear-cuenta'),
+        '/organizaciones',
+      );
+      expect(
+        sessionRedirect(AsyncData(_session(slug: 'jakare')), '/registro/club'),
+        isNull,
+      );
+    });
+
+    test('la guía requiere sesión y organización', () {
+      for (final path in ['/configurar', '/configurar/categorias']) {
+        expect(sessionRedirect(const AsyncData(null), path), '/ingresar');
+        expect(sessionRedirect(AsyncData(_session()), path), '/organizaciones');
+        expect(
+          sessionRedirect(AsyncData(_session(slug: 'jakare')), path),
+          isNull,
+        );
+      }
+    });
   });
 }

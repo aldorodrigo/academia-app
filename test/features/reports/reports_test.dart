@@ -47,7 +47,12 @@ Map<String, Object?> balanceJson({
 };
 
 const balancesJson = {
-  'totals': {'pending': 3250000, 'overdue': 1800000, 'credit': 90300},
+  'totals': {
+    'pending': 3250000,
+    'overdue': 1800000,
+    'credit': 90300,
+    'upcoming': 400000,
+  },
   'families': [
     {
       'family': 'Familia Benítez',
@@ -55,6 +60,7 @@ const balancesJson = {
       'pending': 270000,
       'overdue': 150000,
       'credit': 0,
+      'upcoming': 200000,
     },
   ],
   'pdf_url': 'https://api.test/informes/saldos.pdf',
@@ -142,6 +148,8 @@ void main() {
 
     final balances = BalancesReport.fromJson(balancesJson);
     expect(balances.families.single.students, ['Mateo', 'Sofía']);
+    expect(balances.upcoming, 400000);
+    expect(balances.families.single.upcoming, 200000);
 
     final delinquents = DelinquentsReport.fromJson(delinquentsJson);
     expect(delinquents.families.single.monthsOverdue, 3);
@@ -216,7 +224,11 @@ void main() {
     await tester.tap(find.text('Saldos'));
     await tester.pumpAndSettle();
     expect(find.text('Familia Benítez'), findsOneWidget);
-    expect(find.text('Mateo, Sofía · Vencido ₲ 150.000'), findsOneWidget);
+    expect(
+      find.text('Mateo, Sofía · Vencido ₲ 150.000 · Próximas ₲ 200.000'),
+      findsOneWidget,
+    );
+    expect(find.text('Próximas cuotas'), findsOneWidget);
 
     await tester.tap(find.text('Morosos'));
     await tester.pumpAndSettle();

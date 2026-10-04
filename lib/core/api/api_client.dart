@@ -48,6 +48,14 @@ final apiClientProvider = Provider<Dio>(
   (ref) => buildApiClient(ref.watch(sessionStorageProvider)),
 );
 
+/// Error de red (sin señal, servidor inalcanzable o tiempo agotado), no una
+/// respuesta de la API.
+bool isNetworkError(Object error) =>
+    error is DioException &&
+    error.response == null &&
+    error.type != DioExceptionType.cancel &&
+    error.type != DioExceptionType.badCertificate;
+
 /// Mensaje de error legible para mostrar al usuario.
 String apiErrorMessage(Object error) {
   if (error is DioException) {
@@ -58,8 +66,13 @@ String apiErrorMessage(Object error) {
         return (errors.first as List).first.toString();
       }
     }
-    if (data is Map && data['message'] is String) {
+    if (data is Map &&
+        data['message'] is String &&
+        data['message'] != 'Too Many Attempts.') {
       return data['message'] as String;
+    }
+    if (error.response?.statusCode == 429) {
+      return 'Esperá un momento antes de volver a intentar.';
     }
     if (error.type == DioExceptionType.connectionError ||
         error.type == DioExceptionType.connectionTimeout) {

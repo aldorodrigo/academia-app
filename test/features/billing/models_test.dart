@@ -41,4 +41,46 @@ void main() {
     expect(account.charges.last.period, isNull);
     expect(account.unpaid.map((c) => c.id), [501, 400]);
   });
+
+  test('sin los campos del Sprint 4c, todo es "a pagar ahora"', () {
+    final account = Account.fromJson(accountJson());
+
+    expect(account.dueNow, account.balance);
+    expect(account.upcoming, 0);
+    expect(account.students.first.dueNow, 150000);
+    expect(account.charges.first.season, isNull);
+    expect(account.charges.first.isUpcoming, isFalse);
+    expect(account.upcomingCharges, isEmpty);
+    expect(account.dueCharges.map((c) => c.id), [501, 400]);
+  });
+
+  test('lee temporada, período, cantidad y cuotas próximas', () {
+    final account = Account.fromJson({
+      ...accountJson(
+        charges: [
+          chargeJson(),
+          upcomingChargeJson(
+            id: 701,
+            description: 'Semana 11–17 ene',
+            dueOn: '2027-01-14',
+          ),
+          upcomingChargeJson(),
+        ],
+      ),
+      'due_now': 60000,
+      'upcoming': 200000,
+    });
+    final colonia = account.charges.last;
+
+    expect(account.dueNow, 60000);
+    expect(account.upcoming, 200000);
+    expect(colonia.season, 'Colonia de verano 2027');
+    expect(colonia.periodStart, DateTime(2027, 1, 4));
+    expect(colonia.periodEnd, DateTime(2027, 1, 10));
+    expect(colonia.quantity, 5);
+    expect(colonia.unitAmount, 20000);
+    expect(colonia.isUpcoming, isTrue);
+    expect(account.dueCharges.map((c) => c.id), [501]);
+    expect(account.upcomingCharges.map((c) => c.id), [700, 701]);
+  });
 }

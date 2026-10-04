@@ -159,6 +159,58 @@ void main() {
       expect(find.text('Vigente hasta 01/03/2027'), findsOneWidget);
     });
 
+    testWidgets('muestra las fechas y marca la temporada que no empezó', (
+      tester,
+    ) async {
+      final detail = studentDetailJson();
+      final enrollment =
+          (detail['enrollments']! as List).first as Map<String, Object?>;
+      await tester.pumpWidget(
+        _app(
+          _routes(
+            student: {
+              ...detail,
+              'enrollments': [
+                {
+                  ...enrollment,
+                  'season': {
+                    'id': 1,
+                    'name': '2026',
+                    'starts_on': '2026-01-01',
+                    'ends_on': '2026-12-31',
+                  },
+                },
+                {
+                  ...enrollment,
+                  'id': 41,
+                  'status': 'activo',
+                  'season': {
+                    'id': 3,
+                    'name': 'Colonia de verano 2027',
+                    'starts_on': '2027-01-04',
+                    'ends_on': '2027-01-17',
+                  },
+                },
+              ],
+            },
+          ),
+          const StudentScreen(id: 12),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Del 01/01/2026 al 31/12/2026'), findsOneWidget);
+      expect(find.text('Becado'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Empieza el 04/01/2027'), 200);
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Deporte: Fútbol · Temporada Colonia de verano 2027'),
+        findsOneWidget,
+      );
+      expect(find.text('Empieza el 04/01/2027'), findsOneWidget);
+      expect(find.text('Activo'), findsNothing);
+    });
+
     testWidgets('sin permiso no muestra la ficha médica', (tester) async {
       await tester.pumpWidget(
         _app(

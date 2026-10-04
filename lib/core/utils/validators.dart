@@ -7,6 +7,10 @@ String? validateEmail(String? value) {
   return null;
 }
 
+/// Correo que se puede dejar vacío (ej. el opcional de quien entra con el celular).
+String? validateOptionalEmail(String? value) =>
+    value == null || value.trim().isEmpty ? null : validateEmail(value);
+
 String? validateName(String? value) =>
     value == null || value.trim().isEmpty ? 'Ingresá tu nombre.' : null;
 
@@ -25,3 +29,36 @@ String? validateNewPassword(String? value) {
 
 String? validatePasswordConfirmation(String? value, String password) =>
     value == password ? null : 'Las contraseñas no coinciden.';
+
+String? validateTerms(bool accepted) =>
+    accepted ? null : 'Tenés que aceptar los términos.';
+
+/// Celular: entre 8 y 15 dígitos, con o sin espacios, guiones o `+`. La API
+/// lo normaliza y decide si es un celular válido.
+String? validatePhone(String? value) {
+  final text = value?.trim() ?? '';
+  if (text.isEmpty) return 'Ingresá tu número de celular.';
+  if (!RegExp(r'^\+?[\d\s\-()]+$').hasMatch(text)) {
+    return 'Ingresá un número de celular válido.';
+  }
+  final digits = text.replaceAll(RegExp(r'\D'), '');
+  if (digits.length < 8 || digits.length > 15) {
+    return 'Ingresá un número de celular válido.';
+  }
+  return null;
+}
+
+/// Celular o correo (con `@`), para ingresar o recuperar la contraseña.
+String? validateLogin(String? value) {
+  final text = value?.trim() ?? '';
+  if (text.isEmpty) return 'Ingresá tu celular o tu correo.';
+  return text.contains('@') ? validateEmail(text) : validatePhone(text);
+}
+
+/// Código de verificación (WhatsApp o correo): 6 dígitos.
+String? validateCode(String? value) {
+  final code = value?.trim() ?? '';
+  if (code.isEmpty) return 'Ingresá el código que te mandamos.';
+  if (!RegExp(r'^\d{6}$').hasMatch(code)) return 'El código tiene 6 dígitos.';
+  return null;
+}

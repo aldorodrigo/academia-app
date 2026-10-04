@@ -45,7 +45,7 @@ class _InvitationCodeScreenState extends State<InvitationCodeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const Text(
-                      'Pegá el link que te llegó por correo o el código de '
+                      'Pegá el link que te llegó por WhatsApp o por correo, o el código de '
                       'la invitación. Si tenés un QR, escanealo con la cámara '
                       'del celular.',
                     ),

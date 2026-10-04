@@ -96,19 +96,32 @@ class Enrollment {
     required this.status,
     required this.season,
     required this.group,
+    this.seasonStartsOn,
+    this.seasonEndsOn,
   });
 
-  factory Enrollment.fromJson(Map<String, dynamic> json) => Enrollment(
-    id: json['id'] as int,
-    status: EnrollmentStatus.parse(json['status']),
-    season: (json['season'] as Map<String, dynamic>)['name'] as String,
-    group: Group.fromJson(json['group'] as Map<String, dynamic>),
-  );
+  factory Enrollment.fromJson(Map<String, dynamic> json) {
+    final season = json['season'] as Map<String, dynamic>;
+    return Enrollment(
+      id: json['id'] as int,
+      status: EnrollmentStatus.parse(json['status']),
+      season: season['name'] as String,
+      seasonStartsOn: _date(season['starts_on']),
+      seasonEndsOn: _date(season['ends_on']),
+      group: Group.fromJson(json['group'] as Map<String, dynamic>),
+    );
+  }
 
   final int id;
   final EnrollmentStatus status;
   final String season;
+  final DateTime? seasonStartsOn;
+  final DateTime? seasonEndsOn;
   final Group group;
+
+  /// La temporada todavía no empezó.
+  bool isUpcoming(DateTime today) =>
+      seasonStartsOn != null && seasonStartsOn!.isAfter(today);
 }
 
 class Guardian {
@@ -181,6 +194,7 @@ class Student {
     this.guardians = const [],
     this.medical,
     this.canViewMedical = false,
+    this.classReminders,
   });
 
   factory Student.fromJson(Map<String, dynamic> json) {
@@ -201,6 +215,7 @@ class Student {
       guardians: _list(json['guardians'], Guardian.fromJson),
       medical: medical == null ? null : MedicalRecord.fromJson(medical),
       canViewMedical: permissions?['view_medical'] as bool? ?? false,
+      classReminders: json['class_reminders'] as bool?,
     );
   }
 
@@ -223,6 +238,9 @@ class Student {
   final MedicalRecord? medical;
   final bool canViewMedical;
 
+  /// Aviso de los días de clase: null = el tutor nunca respondió.
+  final bool? classReminders;
+
   String get initials =>
       '${firstName.isEmpty ? '' : firstName[0]}'
               '${lastName.isEmpty ? '' : lastName[0]}'
@@ -231,10 +249,25 @@ class Student {
   int? age(DateTime today) =>
       birthDate == null ? null : ageOn(birthDate!, today);
 
-  /// "Sub-10 · Fútbol, Inicial · Pádel".
-  String get groupsDescription => enrollments
-      .map((e) => '${e.group.name} · ${e.group.program.name}')
-      .join(', ');
+  /// Inscripciones de temporadas vigentes (sin las que todavía no empezaron).
+  List<Enrollment> currentEnrollments(DateTime today) =>
+      enrollments.where((e) => !e.isUpcoming(today)).toList();
+
+  /// "Sub-10 · Fútbol, Inicial · Pádel" de las vigentes, y cuántas temporadas
+  /// próximas tiene ("… y 2 temporadas próximas"). Si solo tiene próximas, esas.
+  String groupsDescription(DateTime today) {
+    final current = currentEnrollments(today);
+    final upcoming = enrollments.length - current.length;
+    final groups = (current.isEmpty ? enrollments : current)
+        .map((e) => '${e.group.name} · ${e.group.program.name}')
+        .toSet()
+        .join(', ');
+
+    if (current.isEmpty || upcoming == 0) return groups;
+    return upcoming == 1
+        ? '$groups y 1 temporada próxima'
+        : '$groups y $upcoming temporadas próximas';
+  }
 }
 
 DateTime? _date(Object? value) =>

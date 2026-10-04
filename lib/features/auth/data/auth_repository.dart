@@ -11,10 +11,76 @@ class AuthRepository {
   final Dio _dio;
   final SessionStorage _storage;
 
-  Future<void> login({required String email, required String password}) async {
+  /// [login] es el celular o el correo.
+  Future<void> login({required String login, required String password}) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/auth/token',
-      data: {'email': email, 'password': password, 'device_name': 'app'},
+      data: {'login': login, 'password': password, 'device_name': 'app'},
+    );
+    await _storage.writeToken(response.data!['token'] as String);
+  }
+
+  /// Crea la cuenta (sin organizaciones) y deja la sesión iniciada; la API
+  /// manda el código por WhatsApp si hay [phone], si no por correo. Con
+  /// [phone], el [email] es opcional: le llega una copia de códigos y avisos.
+  Future<void> register({
+    required String name,
+    String? phone,
+    String? email,
+    required String password,
+    required String passwordConfirmation,
+    String? captchaToken,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/auth/register',
+      data: {
+        'name': name,
+        'phone': ?phone,
+        'email': ?email,
+        'password': password,
+        'password_confirmation': passwordConfirmation,
+        'device_name': 'app',
+        'terms': true,
+        'captcha_token': ?captchaToken,
+      },
+    );
+    await _storage.writeToken(response.data!['token'] as String);
+  }
+
+  Future<void> verify(String code) =>
+      _dio.post<void>('/auth/verify', data: {'code': code});
+
+  /// Código nuevo; con [byEmail], por correo en lugar de WhatsApp.
+  Future<void> resendCode({bool byEmail = false, String? captchaToken}) =>
+      _dio.post<void>(
+        '/auth/verify/resend',
+        data: {if (byEmail) 'channel': 'mail', 'captcha_token': ?captchaToken},
+      );
+
+  /// Pide el código para cambiar la contraseña (la API responde igual haya o
+  /// no una cuenta).
+  Future<void> forgotPassword(String login, {String? captchaToken}) =>
+      _dio.post<void>(
+        '/auth/password/forgot',
+        data: {'login': login, 'captcha_token': ?captchaToken},
+      );
+
+  /// Cambia la contraseña con el código y deja la sesión iniciada.
+  Future<void> resetPassword({
+    required String login,
+    required String code,
+    required String password,
+    required String passwordConfirmation,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/auth/password/reset',
+      data: {
+        'login': login,
+        'code': code,
+        'password': password,
+        'password_confirmation': passwordConfirmation,
+        'device_name': 'app',
+      },
     );
     await _storage.writeToken(response.data!['token'] as String);
   }
@@ -38,9 +104,11 @@ class AuthRepository {
 
       return Session(
         name: data['name'] as String,
-        email: data['email'] as String,
+        phone: data['phone'] as String?,
+        email: data['email'] as String?,
         organizations: organizations,
         organizationSlug: slug,
+        verified: data['verified'] as bool? ?? true,
       );
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {

@@ -40,10 +40,12 @@ class StudentCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final age = student.age(ref.watch(todayProvider));
+    final today = ref.watch(todayProvider);
+    final age = student.age(today);
+    final current = student.currentEnrollments(today);
     final details = [
       if (age != null) '$age años',
-      if (student.enrollments.isNotEmpty) student.groupsDescription,
+      if (student.enrollments.isNotEmpty) student.groupsDescription(today),
     ].join(' · ');
 
     return Card(
@@ -51,9 +53,9 @@ class StudentCard extends ConsumerWidget {
         leading: StudentAvatar(student),
         title: Text(student.fullName),
         subtitle: details.isEmpty ? null : Text(details),
-        trailing: student.enrollments.isEmpty
+        trailing: current.isEmpty
             ? null
-            : EnrollmentStatusChip(student.enrollments.first.status),
+            : EnrollmentStatusChip(current.first.status),
         onTap: () => context.go('/hijos/${student.id}'),
       ),
     );

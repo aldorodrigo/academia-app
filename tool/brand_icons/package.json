@@ -1,0 +1,13 @@
+{
+  "name": "tuku-brand-icons",
+  "private": true,
+  "type": "module",
+  "description": "Genera los íconos y la pantalla de inicio desde assets/brand/",
+  "scripts": {
+    "generate": "node generate.mjs"
+  },
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "pngjs": "^7.0.0"
+  }
+}

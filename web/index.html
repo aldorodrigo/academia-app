@@ -18,21 +18,57 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="App de la plataforma para academias, clubes y escuelas">
+  <meta name="description" content="Las actividades de tus hijos, en un solo lugar.">
+  <meta name="theme-color" content="#F6F9F3" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0E1611" media="(prefers-color-scheme: dark)">
+
+  <!-- Vista previa de los links (invitaciones por WhatsApp o por correo): la tarjeta de Tuku. -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Tuku">
+  <meta property="og:locale" content="es_PY">
+  <meta property="og:title" content="Tuku">
+  <meta property="og:description" content="Cuotas, asistencia y avisos de clase para academias, clubes y escuelas. Todo en una app.">
+  <meta property="og:image" content="https://tukuha.app/brand/tuku-tarjeta-redes.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="Academia">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Tuku">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 
   <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>Academia</title>
+  <title>Tuku</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Pantalla de inicio: la misma que Android e iOS, hasta el primer cuadro de Flutter. -->
+  <style>
+    html, body { margin: 0; height: 100%; background: #F6F9F3; }
+    #splash {
+      position: fixed; inset: 0; z-index: 10;
+      display: flex; align-items: center; justify-content: center;
+      background: #F6F9F3; transition: opacity 200ms ease-out;
+    }
+    #splash.done { opacity: 0; pointer-events: none; }
+    @media (prefers-color-scheme: dark) {
+      html, body, #splash { background: #0E1611; }
+    }
+  </style>
 </head>
 <body>
+  <div id="splash"><img src="icons/splash.png" width="160" height="160" alt="Tuku"></div>
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      var splash = document.getElementById('splash');
+      splash.classList.add('done');
+      setTimeout(function () { splash.remove(); }, 250);
+    });
+  </script>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader

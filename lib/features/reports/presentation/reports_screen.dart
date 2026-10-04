@@ -122,7 +122,7 @@ class _BalanceTabState extends ConsumerState<_BalanceTab> {
                 'Ingresos',
                 children: [
                   if (r.income.isEmpty)
-                    const Text('Sin ingresos en el período.'),
+                    const Text('Sin ingresos en estas fechas.'),
                   for (final line in r.income)
                     AmountRow(line.label, line.amount),
                 ],
@@ -131,7 +131,7 @@ class _BalanceTabState extends ConsumerState<_BalanceTab> {
                 'Gastos',
                 children: [
                   if (r.expenses.isEmpty)
-                    const Text('Sin gastos en el período.'),
+                    const Text('Sin gastos en estas fechas.'),
                   for (final line in r.expenses)
                     AmountRow(line.label, line.amount),
                 ],
@@ -169,6 +169,7 @@ class _BalancesTab extends ConsumerWidget {
             AmountRow('Pendiente de cobro', r.pending, bold: true),
             AmountRow('Vencido', r.overdue, color: theme.colorScheme.error),
             if (r.credit > 0) AmountRow('Saldo a favor', r.credit),
+            if (r.upcoming > 0) AmountRow('Próximas cuotas', r.upcoming),
           ],
         ),
         DownloadButtons(r.links),
@@ -192,6 +193,8 @@ class _BalancesTab extends ConsumerWidget {
                     'Vencido ${formatMoney(family.overdue)}',
                   if (family.credit > 0)
                     'Saldo a favor ${formatMoney(family.credit)}',
+                  if (family.upcoming > 0)
+                    'Próximas ${formatMoney(family.upcoming)}',
                 ].join(' · '),
               ),
               trailing: Text(

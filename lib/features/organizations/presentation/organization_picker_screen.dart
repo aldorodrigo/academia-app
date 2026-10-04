@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../auth/data/session_controller.dart';
 
@@ -24,12 +25,31 @@ class OrganizationPickerScreen extends ConsumerWidget {
         ],
       ),
       body: organizations.isEmpty
-          ? const Center(
+          ? Center(
               child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Text(
-                  'Tu usuario todavía no pertenece a ninguna organización.',
-                  textAlign: TextAlign.center,
+                padding: const EdgeInsets.all(24),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'Tu usuario todavía no pertenece a ninguna organización.',
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      FilledButton(
+                        onPressed: () => context.go('/registro/club'),
+                        child: const Text('Registrar mi club'),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: () => context.go('/invitacion'),
+                        child: const Text('Tengo una invitación'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             )

@@ -1,10 +1,12 @@
+import '../../../core/utils/format.dart';
 import '../../auth/data/models.dart';
 
 class Invitation {
   const Invitation({
     required this.token,
     required this.organization,
-    required this.email,
+    this.email,
+    this.phone,
     required this.roleLabels,
     required this.userExists,
     this.expiresAt,
@@ -16,7 +18,8 @@ class Invitation {
         organization: Organization.fromJson(
           json['organization'] as Map<String, dynamic>,
         ),
-        email: json['email'] as String,
+        email: json['email'] as String?,
+        phone: json['phone'] as String?,
         roleLabels: ((json['roles'] as List?) ?? const [])
             .map((r) => (r as Map<String, dynamic>)['label'] as String)
             .toList(),
@@ -28,10 +31,16 @@ class Invitation {
 
   final String token;
   final Organization organization;
-  final String email;
+
+  /// La invitación va a un correo o a un celular (formato internacional).
+  final String? email;
+  final String? phone;
   final List<String> roleLabels;
 
-  /// Ya hay una cuenta con ese correo: solo se pide la contraseña.
+  /// El celular (formateado) o el correo al que llegó.
+  String get contact => phone != null ? formatPhone(phone!) : email ?? '';
+
+  /// Ya hay una cuenta con ese celular o correo: solo se pide la contraseña.
   final bool userExists;
   final DateTime? expiresAt;
 }

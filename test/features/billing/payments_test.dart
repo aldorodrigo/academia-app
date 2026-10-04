@@ -125,7 +125,7 @@ void main() {
     await tester.pumpWidget(_app(const Scaffold(body: AccountSummaryCard())));
     await tester.pumpAndSettle();
 
-    expect(find.text('Total a pagar ₲ 60.000'), findsOneWidget);
+    expect(find.text('A pagar ahora ₲ 60.000'), findsOneWidget);
     expect(find.text('Saldo a favor ₲ 90.000'), findsOneWidget);
   });
 }
