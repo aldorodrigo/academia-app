@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/utils/validators.dart';
 import '../../auth/data/session_controller.dart';
+import '../../auth/presentation/terms_checkbox.dart';
 import '../data/invitation_repository.dart';
 import '../data/models.dart';
 
@@ -58,10 +59,18 @@ class _AcceptFormState extends ConsumerState<_AcceptForm> {
   final _name = TextEditingController();
   final _password = TextEditingController();
   final _confirmation = TextEditingController();
+  bool _terms = false;
   bool _loading = false;
   String? _error;
 
   bool get _newAccount => !widget.invitation.userExists;
+
+  @override
+  void initState() {
+    super.initState();
+    // El nombre que cargó quien invitó; se puede corregir.
+    _name.text = widget.invitation.name?.trim() ?? '';
+  }
 
   @override
   void dispose() {
@@ -72,12 +81,13 @@ class _AcceptFormState extends ConsumerState<_AcceptForm> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    final valid = _formKey.currentState!.validate();
+    // Una cuenta nueva acepta los términos, como en el registro.
+    final terms = _newAccount ? validateTerms(_terms) : null;
+    setState(() => _error = terms);
+    if (!valid || terms != null) return;
 
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    setState(() => _loading = true);
 
     try {
       await ref
@@ -87,6 +97,7 @@ class _AcceptFormState extends ConsumerState<_AcceptForm> {
             name: _newAccount ? _name.text.trim() : null,
             password: _password.text,
             passwordConfirmation: _newAccount ? _confirmation.text : null,
+            acceptedTerms: _newAccount && _terms,
           );
       if (mounted) context.go('/inicio');
     } catch (e) {
@@ -178,6 +189,15 @@ class _AcceptFormState extends ConsumerState<_AcceptForm> {
                     validator: (value) =>
                         validatePasswordConfirmation(value, _password.text),
                     onFieldSubmitted: (_) => _submit(),
+                  ),
+                  const SizedBox(height: 8),
+                  TermsCheckbox(
+                    key: const Key('terms'),
+                    value: _terms,
+                    onChanged: (v) => setState(() {
+                      _terms = v;
+                      if (_terms) _error = null;
+                    }),
                   ),
                 ],
                 if (_error != null) ...[

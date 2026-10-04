@@ -190,12 +190,20 @@ class AttendanceRepository {
     return GroupAttendance.fromJson(_data(response.data!));
   }
 
-  /// Próxima clase de cada alumno a cargo del tutor.
+  /// Próxima clase de cada alumno a cargo del tutor, por fecha y hora de
+  /// inicio (la API ya las manda así; a la misma hora se respeta su orden).
   Future<List<AgendaItem>> agenda() async {
     if (await _storage.readOrganization() == null) return const [];
 
     final response = await _dio.get<Map<String, dynamic>>('/agenda');
-    return _items(response.data!, AgendaItem.fromJson);
+    final items = _items(response.data!, AgendaItem.fromJson).indexed.toList()
+      ..sort((a, b) {
+        final byDate = a.$2.session.date.compareTo(b.$2.session.date);
+        if (byDate != 0) return byDate;
+        final byTime = a.$2.session.startsAt.compareTo(b.$2.session.startsAt);
+        return byTime != 0 ? byTime : a.$1.compareTo(b.$1);
+      });
+    return [for (final (_, item) in items) item];
   }
 
   Future<AgendaItem> respond(

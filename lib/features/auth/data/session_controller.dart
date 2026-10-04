@@ -82,6 +82,7 @@ class SessionController extends AsyncNotifier<Session?> {
     required String password,
     String? name,
     String? passwordConfirmation,
+    bool acceptedTerms = false,
   }) async {
     await ref
         .read(invitationRepositoryProvider)
@@ -90,6 +91,7 @@ class SessionController extends AsyncNotifier<Session?> {
           name: name,
           password: password,
           passwordConfirmation: passwordConfirmation,
+          acceptedTerms: acceptedTerms,
         );
     state = AsyncData(await _repository.restore());
   }
