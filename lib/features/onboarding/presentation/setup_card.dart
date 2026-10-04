@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../organizations/data/organization_repository.dart';
 import '../data/onboarding_controller.dart';
 import 'setup_steps.dart';
 import 'step_scaffold.dart';
 
-/// La guía "Configurá tu club" dentro del inicio del administrador: la lista de
+/// La guía "Configurá tu club" (o academia, escuela…) dentro del inicio del administrador: la lista de
 /// pasos mientras esté incompleta; "Seguir después" la achica a una barra y
 /// "Seguir" la vuelve a abrir. Completa, desaparece.
 class SetupCard extends ConsumerWidget {
@@ -37,6 +38,8 @@ class SetupCard extends ConsumerWidget {
 
     final theme = Theme.of(context);
     final next = onboarding.nextStep;
+    final noun =
+        ref.watch(currentOrganizationProvider).value?.typeNoun ?? 'club';
     final progress = Row(
       children: [
         Expanded(
@@ -71,7 +74,7 @@ class SetupCard extends ConsumerWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Configurá tu club',
+                      'Configurá tu $noun',
                       style: theme.textTheme.titleMedium,
                     ),
                   ),
@@ -113,7 +116,7 @@ class SetupCard extends ConsumerWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Configurá tu club',
+                          'Configurá tu $noun',
                           style: theme.textTheme.titleMedium,
                         ),
                       ),

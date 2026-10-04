@@ -194,7 +194,7 @@ void main() {
             },
           };
         },
-        'GET /organization': (_) => organizationJson(),
+        'GET /organization': (_) => organizationJson(type: 'academy'),
         'GET /onboarding': (_) => onboardingJson(),
       },
       token: null,
@@ -262,7 +262,7 @@ void main() {
     await tester.tap(find.byKey(const Key('create-club')));
     await _settle(tester);
 
-    expect(find.text('Configurá tu club'), findsOneWidget);
+    expect(find.text('Configurá tu academia'), findsOneWidget);
     expect(find.text('Empezar'), findsOneWidget);
     final created = requests.firstWhere(
       (r) => r.method == 'POST' && r.path == '/organizations',
@@ -277,6 +277,7 @@ void main() {
         'student': 'Alumno',
         'instructor': 'Profesor',
         'guardian': 'Tutor',
+        'space': 'Sala',
       },
     });
   });
@@ -972,5 +973,236 @@ void main() {
       find.textContaining('Las profesoras toman asistencia'),
       findsOneWidget,
     );
+  });
+
+  group('vocabulario de deporte', () {
+    Map<String, Object?> academy({bool sport = false}) => sport
+        ? organizationJson(type: 'academy', student: 'Alumno')
+        : organizationJson(
+            type: 'academy',
+            group: 'Grupo',
+            student: 'Alumno',
+            instructor: 'Profesor',
+            space: 'Sala',
+          );
+
+    Routes academyRoutes({
+      required bool Function() saved,
+      required void Function() onSave,
+    }) {
+      var programs = <Map<String, Object?>>[];
+      return {
+        ..._admin(
+          onboarding: () => programs.isEmpty
+              ? onboardingJson()
+              : onboardingJson(
+                  programs: 'done',
+                  groups: 'pending',
+                  terminologySuggestion: saved() ? null : sportSuggestionJson,
+                ),
+        ),
+        'GET /setup/programs': (_) => {'data': programs},
+        'POST /setup/programs': (_) {
+          programs = [programJson(1, 'Fútbol')];
+          return {'data': programs};
+        },
+        'PUT /organization/terminology': (_) {
+          onSave();
+          return {
+            'data': {'terminology': <String, String>{}},
+          };
+        },
+        'GET /setup/groups': (_) => {'data': <Object?>[]},
+        'GET /setup/sites': (_) => {'data': <Object?>[]},
+        'POST /setup/groups/suggestions': (_) => {
+          'data': [
+            {'name': 'Sub-6', 'min_age': 5, 'max_age': 6, 'level': null},
+          ],
+        },
+      };
+    }
+
+    testWidgets('una academia que enseña fútbol elige las palabras', (
+      tester,
+    ) async {
+      var saved = false;
+      final requests = <RequestOptions>[];
+      await _pumpApp(
+        tester,
+        {
+          ...academyRoutes(saved: () => saved, onSave: () => saved = true),
+          'GET /organization': (_) => academy(sport: saved),
+        },
+        location: '/configurar/disciplinas',
+        requests: requests,
+      );
+
+      await tester.tap(find.text('Fútbol'));
+      await _settle(tester);
+      await tester.tap(find.byKey(const Key('step-primary')));
+      await _settle(tester);
+
+      expect(find.byKey(const Key('terminology-suggestion')), findsOneWidget);
+      expect(
+        find.textContaining(
+          'En fútbol se suele decir categoría, técnico y cancha.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Dejar como estaba (grupo, profesor y sala)'),
+        findsOneWidget,
+      );
+      // Decide: categoría y cancha, pero siguen siendo profesores.
+      await tester.tap(find.byKey(const Key('term-instructor-Profesor')));
+      await _settle(tester);
+      await tester.tap(find.byKey(const Key('terminology-use')));
+      await _settle(tester);
+
+      final body = requests
+          .firstWhere(
+            (r) => r.method == 'PUT' && r.path == '/organization/terminology',
+          )
+          .data;
+      expect(body, {
+        'terminology': {
+          'group': 'Categoría',
+          'instructor': 'Profesor',
+          'space': 'Cancha',
+        },
+      });
+      // Sigue al paso 2, ya con las palabras nuevas.
+      expect(find.byKey(const Key('terminology-suggestion')), findsNothing);
+      expect(find.text('¿Qué categorías tienen?'), findsOneWidget);
+    });
+
+    testWidgets('"Dejar como estaba" solo lo confirma', (tester) async {
+      var saved = false;
+      final requests = <RequestOptions>[];
+      await _pumpApp(
+        tester,
+        {
+          ...academyRoutes(saved: () => saved, onSave: () => saved = true),
+          'GET /organization': (_) => academy(),
+        },
+        location: '/configurar/disciplinas',
+        requests: requests,
+      );
+
+      await tester.tap(find.text('Fútbol'));
+      await _settle(tester);
+      await tester.tap(find.byKey(const Key('step-primary')));
+      await _settle(tester);
+      await tester.tap(find.byKey(const Key('terminology-keep')));
+      await _settle(tester);
+
+      expect(
+        requests.firstWhere((r) => r.path == '/organization/terminology').data,
+        {'terminology': <String, String>{}},
+      );
+      expect(find.text('¿Qué grupos tienen?'), findsOneWidget);
+    });
+
+    testWidgets('sin propuesta sigue directo', (tester) async {
+      final requests = <RequestOptions>[];
+      await _pumpApp(
+        tester,
+        {
+          ...academyRoutes(saved: () => true, onSave: () {}),
+          'GET /organization': (_) => academy(),
+        },
+        location: '/configurar/disciplinas',
+        requests: requests,
+      );
+
+      await tester.tap(find.text('Fútbol'));
+      await _settle(tester);
+      await tester.tap(find.byKey(const Key('step-primary')));
+      await _settle(tester);
+
+      expect(find.byKey(const Key('terminology-suggestion')), findsNothing);
+      expect(find.text('¿Qué grupos tienen?'), findsOneWidget);
+      expect(
+        requests.where((r) => r.path == '/organization/terminology'),
+        isEmpty,
+      );
+    });
+
+    testWidgets('la guía dice "tu academia" y no "tu club"', (tester) async {
+      await _pumpApp(tester, {
+        ..._admin(),
+        'GET /organization': (_) => academy(),
+      });
+
+      expect(find.text('Configurá tu academia'), findsOneWidget);
+      expect(find.text('Configurá tu club'), findsNothing);
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(Scaffold).first),
+      );
+      container.read(routerProvider).go('/cuenta');
+      await _settle(tester);
+      expect(find.text('Configurar la academia'), findsOneWidget);
+    });
+  });
+
+  group('cómo les dicen (Mi cuenta)', () {
+    testWidgets('cambiar las palabras, también escribiendo otra', (
+      tester,
+    ) async {
+      final requests = <RequestOptions>[];
+      await _pumpApp(
+        tester,
+        {
+          ..._admin(),
+          'PUT /organization/terminology': (_) => {
+            'data': {'terminology': <String, String>{}},
+          },
+        },
+        location: '/cuenta',
+        requests: requests,
+      );
+
+      await tester.tap(find.text('Cómo les dicen'));
+      await _settle(tester);
+      expect(find.text('A quienes enseñan'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('term-instructor-Profesor')));
+      await tester.tap(find.byKey(const Key('term-space-other')));
+      await _settle(tester);
+      await tester.enterText(
+        find.byKey(const Key('term-other-word')),
+        'pileta',
+      );
+      await tester.tap(find.text('Listo'));
+      await _settle(tester);
+      expect(find.byKey(const Key('term-space-Pileta')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('vocabulary-save')));
+      await _settle(tester);
+
+      expect(
+        requests.firstWhere((r) => r.path == '/organization/terminology').data,
+        {
+          'terminology': {
+            'student': 'Jugador',
+            'instructor': 'Profesor',
+            'group': 'Categoría',
+            'space': 'Pileta',
+          },
+        },
+      );
+      expect(find.text('Listo: las pantallas ya dicen así.'), findsOneWidget);
+      expect(find.text('Mi cuenta'), findsOneWidget);
+    });
+
+    testWidgets('sin permiso no aparece', (tester) async {
+      await _pumpApp(
+        tester,
+        _admin(permissions: const []),
+        location: '/cuenta',
+      );
+      expect(find.text('Cómo les dicen'), findsNothing);
+    });
   });
 }

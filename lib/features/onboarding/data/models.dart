@@ -62,6 +62,7 @@ class Onboarding {
     this.next,
     this.completed = false,
     this.dismissed = false,
+    this.terminologySuggestion,
   });
 
   factory Onboarding.fromJson(Map<String, dynamic> json) => Onboarding(
@@ -75,6 +76,11 @@ class Onboarding {
     next: json['next'] as String?,
     completed: json['completed'] as bool? ?? false,
     dismissed: json['dismissed'] as bool? ?? false,
+    terminologySuggestion: json['terminology_suggestion'] is Map
+        ? TerminologySuggestion.fromJson(
+            Map<String, dynamic>.from(json['terminology_suggestion'] as Map),
+          )
+        : null,
   );
 
   final List<OnboardingStep> steps;
@@ -88,6 +94,9 @@ class Onboarding {
   /// Se cerró: no se abre sola, pero sigue la tarjeta del inicio.
   final bool dismissed;
 
+  /// Palabras de deporte propuestas (la API decide cuándo); null si no hay.
+  final TerminologySuggestion? terminologySuggestion;
+
   OnboardingStep? step(String? key) {
     for (final step in steps) {
       if (step.key == key) return step;
@@ -99,6 +108,48 @@ class Onboarding {
 
   /// Posición del paso para "Paso 2 de 4".
   int numberOf(String key) => steps.indexWhere((s) => s.key == key) + 1;
+}
+
+/// Propuesta de vocabulario de deporte: una academia que enseña fútbol pasa de
+/// Grupo, Profesor y Sala a Categoría, Técnico y Cancha si el usuario quiere.
+class TerminologySuggestion {
+  const TerminologySuggestion({
+    required this.programs,
+    required this.current,
+    required this.suggested,
+  });
+
+  factory TerminologySuggestion.fromJson(Map<String, dynamic> json) =>
+      TerminologySuggestion(
+        programs: List<String>.from(json['programs'] as List? ?? const []),
+        current: Map<String, String>.from(json['current'] as Map? ?? const {}),
+        suggested: Map<String, String>.from(
+          json['suggested'] as Map? ?? const {},
+        ),
+      );
+
+  /// Disciplinas deportivas que la originan ("Fútbol").
+  final List<String> programs;
+
+  /// Lo que dicen hoy las pantallas, solo las palabras que se proponen cambiar.
+  final Map<String, String> current;
+  final Map<String, String> suggested;
+
+  /// "categoría, técnico y cancha".
+  String get suggestedText => joinWords(suggested.values);
+
+  /// "grupo, profesor y sala".
+  String get currentText => joinWords(current.values);
+
+  /// "fútbol", "fútbol y básquet".
+  String get programsText => joinWords(programs);
+}
+
+/// "a, b y c" en minúscula.
+String joinWords(Iterable<String> words) {
+  final list = words.map((w) => w.toLowerCase()).toList();
+  if (list.length <= 1) return list.join();
+  return '${list.sublist(0, list.length - 1).join(', ')} y ${list.last}';
 }
 
 /// Ruta de cada paso de la guía.
@@ -588,10 +639,11 @@ enum FeeFrequency {
   };
 }
 
-const dailyBasisOptions = {
+/// Bases del cobro por día; [group] es el término del club ("Categoría").
+Map<String, (String, String)> dailyBasisOptions(String group) => {
   'entrenamiento': (
     'Días de entrenamiento',
-    'Los días con horario de la categoría.',
+    'Los días con horario ${gendered(group, 'del', 'de la')} ${group.toLowerCase()}.',
   ),
   'asistencia': (
     'Clases asistidas',

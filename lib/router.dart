@@ -31,6 +31,7 @@ import 'features/onboarding/presentation/programs_step_screen.dart';
 import 'features/onboarding/presentation/season_step_screen.dart';
 import 'features/onboarding/presentation/setup_done_screen.dart';
 import 'features/organizations/presentation/organization_picker_screen.dart';
+import 'features/organizations/presentation/vocabulary_screen.dart';
 import 'features/payment_reports/presentation/payment_reports_screen.dart';
 import 'features/payment_reports/presentation/report_payment_screen.dart';
 import 'features/reports/presentation/reports_screen.dart';
@@ -189,6 +190,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/clases/:id',
         builder: (_, state) =>
             ClassAttendanceScreen(id: int.parse(state.pathParameters['id']!)),
+      ),
+      GoRoute(
+        path: '/vocabulario',
+        builder: (_, _) => const VocabularyScreen(),
       ),
       GoRoute(
         path: '/notificaciones',

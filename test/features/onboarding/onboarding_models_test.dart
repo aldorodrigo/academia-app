@@ -2,6 +2,7 @@ import 'package:academia_app/core/utils/validators.dart';
 import 'package:academia_app/features/onboarding/data/models.dart';
 import 'package:academia_app/features/onboarding/data/onboarding_controller.dart';
 import 'package:academia_app/features/onboarding/data/step_controllers.dart';
+import 'package:academia_app/features/organizations/data/models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'onboarding_json.dart';
@@ -286,5 +287,47 @@ void main() {
     }
     expect(gendered('Grupo', 'cada uno', 'cada una'), 'cada uno');
     expect(gendered('Categoría', 'todos', 'todas'), 'todas');
+  });
+
+  test('propuesta de vocabulario de deporte', () {
+    expect(_onboarding().terminologySuggestion, isNull);
+
+    final onboarding = Onboarding.fromJson(
+      onboardingJson(
+            programs: 'done',
+            groups: 'pending',
+            terminologySuggestion: sportSuggestionJson,
+          )['data']!
+          as Map<String, dynamic>,
+    );
+    final suggestion = onboarding.terminologySuggestion!;
+    expect(suggestion.programsText, 'fútbol');
+    expect(suggestion.suggestedText, 'categoría, técnico y cancha');
+    expect(suggestion.currentText, 'grupo, profesor y sala');
+    expect(joinWords(['Fútbol', 'Básquet']), 'fútbol y básquet');
+  });
+
+  test('qué es la organización, para los textos de la guía', () {
+    OrganizationDetails org(String? type) => OrganizationDetails.fromJson({
+      ...(organizationJson()['data']! as Map<String, Object?>),
+      'type': type,
+    });
+    expect(org('club').typeNoun, 'club');
+    expect(org('club').typeWithArticle, 'el club');
+    expect(org('academy').typeWithArticle, 'la academia');
+    expect(org('school').typeNoun, 'escuela');
+    expect(org('parents_association').typeNoun, 'comisión');
+    expect(org(null).typeNoun, 'club');
+  });
+
+  test('cobro por día: la base dice el término del club', () {
+    expect(
+      dailyBasisOptions('Grupo')['entrenamiento']!.$2,
+      'Los días con horario del grupo.',
+    );
+    expect(
+      dailyBasisOptions('Categoría')['entrenamiento']!.$2,
+      'Los días con horario de la categoría.',
+    );
   });
 }

@@ -33,6 +33,7 @@ Map<String, Object?> onboardingJson({
   String season = 'locked',
   String instructors = 'locked',
   bool dismissed = false,
+  Map<String, Object?>? terminologySuggestion,
 }) {
   final statuses = [programs, groups, season, instructors];
   final done = statuses.where((s) => s == 'done' || s == 'skipped').length;
@@ -75,9 +76,21 @@ Map<String, Object?> onboardingJson({
       'next': next,
       'completed': next == null,
       'dismissed': dismissed,
+      'terminology_suggestion': terminologySuggestion,
     },
   };
 }
+
+/// Propuesta de vocabulario de deporte (`terminology_suggestion`).
+const sportSuggestionJson = {
+  'programs': ['Fútbol'],
+  'current': {'group': 'Grupo', 'instructor': 'Profesor', 'space': 'Sala'},
+  'suggested': {
+    'group': 'Categoría',
+    'instructor': 'Técnico',
+    'space': 'Cancha',
+  },
+};
 
 const templatesJson = {
   'data': {
@@ -92,6 +105,7 @@ const templatesJson = {
           'student': 'Jugador',
           'instructor': 'Técnico',
           'guardian': 'Tutor',
+          'space': 'Cancha',
         },
       },
       {
@@ -104,6 +118,7 @@ const templatesJson = {
           'student': 'Alumno',
           'instructor': 'Profesor',
           'guardian': 'Tutor',
+          'space': 'Sala',
         },
       },
     ],
@@ -111,6 +126,7 @@ const templatesJson = {
       'student': ['Jugador', 'Alumno', 'Alumna'],
       'instructor': ['Técnico', 'Profesor'],
       'group': ['Categoría', 'Grupo', 'Nivel'],
+      'space': ['Cancha', 'Sala', 'Aula'],
     },
     'programs': [
       {'name': 'Fútbol', 'group_criterion': 'birth_year'},
@@ -298,19 +314,24 @@ Map<String, Object?> instructorsJson({
 
 Map<String, Object?> organizationJson({
   List<String> permissions = const ['configure_organization'],
+  String type = 'club',
   String group = 'Categoría',
+  String student = 'Jugador',
   String instructor = 'Técnico',
+  String space = 'Cancha',
 }) => {
   'data': {
     'slug': 'jakare',
     'name': 'Club Jakare',
+    'type': type,
     'features': <String>[],
     'terminology': {
       'program': 'Disciplina',
       'group': group,
-      'student': 'Jugador',
+      'student': student,
       'instructor': instructor,
       'guardian': 'Tutor',
+      'space': space,
     },
     'membership': {'roles': <Object?>[], 'permissions': permissions},
   },

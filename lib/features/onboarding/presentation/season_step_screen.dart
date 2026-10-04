@@ -257,7 +257,7 @@ class _FeesPage extends StatelessWidget {
             onChanged: (v) => v == null ? null : controller.setDailyBasis(v),
             child: Column(
               children: [
-                for (final entry in dailyBasisOptions.entries)
+                for (final entry in dailyBasisOptions(groupTerm).entries)
                   RadioListTile<String>(
                     contentPadding: EdgeInsets.zero,
                     value: entry.key,

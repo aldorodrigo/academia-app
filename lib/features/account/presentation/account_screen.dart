@@ -58,7 +58,9 @@ class AccountScreen extends ConsumerWidget {
           if (onboarding != null && !onboarding.completed)
             ListTile(
               leading: const Icon(Icons.tune),
-              title: const Text('Configurar el club'),
+              title: Text(
+                'Configurar ${organization?.typeWithArticle ?? 'el club'}',
+              ),
               subtitle: Text(
                 'Guía de primeros pasos · ${onboarding.done} de ${onboarding.total}',
               ),
@@ -68,6 +70,17 @@ class AccountScreen extends ConsumerWidget {
                 }
                 if (context.mounted) context.go('/inicio');
               },
+            ),
+          if (organization?.can('configure_organization') ?? false)
+            ListTile(
+              leading: const Icon(Icons.translate_outlined),
+              title: const Text('Cómo les dicen'),
+              subtitle: Text(
+                '${organization!.term('group')}, '
+                '${organization.term('instructor').toLowerCase()}, '
+                '${organization.term('space').toLowerCase()}…',
+              ),
+              onTap: () => context.push('/vocabulario'),
             ),
           ListTile(
             leading: const Icon(Icons.notifications_outlined),

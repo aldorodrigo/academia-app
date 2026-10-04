@@ -21,6 +21,19 @@ class OrganizationRepository {
       response.data!['data'] as Map<String, dynamic>,
     );
   }
+
+  /// Cambia cómo les dicen (`PUT organization/terminology`); vacío = solo
+  /// confirma lo que hay ("Dejar como estaba"). Devuelve el vocabulario entero.
+  Future<Map<String, String>> updateTerminology(
+    Map<String, String> terminology,
+  ) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      '/organization/terminology',
+      data: {'terminology': terminology},
+    );
+    final data = response.data!['data'] as Map<String, dynamic>;
+    return Map<String, String>.from(data['terminology'] as Map? ?? const {});
+  }
 }
 
 final organizationRepositoryProvider = Provider<OrganizationRepository>(
