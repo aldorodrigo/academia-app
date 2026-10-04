@@ -6,9 +6,9 @@ import '../../../core/api/api_client.dart';
 import '../../../core/utils/validators.dart';
 import '../data/session_controller.dart';
 
-/// Crear cuenta con el celular (código por WhatsApp) o, si no tiene WhatsApp,
-/// con el correo. Al terminar, la sesión queda iniciada y el router lleva a
-/// ingresar el código.
+/// Crear cuenta con el celular (código por WhatsApp y, si deja un correo, una
+/// copia por correo) o, si no tiene WhatsApp, con el correo. Al terminar, la
+/// sesión queda iniciada y el router lleva a ingresar el código.
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 
@@ -50,7 +50,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           .register(
             name: _name.text.trim(),
             phone: _useEmail ? null : _phone.text.trim(),
-            email: _useEmail ? _email.text.trim() : null,
+            // Con el celular, el correo es opcional.
+            email: _email.text.trim().isEmpty ? null : _email.text.trim(),
             password: _password.text,
             passwordConfirmation: _confirmation.text,
           );
@@ -111,7 +112,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           autofillHints: const [AutofillHints.email],
                           validator: validateEmail,
                         )
-                      else
+                      else ...[
                         TextFormField(
                           key: const Key('phone'),
                           controller: _phone,
@@ -124,6 +125,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           autofillHints: const [AutofillHints.telephoneNumber],
                           validator: validatePhone,
                         ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          key: const Key('optional-email'),
+                          controller: _email,
+                          decoration: const InputDecoration(
+                            labelText: 'Correo (opcional)',
+                            helperText: 'Te mandamos también por correo los códigos y los avisos.',
+                          ),
+                          keyboardType: TextInputType.emailAddress,
+                          autofillHints: const [AutofillHints.email],
+                          validator: validateOptionalEmail,
+                        ),
+                      ],
                       Align(
                         alignment: Alignment.centerLeft,
                         child: TextButton(

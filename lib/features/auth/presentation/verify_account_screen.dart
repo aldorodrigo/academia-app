@@ -140,6 +140,16 @@ class _VerifyAccountScreenState extends ConsumerState<VerifyAccountScreen> {
                     textAlign: TextAlign.center,
                     style: theme.textTheme.titleMedium,
                   ),
+                  // Lo que va por WhatsApp va también al correo (con su propio código).
+                  if (canUseEmail) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Y otro a ${session.email}: podés usar cualquiera de los dos.',
+                      key: const Key('copy-email'),
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
                   if (!byWhatsApp) ...[
                     const SizedBox(height: 4),
                     Text(

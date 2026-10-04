@@ -7,6 +7,10 @@ String? validateEmail(String? value) {
   return null;
 }
 
+/// Correo que se puede dejar vacío (ej. el opcional de quien entra con el celular).
+String? validateOptionalEmail(String? value) =>
+    value == null || value.trim().isEmpty ? null : validateEmail(value);
+
 String? validateName(String? value) =>
     value == null || value.trim().isEmpty ? 'Ingresá tu nombre.' : null;
 

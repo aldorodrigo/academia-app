@@ -21,7 +21,8 @@ class AuthRepository {
   }
 
   /// Crea la cuenta (sin organizaciones) y deja la sesión iniciada; la API
-  /// manda el código por WhatsApp si hay [phone], si no por correo.
+  /// manda el código por WhatsApp si hay [phone], si no por correo. Con
+  /// [phone], el [email] es opcional: le llega una copia de códigos y avisos.
   Future<void> register({
     required String name,
     String? phone,

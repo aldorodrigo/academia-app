@@ -25,6 +25,10 @@ void main() {
     expect(validateName('Ana'), isNull);
     expect(validateEmail('ana'), 'El correo electrónico no es válido.');
     expect(validateEmail('ana@test.com'), isNull);
+    // El opcional puede quedar vacío, pero si se escribe tiene que ser válido.
+    expect(validateOptionalEmail(''), isNull);
+    expect(validateOptionalEmail('ana'), 'El correo electrónico no es válido.');
+    expect(validateOptionalEmail('ana@test.com'), isNull);
   });
 
   test('celular', () {

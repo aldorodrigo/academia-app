@@ -281,6 +281,65 @@ void main() {
     });
   });
 
+  testWidgets(
+    'con el celular, el correo es opcional y recibe una copia del código',
+    (tester) async {
+      final requests = <RequestOptions>[];
+
+      await _pumpApp(
+        tester,
+        {
+          'POST /auth/register': (_) => {'token': 'nuevo'},
+          'GET /me': (_) => meJson(
+            verified: false,
+            phone: '+595981123456',
+            email: 'laura@test.com',
+            organizations: const [],
+          ),
+        },
+        token: null,
+        organization: null,
+        requests: requests,
+      );
+
+      await tester.tap(find.byKey(const Key('create-account')));
+      await _settle(tester);
+      await tester.tap(find.byKey(const Key('choice-club')));
+      await _settle(tester);
+
+      expect(find.text('Correo (opcional)'), findsOneWidget);
+      await tester.enterText(find.byKey(const Key('name')), 'Laura Gómez');
+      await tester.enterText(find.byKey(const Key('phone')), '0981 123 456');
+      await tester.enterText(find.byKey(const Key('optional-email')), 'laura');
+      await tester.enterText(find.byKey(const Key('password')), 'secreta123');
+      await tester.enterText(
+        find.byKey(const Key('confirmation')),
+        'secreta123',
+      );
+      await tester.tap(find.byKey(const Key('terms')));
+      await tester.tap(find.widgetWithText(FilledButton, 'Crear cuenta'));
+      await _settle(tester);
+      // Si lo escribe, tiene que ser válido.
+      expect(find.text('El correo electrónico no es válido.'), findsOneWidget);
+
+      await tester.enterText(
+        find.byKey(const Key('optional-email')),
+        'laura@test.com',
+      );
+      await tester.tap(find.widgetWithText(FilledButton, 'Crear cuenta'));
+      await _settle(tester);
+
+      final register = requests.firstWhere((r) => r.path == '/auth/register');
+      expect((register.data as Map)['phone'], '0981 123 456');
+      expect((register.data as Map)['email'], 'laura@test.com');
+      expect(find.text('Confirmá tu número'), findsOneWidget);
+      expect(
+        find.text('Y otro a laura@test.com: podés usar cualquiera de los dos.'),
+        findsOneWidget,
+      );
+    },
+  );
+
   testWidgets('sin organizaciones se ofrece registrar el club', (tester) async {
     await _pumpApp(tester, {
       'GET /me': (_) => meJson(organizations: const []),
