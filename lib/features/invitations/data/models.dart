@@ -7,6 +7,7 @@ class Invitation {
     required this.organization,
     this.email,
     this.phone,
+    this.name,
     required this.roleLabels,
     required this.userExists,
     this.expiresAt,
@@ -20,6 +21,7 @@ class Invitation {
         ),
         email: json['email'] as String?,
         phone: json['phone'] as String?,
+        name: json['name'] as String?,
         roleLabels: ((json['roles'] as List?) ?? const [])
             .map((r) => (r as Map<String, dynamic>)['label'] as String)
             .toList(),
@@ -35,6 +37,9 @@ class Invitation {
   /// La invitación va a un correo o a un celular (formato internacional).
   final String? email;
   final String? phone;
+
+  /// El nombre que cargó quien invitó (para completar "Nombre y apellido").
+  final String? name;
   final List<String> roleLabels;
 
   /// El celular (formateado) o el correo al que llegó.

@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../fakes.dart';
 import 'invitation_repository_test.dart' show invitationJson;
@@ -46,6 +47,85 @@ void main() {
     expect(find.text('Las contraseñas no coinciden.'), findsOneWidget);
   });
 
+  testWidgets(
+    'cuenta nueva: trae el nombre de la invitación y pide aceptar los términos',
+    (tester) async {
+      final requests = <RequestOptions>[];
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => const InvitationScreen(token: 'abc'),
+          ),
+          GoRoute(path: '/inicio', builder: (_, _) => const Text('Inicio')),
+        ],
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sessionStorageProvider.overrideWithValue(InMemorySessionStorage()),
+            apiClientProvider.overrideWithValue(
+              fakeDio({
+                'GET /invitations/abc': (_) => {
+                  'data': {...invitationJson['data']!, 'name': 'Ana Pérez'},
+                },
+                'POST /invitations/abc/accept': (_) => {
+                  'token': 't',
+                  'organization': 'jakare',
+                },
+                'GET /me': (_) => {
+                  'data': {
+                    'name': 'Ana Pérez',
+                    'email': 'ana@test.com',
+                    'organizations': [
+                      {'slug': 'jakare', 'name': 'Club Jakare'},
+                    ],
+                  },
+                },
+              }, requests: requests),
+            ),
+          ],
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // El nombre viene cargado y se puede corregir.
+      final name = tester.widget<TextFormField>(find.byKey(const Key('name')));
+      expect(name.controller!.text, 'Ana Pérez');
+
+      await tester.enterText(find.byKey(const Key('password')), 'secreta12');
+      await tester.enterText(
+        find.byKey(const Key('confirmation')),
+        'secreta12',
+      );
+      await tester.ensureVisible(find.text('Crear cuenta'));
+      await tester.tap(find.text('Crear cuenta'));
+      await tester.pumpAndSettle();
+
+      // Sin aceptar los términos no se crea la cuenta.
+      expect(find.text('Tenés que aceptar los términos.'), findsOneWidget);
+      expect(requests.where((r) => r.method == 'POST'), isEmpty);
+
+      await tester.ensureVisible(find.byKey(const Key('terms')));
+      await tester.tap(find.byKey(const Key('terms')));
+      await tester.pump();
+      expect(find.text('Tenés que aceptar los términos.'), findsNothing);
+      await tester.tap(find.text('Crear cuenta'));
+      await tester.pumpAndSettle();
+
+      final accept = requests.singleWhere((r) => r.method == 'POST');
+      expect(accept.data, {
+        'name': 'Ana Pérez',
+        'password': 'secreta12',
+        'password_confirmation': 'secreta12',
+        'device_name': 'app',
+        'terms': true,
+      });
+      expect(find.text('Inicio'), findsOneWidget);
+    },
+  );
+
   testWidgets('cuenta existente: solo pide la contraseña', (tester) async {
     await tester.pumpWidget(
       _app(
@@ -56,6 +136,8 @@ void main() {
 
     expect(find.byKey(const Key('name')), findsNothing);
     expect(find.byKey(const Key('confirmation')), findsNothing);
+    // Ya aceptó los términos al crear su cuenta.
+    expect(find.byKey(const Key('terms')), findsNothing);
     expect(find.text('Aceptar'), findsOneWidget);
   });
 

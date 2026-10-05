@@ -22,12 +22,14 @@ class InvitationRepository {
   }
 
   /// Acepta la invitación (crea la cuenta si hace falta) y deja la sesión
-  /// iniciada en la organización que invitó.
+  /// iniciada en la organización que invitó. Una cuenta nueva tiene que
+  /// aceptar los términos ([acceptedTerms]).
   Future<void> accept(
     String token, {
     required String password,
     String? name,
     String? passwordConfirmation,
+    bool acceptedTerms = false,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/invitations/$token/accept',
@@ -36,6 +38,7 @@ class InvitationRepository {
         'password': password,
         'password_confirmation': ?passwordConfirmation,
         'device_name': 'app',
+        if (acceptedTerms) 'terms': true,
       },
     );
     await _storage.writeToken(response.data!['token'] as String);

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/utils/validators.dart';
 import '../data/session_controller.dart';
+import 'terms_checkbox.dart';
 
 /// Crear cuenta con el celular (código por WhatsApp y, si deja un correo, una
 /// copia por correo) o, si no tiene WhatsApp, con el correo. Al terminar, la
@@ -176,18 +177,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         onFieldSubmitted: (_) => _submit(),
                       ),
                       const SizedBox(height: 8),
-                      CheckboxListTile(
+                      TermsCheckbox(
                         key: const Key('terms'),
-                        contentPadding: EdgeInsets.zero,
-                        controlAffinity: ListTileControlAffinity.leading,
                         value: _terms,
                         onChanged: (v) => setState(() {
-                          _terms = v ?? false;
+                          _terms = v;
                           if (_terms) _error = null;
                         }),
-                        title: const Text(
-                          'Acepto los términos de uso y la política de datos personales.',
-                        ),
                       ),
                       if (_error != null) ...[
                         const SizedBox(height: 8),

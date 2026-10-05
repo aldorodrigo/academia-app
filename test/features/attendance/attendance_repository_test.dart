@@ -119,6 +119,44 @@ void main() {
     expect(item.response, GuardianResponse.notGoing);
   });
 
+  test('la agenda queda por fecha y hora de inicio', () async {
+    Map<String, Object?> item(int id, String name, String date, String at) {
+      final json = agendaItemJson(date: date);
+      return {
+        ...json,
+        'student': <String, Object?>{
+          ...json['student']! as Map<String, Object?>,
+          'id': id,
+          'first_name': name,
+        },
+        'class': <String, Object?>{
+          ...json['class']! as Map<String, Object?>,
+          'starts_at': at,
+        },
+      };
+    }
+
+    final repository = _repository({
+      'GET /agenda': (_) => {
+        'data': [
+          item(1, 'Thiago', '2026-09-28', '18:30'),
+          item(2, 'Sofía', '2026-09-30', '08:00'),
+          item(3, 'Mateo', '2026-09-28', '17:00'),
+          item(4, 'Lucas', '2026-09-28', '17:00'),
+        ],
+      },
+    });
+
+    final agenda = await repository.agenda();
+
+    expect(agenda.map((i) => i.studentFirstName), [
+      'Mateo',
+      'Lucas',
+      'Thiago',
+      'Sofía',
+    ]);
+  });
+
   test('sin organización la agenda está vacía', () async {
     final repository = AttendanceRepository(
       fakeDio({}),
