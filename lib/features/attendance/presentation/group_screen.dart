@@ -108,6 +108,8 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
     final manages =
         (organization?.can('withdraw_students') ?? false) ||
         (organization?.can('waive_charges') ?? false);
+    // Quien cobra en efectivo toca un alumno para cobrarle.
+    final canCollect = organization?.can('collect_payments') ?? false;
     return [
       const SizedBox(height: 8),
       Text('Clases', style: theme.textTheme.titleMedium),
@@ -218,6 +220,9 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
               ),
             ],
           ),
+          onTap: canCollect
+              ? () => context.push('/cobrar/${student.id}')
+              : null,
         ),
         if (student.isPendingConfirmation && student.canConfirm)
           Padding(

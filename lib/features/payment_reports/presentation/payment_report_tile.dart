@@ -84,6 +84,11 @@ class PaymentReportTile extends ConsumerWidget {
             ),
             const SizedBox(height: 4),
             Text(report.chargesSummary),
+            if (report.registeredBy != null)
+              Text(
+                'Registrado por ${report.registeredBy}',
+                style: theme.textTheme.bodySmall,
+              ),
             if (rejected && report.rejectionReason != null)
               Text(
                 'Motivo: ${report.rejectionReason}',
@@ -99,7 +104,8 @@ class PaymentReportTile extends ConsumerWidget {
                     onPressed: () =>
                         ref.read(urlLauncherProvider)(Uri.parse(proof)),
                   ),
-                if (report.isPending)
+                // Lo que registró el club lo retira quien lo registró, no la familia.
+                if (report.isPending && report.registeredBy == null)
                   TextButton(
                     onPressed: () => _withdraw(context, ref),
                     child: const Text('Retirar'),

@@ -7,10 +7,12 @@ import '../../../core/api/api_client.dart';
 import '../../../core/utils/clock.dart';
 import '../../../core/utils/format.dart';
 import '../../billing/data/account_repository.dart';
+import '../../billing/data/amount_hint.dart';
 import '../../billing/data/models.dart';
 import '../data/models.dart';
 import '../data/payment_reports_repository.dart';
 import '../data/report_form.dart';
+import 'proof_field.dart';
 
 /// El tutor informa una transferencia: datos para transferir, qué cuotas paga,
 /// monto, fecha y el comprobante (foto o PDF). Queda en revisión.
@@ -81,12 +83,13 @@ class _ReportFormState extends ConsumerState<_ReportForm> {
     super.dispose();
   }
 
+  int get _selectedTotal =>
+      suggestedAmount(_charges.where((c) => _selected.contains(c.id)));
+
   /// Mientras el tutor no lo cambie, el monto es lo que falta de las cuotas elegidas.
   void _syncAmount() {
     if (_amountEdited) return;
-    final total = suggestedAmount(
-      _charges.where((c) => _selected.contains(c.id)),
-    );
+    final total = _selectedTotal;
     _amount.text = total > 0 ? '$total' : '';
   }
 
@@ -196,12 +199,19 @@ class _ReportFormState extends ConsumerState<_ReportForm> {
             controller: _amount,
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Monto transferido',
               prefixText: '₲ ',
+              helperText: reportAmountHint(
+                int.tryParse(_amount.text),
+                _selectedTotal,
+              ),
+              helperMaxLines: 3,
             ),
             validator: validateReportAmount,
-            onChanged: (_) => _amountEdited = true,
+            onChanged: (value) => setState(
+              () => _amountEdited = amountEditedByHand(value, _selectedTotal),
+            ),
           ),
           const SizedBox(height: 16),
           InkWell(
@@ -239,7 +249,7 @@ class _ReportFormState extends ConsumerState<_ReportForm> {
             ),
           ),
           const SizedBox(height: 16),
-          _ProofField(
+          ProofField(
             proof: _proof,
             error: _proofError,
             onPick: _sending ? null : _pickProof,
@@ -315,73 +325,4 @@ class _TransferAccountCard extends StatelessWidget {
       ),
     ),
   );
-}
-
-/// Botón para adjuntar el comprobante y el archivo elegido.
-class _ProofField extends StatelessWidget {
-  const _ProofField({
-    required this.proof,
-    required this.error,
-    required this.onPick,
-  });
-
-  final PickedProof? proof;
-  final String? error;
-  final VoidCallback? onPick;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final file = proof;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (file == null)
-          OutlinedButton.icon(
-            icon: const Icon(Icons.attach_file),
-            label: const Text('Adjuntar comprobante'),
-            onPressed: onPick,
-          )
-        else
-          Card(
-            child: ListTile(
-              leading: Icon(
-                file.name.toLowerCase().endsWith('.pdf')
-                    ? Icons.picture_as_pdf_outlined
-                    : Icons.image_outlined,
-              ),
-              title: Text(file.name),
-              subtitle: Text(_size(file.bytes.length)),
-              trailing: TextButton(
-                onPressed: onPick,
-                child: const Text('Cambiar'),
-              ),
-            ),
-          ),
-        if (error != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 4, left: 12),
-            child: Text(
-              error!,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.error,
-              ),
-            ),
-          )
-        else if (file == null)
-          Padding(
-            padding: const EdgeInsets.only(top: 4, left: 12),
-            child: Text(
-              'Captura o PDF de la transferencia, hasta 5 MB.',
-              style: theme.textTheme.bodySmall,
-            ),
-          ),
-      ],
-    );
-  }
-
-  static String _size(int bytes) => bytes < 1024 * 1024
-      ? '${(bytes / 1024).ceil()} KB'
-      : '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
 }

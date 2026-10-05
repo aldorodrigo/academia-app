@@ -67,7 +67,10 @@ lib/
   Pagos, saldo a favor y recibos (PDF por link firmado, se abre con `urlLauncherProvider`, reemplazable en tests).
 - **Comprobantes de transferencia** (`features/payment_reports/`): el tutor informa un pago desde el estado de cuenta
   ("Informar transferencia", `/estado-de-cuenta/informar-pago`: cuotas, monto, fecha, cuenta y foto o PDF elegido con
-  `proofPickerProvider`, reemplazable en tests); queda en revisión hasta que se aprueba. Quien tiene el permiso
+  `proofPickerProvider`, reemplazable en tests); queda en revisión hasta que se aprueba. El monto sigue a las cuotas
+  elegidas hasta que se edita a mano y avisa si es parcial o sobra (`amountHint`, compartido con Cobrar). Arriba del
+  estado de cuenta van solo los comprobantes `open` (en revisión o rechazados con cuotas pendientes; lo decide la
+  API). Quien tiene el permiso
   `review_payment_reports` ve `PaymentReportsCard` en el inicio y `/comprobantes` (aprobar o rechazar con motivo).
 - **Inscribir a un hijo** (`features/enrollment/`, "entra ya, se confirma después"): desde "Mis hijos" ("Inscribir a
   otro hijo") o "Mi cuenta", `/hijos/inscribir` (datos, documento obligatorio, fecha dd/mm/aaaa; `PlacePicker` con
@@ -78,6 +81,17 @@ lib/
   planilla ("Nuevo, por confirmar", `confirmEnrollment`/`rejectEnrollment` en `enrollment_actions.dart`). Con
   `create_students`, "Cargar alumno" (`/alumnos/nuevo`, `POST students`) con la invitación del tutor para mandar por
   WhatsApp (`urlLauncherProvider`). Plan: `academia-api/docs/PLAN_INSCRIPCION_TUTOR.md` (5e le suma el link público).
+- **Cobro en efectivo y caja del técnico** (`features/cash/`, plan en `academia-api/docs/PLAN_COBRO_EFECTIVO.md`):
+  quien tiene `collect_payments` cobra desde `/cobrar` (alumnos de sus grupos, o todos para la comisión) o tocando un
+  alumno en `/grupos/:id`; `/cobrar/:id` muestra las cuotas pendientes de la familia (elegidas las de ahora, sin las
+  próximas ni las que tienen una transferencia en revisión), el monto prellenado con `settle_amount` (pronto pago lo
+  calcula la API) y el recibo. Cada cobro manda un `request_id` (`collectionRequestIdProvider`, reemplazable en tests)
+  para que un reintento no lo duplique. En la misma pantalla, "Transferencia" registra la que la familia le mandó por
+  WhatsApp (`POST collections/transfers`, captura o PDF con `proofPickerProvider` y `ProofField`): queda aprobada con
+  recibo si quien la registra valida comprobantes (`approves_transfers`), si no en revisión; la familia la ve con
+  "Registrado por …" (`PaymentReport.registeredBy`, sin "Retirar"). El efectivo entra en su caja personal: `/mi-caja` (saldo en su poder, movimientos y
+  "Depositar", que queda por confirmar). Quien valida comprobantes (`review_payment_reports`) ve `/efectivo` (cajas de
+  cada uno y depósitos para confirmar o rechazar). Cobrar y depositar requieren conexión.
 - **Informes** (comisión): `/informes` (balance del mes, saldos por familia, morosos; PDF/Excel por link firmado)
   y tarjeta en el inicio, solo si `currentOrganizationProvider` trae el permiso `view_reports` (`can()`).
   Saldos y Morosos marcan a los hijos dados de baja (`withdrawn`, `WithdrawalLabel`: "Matías: baja el 03/06/2026");
@@ -132,7 +146,8 @@ lib/
   `configure_organization`, `PUT organization/terminology`, `VocabularyController`). Los textos de la guía usan el
   tipo (`typeNoun`: "Configurá tu academia").
 - **Botones del inicio:** `QuickActionsBar` con `quickActionsFor()` (`features/home/data/quick_actions.dart`) según
-  permisos y roles: Mis grupos, Estado de cuenta, Mis reservas, Agenda, Alumnos particulares, Informes.
+  permisos y roles: Mis grupos, Cobrar, Mi caja, Estado de cuenta, Mis reservas, Agenda, Alumnos particulares,
+  Comprobantes, Efectivo, Cargar alumno, Solicitudes, Informes.
 - **Organización activa:** `currentOrganizationProvider` (`GET /organization`) da vocabulario
   (`term('group')`), módulos (`hasFeature`) y perfiles del usuario con mandato (`roles`).
 - **Contrato de API:** `academia-api/docs/API_V1.md`. La app se construye primero contra el

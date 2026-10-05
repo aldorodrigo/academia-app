@@ -310,9 +310,11 @@ class Account {
   /// Suma de los comprobantes en revisión.
   final int pendingReportsAmount;
 
-  /// En revisión o rechazados: lo que el tutor tiene que ver arriba de sus pagos.
+  /// Lo que el tutor tiene que ver arriba de sus pagos: en revisión, o
+  /// rechazados con cuotas todavía pendientes (`open`, lo decide la API; sin el
+  /// campo, los no aprobados). Los demás son historial.
   List<PaymentReport> get openReports => paymentReports
-      .where((r) => r.status != PaymentReportStatus.approved)
+      .where((r) => r.open ?? r.status != PaymentReportStatus.approved)
       .toList();
 
   /// Cuotas que ya están en un comprobante en revisión (no se vuelven a informar).
