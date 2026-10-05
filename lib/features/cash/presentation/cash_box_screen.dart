@@ -7,14 +7,16 @@ import '../../../core/api/api_client.dart';
 import '../../../core/utils/clock.dart';
 import '../../../core/utils/format.dart';
 import '../../../core/utils/launcher.dart';
+import '../../organizations/data/organization_repository.dart';
+import '../../../core/widgets/error_view.dart';
 import '../data/cash_form.dart';
 import '../data/cash_repository.dart';
 import '../data/models.dart';
 import 'cash_deposit_tile.dart';
 
 /// "Mi caja": la plata del club que tiene quien cobra en efectivo, sus
-/// movimientos y "Depositar" (queda por confirmar hasta que lo confirma el
-/// tesorero).
+/// movimientos y "Depositar" (queda por confirmar hasta que lo confirma
+/// alguien que valida los comprobantes; la API manda quiénes).
 class CashBoxScreen extends ConsumerWidget {
   const CashBoxScreen({super.key});
 
@@ -32,8 +34,9 @@ class CashBoxScreen extends ConsumerWidget {
         child: box.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, _) => ListView(
-            padding: const EdgeInsets.all(24),
-            children: [Text(apiErrorMessage(error))],
+            children: [
+              ErrorView(error, onRetry: () => ref.invalidate(cashBoxProvider)),
+            ],
           ),
           data: (box) => _CashBoxView(box),
         ),
@@ -346,7 +349,8 @@ class _DepositSheetState extends ConsumerState<DepositSheet> {
               ),
               const SizedBox(height: 8),
               Text(
-                'La plata sigue en tu caja hasta que el tesorero confirma que llegó.',
+                'La plata sigue en tu caja '
+                '${untilConfirmed(widget.box.confirmers, ref.watch(orgWordProvider))}.',
                 style: theme.textTheme.bodySmall,
                 textAlign: TextAlign.center,
               ),

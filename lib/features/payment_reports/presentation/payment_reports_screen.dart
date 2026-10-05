@@ -7,6 +7,11 @@ import '../../../core/api/api_client.dart';
 import '../../../core/utils/clock.dart';
 import '../../../core/utils/format.dart';
 import '../../../core/utils/launcher.dart';
+import '../../../core/vocabulary/vocabulary.dart';
+import '../../../core/widgets/error_view.dart';
+import '../../billing/data/receipt_notice.dart';
+import '../../cash/presentation/receipt_notice_view.dart';
+import '../../organizations/data/organization_repository.dart';
 import '../data/models.dart';
 import '../data/payment_reports_repository.dart';
 import '../data/report_form.dart';
@@ -55,12 +60,9 @@ class _PaymentReportsScreenState extends ConsumerState<PaymentReportsScreen> {
                 ),
               ],
               error: (error, _) => [
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    apiErrorMessage(error),
-                    textAlign: TextAlign.center,
-                  ),
+                ErrorView(
+                  error,
+                  onRetry: () => ref.invalidate(paymentReportsProvider(_all)),
                 ),
               ],
               data: (reports) => [
@@ -95,22 +97,42 @@ class _ReviewCard extends ConsumerWidget {
       builder: (_) => _ApproveDialog(report),
     );
     if (result == null || !context.mounted) return;
-    await _run(
-      context,
-      ref,
-      () => ref
+    ReceiptNotice? notice;
+    await _run(context, ref, () async {
+      final approved = await ref
           .read(paymentReportsRepositoryProvider)
           .approve(
             report.id,
             moneyAccountId: result.moneyAccountId,
             receivedOn: result.receivedOn,
             amount: result.amount,
-          ),
-      (r) => 'Pago aprobado: recibo N° ${r.receiptNumber}.',
-    );
+          );
+      notice = approved.notice;
+      return approved.report;
+    }, (r) => 'Pago aprobado: recibo N° ${r.receiptNumber}.');
+    // La registró alguien del club: a quién le llega el recibo, de verdad.
+    if (notice != null && context.mounted) {
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          scrollable: true,
+          title: const Text('¿A quién le llega el recibo?'),
+          content: ReceiptNoticeView(notice!),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Listo'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   Future<void> _reject(BuildContext context, WidgetRef ref) async {
+    final guardian =
+        ref.read(currentOrganizationProvider).value?.word('guardian') ??
+        Word.of('tutor');
     final reason = await showDialog<String>(
       context: context,
       builder: (_) => const _RejectDialog(),
@@ -121,7 +143,10 @@ class _ReviewCard extends ConsumerWidget {
       ref,
       () =>
           ref.read(paymentReportsRepositoryProvider).reject(report.id, reason),
-      (_) => 'Comprobante rechazado. Le avisamos al tutor.',
+      // Si la registró alguien del club, el motivo le llega a esa persona.
+      (_) =>
+          'Comprobante rechazado. Le avisamos '
+          '${report.registeredBy != null ? 'a ${report.registeredBy}' : guardian.to()}.',
     );
   }
 

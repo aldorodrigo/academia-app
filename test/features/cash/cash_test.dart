@@ -2,6 +2,7 @@ import 'package:academia_app/core/api/api_client.dart';
 import 'package:academia_app/core/storage/session_storage.dart';
 import 'package:academia_app/core/utils/clock.dart';
 import 'package:academia_app/core/utils/launcher.dart';
+import 'package:academia_app/core/vocabulary/vocabulary.dart';
 import 'package:academia_app/features/cash/data/cash_form.dart';
 import 'package:academia_app/features/cash/data/cash_repository.dart';
 import 'package:academia_app/features/cash/data/models.dart';
@@ -112,6 +113,9 @@ Map<String, Object?> _target({
     {'id': 3, 'name': 'Ueno'},
   ],
   'approves_transfers': approves,
+  'confirmers': [
+    {'id': 5, 'name': 'Laura Gómez'},
+  ],
   'collects_to_org_cash': direct,
   'collect_accounts': direct
       ? [
@@ -189,7 +193,11 @@ Map<String, Object?> _cashBox({
   int pending = 300000,
   bool active = true,
   List<Map<String, Object?>>? deposits,
+  List<String> confirmers = const ['Óscar Giménez'],
 }) => {
+  'confirmers': [
+    for (final (i, name) in confirmers.indexed) {'id': i + 1, 'name': name},
+  ],
   'id': 9,
   'name': 'Caja de Juan Pérez',
   'active': active,
@@ -509,6 +517,26 @@ void main() {
   });
 
   group('cobro', () {
+    test('nombra a quién confirma el depósito (N10)', () {
+      final academia = Word.of('academia');
+      expect(
+        untilConfirmed(['Óscar Giménez'], academia),
+        'hasta que Óscar Giménez confirme que llegó',
+      );
+      expect(
+        untilConfirmed(['Óscar Giménez', 'Ana Duarte'], academia),
+        'hasta que Óscar Giménez o Ana Duarte lo confirmen',
+      );
+      expect(
+        untilConfirmed(['A', 'B', 'C'], academia),
+        'hasta que alguien de la academia lo confirme',
+      );
+      expect(
+        untilConfirmed(const [], Word.of('club')),
+        'hasta que alguien del club lo confirme',
+      );
+    });
+
     test('elige lo que hay que pagar ahora, sin lo que está en revisión ni las próximas', () {
       final target = CollectionTarget.fromJson(_target());
 
@@ -648,7 +676,7 @@ void main() {
           fakeDio({
             'POST /collections/transfers': (_) => {
               'data': _staffReport(),
-              'message': 'Transferencia registrada. Queda en revisión hasta que la apruebe el tesorero.',
+              'message': 'Transferencia registrada. Queda en revisión hasta que Laura Gómez la apruebe.',
             },
           }, requests: requests),
           InMemorySessionStorage()..organization = 'jakare',
@@ -832,6 +860,120 @@ void main() {
       expect(find.text('Lista de cobro'), findsOneWidget);
     });
 
+    testWidgets('después de cobrar dice a quién le llega el recibo (N8)', (
+      tester,
+    ) async {
+      final opened = <Uri>[];
+      await tester.pumpWidget(
+        _app(
+          {
+            ..._session(),
+            'GET /collections/students/12': (_) => {'data': _target()},
+            'GET /collections/students': (_) => {'data': _students},
+            'POST /collections': (_) => {
+              'data': {
+                'payment': _payment(),
+                'applied': 285000,
+                'credit': 0,
+                'cash_box': null,
+                'account': {'id': 1, 'name': 'Caja'},
+                'message': 'Cobrado ₲ 285.000. Recibo N° 000124.',
+                'notice': {
+                  'reach': [
+                    {
+                      'name': 'Laura Benítez',
+                      'channels': ['app', 'push'],
+                      'phone': null,
+                      'whatsapp_phone': null,
+                    },
+                    {
+                      'name': 'Carlos Ortiz',
+                      'channels': <String>[],
+                      'phone': '0981 123 456',
+                      'whatsapp_phone': '595981123456',
+                    },
+                  ],
+                  'message':
+                      'Hola, te mandamos el recibo N° 000124: '
+                      'https://api.test/recibos/124?expires=1&signature=larga',
+                  'receipt_url':
+                      'https://api.test/recibos/124?expires=1&signature=larga',
+                },
+              },
+            },
+          },
+          const CollectScreen(studentId: 12),
+          opened: opened,
+        ),
+      );
+      await _settle(tester);
+
+      await _scrollTo(tester, find.text('Cobrar ₲ 285.000'));
+      await tester.tap(find.text('Cobrar ₲ 285.000'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Le avisamos'), findsNothing);
+      expect(
+        find.text(
+          'A Laura Benítez le llega en la app y como notificación en el celular.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          'Carlos Ortiz no tiene la app: no le llega. '
+          'Podés mandárselo por WhatsApp.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Mandar recibo por WhatsApp a Laura Benítez'),
+        findsNothing,
+      );
+
+      await tester.tap(find.text('Mandar recibo por WhatsApp a Carlos Ortiz'));
+      expect(opened.single.host, 'wa.me');
+      expect(opened.single.path, '/595981123456');
+      expect(
+        opened.single.queryParameters['text'],
+        contains('https://api.test/recibos/124?expires=1&signature=larga'),
+      );
+    });
+
+    testWidgets('sin aviso nadie promete "le avisamos" (N8)', (tester) async {
+      await tester.pumpWidget(
+        _app({
+          ..._session(),
+          'GET /collections/students/12': (_) => {'data': _target()},
+          'GET /collections/students': (_) => {'data': _students},
+          'POST /collections': (_) => {
+            'data': {
+              'payment': _payment(),
+              'applied': 285000,
+              'credit': 0,
+              'message': 'Cobrado ₲ 285.000. Recibo N° 000124.',
+              'notice': {
+                'reach': <Object?>[],
+                'message': 'Hola',
+                'receipt_url': 'https://api.test/recibos/124',
+              },
+            },
+          },
+        }, const CollectScreen(studentId: 12)),
+      );
+      await _settle(tester);
+      await _scrollTo(tester, find.text('Cobrar ₲ 285.000'));
+      await tester.tap(find.text('Cobrar ₲ 285.000'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Le avisamos'), findsNothing);
+      expect(
+        find.textContaining('no tiene a nadie cargado para avisarle'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Mandar recibo por WhatsApp'), findsNothing);
+    });
+
     testWidgets('cobra directo a la Caja: sin caja propia y elige la cuenta', (
       tester,
     ) async {
@@ -863,10 +1005,7 @@ void main() {
 
       await _scrollTo(tester, find.text('Cobrar ₲ 285.000'));
       expect(
-        find.text(
-          'Entra directo en Caja: no tenés que depositarlo. '
-          'La familia recibe el recibo.',
-        ),
+        find.text('Entra directo en Caja: no tenés que depositarlo.'),
         findsOneWidget,
       );
       await tester.tap(find.byKey(const Key('collect-account')));
@@ -897,7 +1036,7 @@ void main() {
             'GET /collections/students': (_) => {'data': _students},
             'POST /collections/transfers': (_) => {
               'data': _staffReport(),
-              'message': 'Transferencia registrada. Queda en revisión hasta que la apruebe el tesorero.',
+              'message': 'Transferencia registrada. Queda en revisión hasta que Laura Gómez la apruebe.',
             },
           },
           const CollectScreen(studentId: 12),
@@ -916,7 +1055,10 @@ void main() {
 
       await _scrollTo(tester, find.text('Registrar transferencia'));
       expect(
-        find.textContaining('Queda en revisión hasta que la apruebe'),
+        find.text(
+          'Queda en revisión hasta que Laura Gómez la apruebe. '
+          'La familia la ve en su estado de cuenta.',
+        ),
         findsOneWidget,
       );
       await tester.tap(find.text('Registrar transferencia'));
@@ -987,12 +1129,7 @@ void main() {
       await tester.tap(find.text('Adjuntar comprobante'));
       await tester.pumpAndSettle();
       await _scrollTo(tester, find.text('Registrar transferencia'));
-      expect(
-        find.text(
-          'Se registra el pago con su recibo y le avisamos a la familia.',
-        ),
-        findsOneWidget,
-      );
+      expect(find.text('Se registra el pago con su recibo.'), findsOneWidget);
       await tester.tap(find.text('Registrar transferencia'));
       await tester.pumpAndSettle();
 
@@ -1058,7 +1195,9 @@ void main() {
 
       await _scrollTo(
         tester,
-        find.text('Tu caja está cerrada. Hablá con el tesorero.'),
+        find.text(
+          'Tu caja está cerrada. Hablá con quien maneja las cuentas del club.',
+        ),
       );
       expect(find.widgetWithText(FilledButton, 'Cobrar'), findsNothing);
     });
@@ -1071,7 +1210,9 @@ void main() {
           'POST /collections': (o) => throw apiError(o, 422, {
             'message': 'x',
             'errors': {
-              'amount': ['Tu caja está cerrada. Hablá con el tesorero.'],
+              'amount': [
+                'Tu caja está cerrada. Hablá con quien maneja las cuentas del club.',
+              ],
             },
           }),
         }, const CollectScreen(studentId: 12)),
@@ -1083,7 +1224,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('Tu caja está cerrada. Hablá con el tesorero.'),
+        find.text(
+          'Tu caja está cerrada. Hablá con quien maneja las cuentas del club.',
+        ),
         findsOneWidget,
       );
     });
@@ -1122,6 +1265,13 @@ void main() {
       expect(find.text('285000'), findsOneWidget);
       expect(
         find.text('Puesto: todo lo que tenés (₲ 285.000). Podés cambiarlo.'),
+        findsOneWidget,
+      );
+      // Nombra a quién confirma (N10), no "el tesorero".
+      expect(
+        find.text(
+          'La plata sigue en tu caja hasta que Óscar Giménez confirme que llegó.',
+        ),
         findsOneWidget,
       );
       await tester.enterText(amount, '200000');

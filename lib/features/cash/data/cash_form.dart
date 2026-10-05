@@ -62,6 +62,22 @@ String confirmDepositQuestion(CashDeposit deposit, [Word? organization]) {
       'avisamos.';
 }
 
+/// "hasta que Óscar Giménez confirme que llegó", "hasta que Óscar Giménez o
+/// Ana Duarte lo confirmen" o, con más (o sin nombres), "hasta que alguien de
+/// la academia lo confirme". [one] y [many]: el verbo para una persona y para
+/// dos ("confirme que llegó" / "lo confirmen"); [anyone], para "alguien".
+String untilConfirmed(
+  List<String> confirmers,
+  Word organization, {
+  String one = 'confirme que llegó',
+  String many = 'lo confirmen',
+  String anyone = 'lo confirme',
+}) => switch (confirmers) {
+  [final only] => 'hasta que $only $one',
+  [final first, final second] => 'hasta que $first o $second $many',
+  _ => 'hasta que alguien ${organization.of()} $anyone',
+};
+
 String? validateDepositRejection(String? value) =>
     value == null || value.trim().isEmpty
     ? 'Contale por qué no lo confirmás.'

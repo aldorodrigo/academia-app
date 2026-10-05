@@ -1,4 +1,7 @@
+export '../../billing/data/receipt_notice.dart';
+
 import '../../billing/data/models.dart';
+import '../../billing/data/receipt_notice.dart';
 import '../../payment_reports/data/models.dart';
 import '../../payment_reports/data/report_form.dart';
 
@@ -150,6 +153,7 @@ class CollectionTarget {
     this.collectsToOrgCash = false,
     this.collectAccounts = const [],
     this.defaultCollectAccountId,
+    this.confirmers = const [],
   });
 
   factory CollectionTarget.fromJson(Map<String, dynamic> json) {
@@ -180,6 +184,7 @@ class CollectionTarget {
           .map((a) => TransferAccount.fromJson(a as Map<String, dynamic>))
           .toList(),
       defaultCollectAccountId: json['default_collect_account_id'] as int?,
+      confirmers: confirmerNames(json['confirmers']),
     );
   }
 
@@ -200,8 +205,11 @@ class CollectionTarget {
   final List<TransferAccount> transferAccounts;
 
   /// Quien cobra valida comprobantes: la transferencia queda aprobada al
-  /// registrarla (si no, en revisión del tesorero).
+  /// registrarla (si no, en revisión de quienes validan: [confirmers]).
   final bool approvesTransfers;
+
+  /// Quiénes aprueban la transferencia si no la aprueba quien la registra.
+  final List<String> confirmers;
 
   /// Cobra directo a la Caja del club (o a otra cuenta del club que elija):
   /// sin caja personal ni depósito.
@@ -271,11 +279,25 @@ class TransferRegistrationDraft {
 
 /// La transferencia registrada: aprobada con recibo o en revisión.
 class TransferRegistration {
-  const TransferRegistration({required this.report, required this.message});
+  const TransferRegistration({
+    required this.report,
+    required this.message,
+    this.notice,
+  });
 
   final PaymentReport report;
   final String message;
+
+  /// Aprobada al registrarla: a quién le llega el recibo.
+  final ReceiptNotice? notice;
 }
+
+/// Nombres de `confirmers` (`[{id, name}]`).
+List<String> confirmerNames(Object? json) => [
+  for (final person in (json as List?) ?? const [])
+    if ((person as Map<String, dynamic>)['name'] is String)
+      person['name'] as String,
+];
 
 /// Cobro registrado: el pago con su recibo y cómo quedó la caja.
 class CollectionResult {
@@ -286,6 +308,7 @@ class CollectionResult {
     required this.message,
     this.cashBox,
     this.accountName,
+    this.notice,
   });
 
   factory CollectionResult.fromJson(Map<String, dynamic> json) {
@@ -298,10 +321,14 @@ class CollectionResult {
       credit: json['credit'] as int? ?? 0,
       message: json['message'] as String? ?? '',
       cashBox: box == null ? null : CashBoxSummary.fromJson(box),
+      notice: ReceiptNotice.fromJson(json['notice']),
     );
   }
 
   final Payment payment;
+
+  /// A quién le llega el recibo (y WhatsApp para quien no tiene la app).
+  final ReceiptNotice? notice;
 
   /// Lo imputado a cuotas y lo que quedó a favor de la familia.
   final int applied;
@@ -459,6 +486,7 @@ class CashBox {
     this.movements = const [],
     this.deposits = const [],
     this.depositAccounts = const [],
+    this.confirmers = const [],
   });
 
   factory CashBox.fromJson(Map<String, dynamic> json) => CashBox(
@@ -477,6 +505,7 @@ class CashBox {
     depositAccounts: ((json['deposit_accounts'] as List?) ?? const [])
         .map((a) => DepositAccount.fromJson(a as Map<String, dynamic>))
         .toList(),
+    confirmers: confirmerNames(json['confirmers']),
   );
 
   static const empty = CashBox();
@@ -493,6 +522,9 @@ class CashBox {
   final List<CashMovement> movements;
   final List<CashDeposit> deposits;
   final List<DepositAccount> depositAccounts;
+
+  /// Quiénes confirman los depósitos (sin quien deposita).
+  final List<String> confirmers;
 
   bool get canDeposit => available > 0 && depositAccounts.isNotEmpty;
 }

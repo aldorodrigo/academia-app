@@ -72,7 +72,7 @@ String? validateProof(PickedProof? proof) {
 
 String? validateRejectionReason(String? value) =>
     value == null || value.trim().isEmpty
-    ? 'Contale al tutor por qué no lo aprobás.'
+    ? 'Contá por qué no lo aprobás.'
     : null;
 
 /// Cuotas que se pueden informar: impagas y que no estén en otro comprobante

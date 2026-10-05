@@ -96,7 +96,13 @@ lib/
   `collects_to_org_cash` en `GET collections/students/{id}` el cobro entra en la Caja del club (o en la cuenta que
   elija de `collect_accounts`, `money_account_id`), sin caja propia ni depósito; quien administra los miembros lo
   cambia en `/efectivo` ("Quién cobra directo a la Caja", `collectors`, `PUT cash-collectors/{user}`). Lo que ya tenía
-  en su caja sigue ahí hasta que lo deposite.
+  en su caja sigue ahí hasta que lo deposite. Con `membership.cash_box_balance` en 0, quien cobra directo no ve "Mi caja"
+  en el inicio (`quickActionsFor()`).
+  **Decir la verdad** (N8, N10): después de cobrar (y al registrar o aprobar una transferencia del club) nunca "Le
+  avisamos a la familia": `notice` de la API (`ReceiptNotice` en `features/billing/data/receipt_notice.dart`, con
+  `NoticeReach`) se muestra con `ReceiptNoticeView` ("A Laura le llega en la app." / "Carlos no tiene la app: no le
+  llega." y "Mandar recibo por WhatsApp a …" con el link al recibo de 30 días). Quién confirma un depósito o aprueba una
+  transferencia: `confirmers` de la API con `untilConfirmed()` (`cash_form.dart`), nunca "el tesorero" fijo.
 - **Informes** (comisión): `/informes` (balance del mes, saldos por familia, morosos; PDF/Excel por link firmado)
   y tarjeta en el inicio, solo si `currentOrganizationProvider` trae el permiso `view_reports` (`can()`).
   Saldos y Morosos marcan a los hijos dados de baja (`withdrawn`, `WithdrawalLabel`: "Matías: baja el 03/06/2026");
@@ -158,8 +164,12 @@ lib/
   `configure_organization`, `PUT organization/terminology`, `VocabularyController`). Los textos de la guía usan el
   tipo (`typeNoun`: "Configurá tu academia").
 - **Botones del inicio:** `QuickActionsBar` con `quickActionsFor()` (`features/home/data/quick_actions.dart`) según
-  permisos y roles: Mis grupos, Cobrar, Mi caja, Estado de cuenta, Mis reservas, Agenda, Alumnos particulares,
-  Comprobantes, Efectivo, Cargar alumno, Solicitudes, Informes.
+  permisos y roles, con el vocabulario de la organización: "Mis {grupos}" ("Mis niveles"), Cobrar, Mi caja, Estado de
+  cuenta, Mis reservas, Agenda, Alumnos particulares, Comprobantes, Efectivo, "Cargar {alumno}" ("Cargar jugador"),
+  Solicitudes, Informes.
+- **Errores al cargar:** `ErrorView` (`core/widgets/error_view.dart`): con un 403, "No tenés permiso para ver esto" y
+  "Volver al inicio"; si no, el mensaje y "Reintentar". `ProviderScope(retry: apiRetry)` (`api_client.dart`) no reintenta
+  los 4xx (sin eso, una pantalla de staff abierta por link quedaba cargando mientras Riverpod reintentaba).
 - **Organización activa:** `currentOrganizationProvider` (`GET /organization`) da vocabulario
   (`term('group')`), módulos (`hasFeature`) y perfiles del usuario con mandato (`roles`).
 - **Contrato de API:** `academia-api/docs/API_V1.md`. La app se construye primero contra el

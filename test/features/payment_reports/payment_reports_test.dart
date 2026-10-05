@@ -337,10 +337,7 @@ void main() {
     });
 
     test('motivo del rechazo', () {
-      expect(
-        validateRejectionReason('  '),
-        'Contale al tutor por qué no lo aprobás.',
-      );
+      expect(validateRejectionReason('  '), 'Contá por qué no lo aprobás.');
       expect(validateRejectionReason('No se lee.'), isNull);
     });
   });
@@ -412,7 +409,8 @@ void main() {
         receivedOn: DateTime(2026, 10, 2),
         amount: 200000,
       );
-      expect(approved.receiptNumber, '000124');
+      expect(approved.report.receiptNumber, '000124');
+      expect(approved.notice, isNull);
       expect(requests.last.data, {
         'money_account_id': 2,
         'received_on': '2026-10-02',
@@ -818,10 +816,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(FilledButton, 'Rechazar'));
       await tester.pump();
-      expect(
-        find.text('Contale al tutor por qué no lo aprobás.'),
-        findsOneWidget,
-      );
+      expect(find.text('Contá por qué no lo aprobás.'), findsOneWidget);
 
       await tester.enterText(find.byType(TextFormField), 'No se lee.');
       await tester.tap(find.widgetWithText(FilledButton, 'Rechazar'));

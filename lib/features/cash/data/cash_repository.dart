@@ -90,6 +90,7 @@ class CashRepository {
         response.data!['data'] as Map<String, dynamic>,
       ),
       message: response.data!['message'] as String? ?? '',
+      notice: ReceiptNotice.fromJson(response.data!['notice']),
     );
   }
 

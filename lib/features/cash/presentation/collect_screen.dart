@@ -7,6 +7,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/utils/format.dart';
 import '../../../core/utils/launcher.dart';
 import '../../../core/utils/clock.dart';
+import '../../../core/widgets/error_view.dart';
 import '../../billing/data/amount_hint.dart';
 import '../../billing/data/models.dart';
 import '../../payment_reports/data/report_form.dart';
@@ -14,6 +15,7 @@ import '../../payment_reports/presentation/proof_field.dart';
 import '../data/cash_form.dart';
 import '../data/cash_repository.dart';
 import '../data/models.dart';
+import 'receipt_notice_view.dart';
 import '../../organizations/data/organization_repository.dart';
 
 /// Cobrar a un alumno: cuotas pendientes de su familia, monto prellenado con
@@ -36,11 +38,9 @@ class CollectScreen extends ConsumerWidget {
       ),
       body: target.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text(apiErrorMessage(error), textAlign: TextAlign.center),
-          ),
+        error: (error, _) => ErrorView(
+          error,
+          onRetry: () => ref.invalidate(collectionTargetProvider(studentId)),
         ),
         data: (target) => _CollectForm(target),
       ),
@@ -386,15 +386,17 @@ class _CollectFormState extends ConsumerState<_CollectForm> {
             const SizedBox(height: 8),
             Text(
               target.approvesTransfers
-                  ? 'Se registra el pago con su recibo y le avisamos a la familia.'
-                  : 'Queda en revisión hasta que la apruebe el tesorero. '
+                  ? 'Se registra el pago con su recibo.'
+                  : 'Queda en revisión '
+                        '${untilConfirmed(target.confirmers, ref.watch(orgWordProvider), one: 'la apruebe', many: 'la aprueben', anyone: 'la apruebe')}. '
                         'La familia la ve en su estado de cuenta.',
               style: theme.textTheme.bodySmall,
               textAlign: TextAlign.center,
             ),
           ] else if (!target.canCollect)
             Text(
-              'Tu caja está cerrada. Hablá con el tesorero.',
+              'Tu caja está cerrada. Hablá con quien maneja las cuentas '
+              '${ref.watch(orgWordProvider).of()}.',
               style: TextStyle(color: theme.colorScheme.error),
               textAlign: TextAlign.center,
             )
@@ -418,13 +420,12 @@ class _CollectFormState extends ConsumerState<_CollectForm> {
             Text(
               target.collectsToOrgCash
                   ? 'Entra directo en ${_cashAccountName(target) ?? 'la Caja ${ref.watch(orgWordProvider).of()}'}: '
-                        'no tenés que depositarlo. La familia recibe el recibo.'
+                        'no tenés que depositarlo.'
                   : box == null
                   ? 'Queda en tu caja hasta que lo deposites en la cuenta '
-                        '${ref.watch(orgWordProvider).of()}. '
-                        'La familia recibe el recibo.'
+                        '${ref.watch(orgWordProvider).of()}.'
                   : 'Queda en tu caja (${formatMoney(box.balance)} en tu poder) '
-                        'hasta que lo deposites. La familia recibe el recibo.',
+                        'hasta que lo deposites.',
               style: theme.textTheme.bodySmall,
               textAlign: TextAlign.center,
             ),
@@ -534,6 +535,7 @@ class CollectionDoneDialog extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final url = result.payment.receiptUrl;
     return AlertDialog(
+      scrollable: true,
       icon: const Icon(Icons.check_circle_outline),
       title: Text('Cobrado ${formatMoney(result.payment.amount)}'),
       content: Column(
@@ -547,8 +549,10 @@ class CollectionDoneDialog extends ConsumerWidget {
             Text('En tu caja: ${formatMoney(result.cashBox!.balance)}.')
           else if (result.accountName != null)
             Text('Entró en ${result.accountName}.'),
-          const SizedBox(height: 8),
-          const Text('Le avisamos a la familia con el recibo.'),
+          if (result.notice != null) ...[
+            const SizedBox(height: 12),
+            ReceiptNoticeView(result.notice!),
+          ],
         ],
       ),
       actions: [
@@ -577,6 +581,7 @@ class TransferDoneDialog extends ConsumerWidget {
     final report = result.report;
     final url = report.receiptUrl;
     return AlertDialog(
+      scrollable: true,
       icon: Icon(
         report.isPending ? Icons.hourglass_top : Icons.check_circle_outline,
       ),
@@ -590,6 +595,10 @@ class TransferDoneDialog extends ConsumerWidget {
           Text('${formatMoney(report.amount)} · ${report.chargesSummary}'),
           const SizedBox(height: 8),
           Text(result.message),
+          if (result.notice != null) ...[
+            const SizedBox(height: 12),
+            ReceiptNoticeView(result.notice!),
+          ],
         ],
       ),
       actions: [
