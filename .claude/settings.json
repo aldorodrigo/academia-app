@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./vendor/bin/sail test)",
+      "Bash(./vendor/bin/sail test *)",
+      "Bash(flutter test)",
+      "Bash(flutter test *)",
+      "Bash(flutter analyze)",
+      "Bash(flutter analyze *)",
+      "Bash(~/development/flutter-3.47.5/bin/flutter analyze)",
+      "Bash(~/development/flutter-3.47.5/bin/flutter analyze *)",
+      "Bash(~/development/flutter-3.47.5/bin/flutter test)",
+      "Bash(~/development/flutter-3.47.5/bin/flutter test *)",
+      "Bash(docker compose ps)",
+      "Bash(docker compose ps *)",
+      "Bash(./vendor/bin/sail route:list)",
+      "Bash(./vendor/bin/sail route:list *)",
+      "Bash(docker compose config)",
+      "Bash(docker compose config *)"
+    ]
+  }
+}
