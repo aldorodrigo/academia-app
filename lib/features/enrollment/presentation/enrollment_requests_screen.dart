@@ -8,6 +8,7 @@ import '../../organizations/data/organization_repository.dart';
 import '../data/enrollment_repository.dart';
 import '../data/models.dart';
 import '../data/request_form.dart';
+import '../../../core/widgets/error_view.dart';
 
 /// Inscripciones que pidieron las familias desde la app: el chico ya va a
 /// clases; confirmarla emite sus cuotas y rechazarla lo saca de la lista.
@@ -54,12 +55,9 @@ class _EnrollmentRequestsScreenState
                 ),
               ],
               error: (error, _) => [
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    apiErrorMessage(error),
-                    textAlign: TextAlign.center,
-                  ),
+                ErrorView(
+                  error,
+                  onRetry: () => ref.invalidate(enrollmentReviewProvider(_all)),
                 ),
               ],
               data: (requests) => [

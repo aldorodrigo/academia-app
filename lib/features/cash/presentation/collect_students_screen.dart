@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/api/api_client.dart';
 import '../../../core/utils/format.dart';
 import '../data/cash_repository.dart';
 import '../data/models.dart';
+import '../../../core/widgets/error_view.dart';
 
 /// "Cobrar": los alumnos que puede cobrar quien usa la app (los de sus grupos,
 /// o todos para la comisión), con lo que debe hoy cada familia.
@@ -53,9 +53,9 @@ class _CollectStudentsScreenState extends ConsumerState<CollectStudentsScreen> {
             ...students.when(
               loading: () => const [LinearProgressIndicator()],
               error: (error, _) => [
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Text(apiErrorMessage(error)),
+                ErrorView(
+                  error,
+                  onRetry: () => ref.invalidate(collectableStudentsProvider),
                 ),
               ],
               data: (list) => _list(context, list),

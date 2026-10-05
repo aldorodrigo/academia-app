@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 
 import 'app.dart';
+import 'core/api/api_client.dart';
 import 'core/config/env.dart';
 import 'core/push/class_notifications.dart';
 
@@ -18,7 +19,7 @@ void main() {
     FirebaseMessaging.onBackgroundMessage(firebaseBackgroundMessage);
   }
   LicenseRegistry.addLicense(_fontLicenses);
-  runApp(const ProviderScope(child: App()));
+  runApp(const ProviderScope(retry: apiRetry, child: App()));
 }
 
 /// Licencias OFL de las tipografías de la marca, que van dentro de la app.

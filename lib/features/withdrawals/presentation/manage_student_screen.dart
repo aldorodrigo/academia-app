@@ -12,6 +12,7 @@ import '../data/models.dart';
 import '../data/withdrawals_repository.dart';
 import 'dropout_reports.dart';
 import '../../../core/vocabulary/vocabulary.dart';
+import '../../../core/widgets/error_view.dart';
 
 /// `/alumnos/:id`: ficha para quien da de baja (`withdraw_students`) o condona (`waive_charges`).
 /// Inscripciones con "Dar de baja" y "Sigue viniendo"; cuenta con "Condonar" y "Deshacer".
@@ -26,7 +27,11 @@ class ManageStudentScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(student.value?.fullName ?? 'Alumno'),
+        title: Text(
+          student.value?.fullName ??
+              ref.watch(currentOrganizationProvider).value?.term('student') ??
+              'Alumno',
+        ),
         leading: BackButton(
           onPressed: () =>
               context.canPop() ? context.pop() : context.go('/inicio'),
@@ -34,11 +39,9 @@ class ManageStudentScreen extends ConsumerWidget {
       ),
       body: student.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text(apiErrorMessage(error), textAlign: TextAlign.center),
-          ),
+        error: (error, _) => ErrorView(
+          error,
+          onRetry: () => ref.invalidate(managedStudentProvider(id)),
         ),
         data: (student) => RefreshIndicator(
           onRefresh: () => ref.refresh(managedStudentProvider(id).future),

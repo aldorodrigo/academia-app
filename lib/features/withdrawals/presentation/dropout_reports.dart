@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/api/api_client.dart';
 import '../../../core/utils/format.dart';
 import '../../organizations/data/organization_repository.dart';
 import '../data/models.dart';
 import '../data/withdrawals_repository.dart';
 import '../../../core/vocabulary/vocabulary.dart';
+import '../../../core/widgets/error_view.dart';
 
 /// Tarjeta del inicio para quien da de baja: avisos del técnico o del tutor sin decidir.
 class DropoutReportsCard extends ConsumerWidget {
@@ -62,7 +62,10 @@ class DropoutReportsScreen extends ConsumerWidget {
       ),
       body: reports.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text(apiErrorMessage(error))),
+        error: (error, _) => ErrorView(
+          error,
+          onRetry: () => ref.invalidate(dropoutReportsProvider),
+        ),
         data: (reports) => RefreshIndicator(
           onRefresh: () => ref.refresh(dropoutReportsProvider.future),
           child: ListView(

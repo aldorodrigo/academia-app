@@ -41,7 +41,11 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(value.value?.group.name ?? 'Grupo'),
+        title: Text(
+          value.value?.group.name ??
+              ref.watch(currentOrganizationProvider).value?.term('group') ??
+              'Grupo',
+        ),
         leading: BackButton(onPressed: () => context.go('/grupos')),
       ),
       body: ListView(

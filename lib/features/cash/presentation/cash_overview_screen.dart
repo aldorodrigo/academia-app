@@ -9,6 +9,7 @@ import '../data/cash_repository.dart';
 import '../data/models.dart';
 import 'cash_deposit_tile.dart';
 import '../../organizations/data/organization_repository.dart';
+import '../../../core/widgets/error_view.dart';
 
 /// "Efectivo" (quien valida): cuánta plata del club tiene cada uno que cobra en
 /// efectivo y los depósitos por confirmar.
@@ -29,8 +30,12 @@ class CashOverviewScreen extends ConsumerWidget {
         child: overview.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, _) => ListView(
-            padding: const EdgeInsets.all(24),
-            children: [Text(apiErrorMessage(error))],
+            children: [
+              ErrorView(
+                error,
+                onRetry: () => ref.invalidate(cashOverviewProvider),
+              ),
+            ],
           ),
           data: (overview) => _OverviewView(overview),
         ),

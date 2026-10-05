@@ -104,10 +104,10 @@ class Word {
   String g(String masculine, String feminine) =>
       isFeminine ? feminine : masculine;
 
-  /// "la categoría", "el aula", "los grupos"; con [person], según la persona ("la atleta").
+  /// "la categoría", "el aula", "los grupos"; con [person], según la persona ("la atleta", "la tutora").
   String the({bool plural = false, Gender? person}) =>
       '${_articleFor(plural: plural, person: person)} '
-      '${plural ? pluralLower : lower}';
+      '${_noun(plural: plural, person: person)}';
 
   /// Al principio de una frase: "La academia", "El club".
   String theUpper({bool plural = false, Gender? person}) =>
@@ -120,14 +120,14 @@ class Word {
   String of({bool plural = false, Gender? person}) {
     final article = _articleFor(plural: plural, person: person);
     return '${article == 'el' ? 'del' : 'de $article'} '
-        '${plural ? pluralLower : lower}';
+        '${_noun(plural: plural, person: person)}';
   }
 
   /// "al técnico", "a la técnica", "a los jugadores".
   String to({bool plural = false, Gender? person}) {
     final article = _articleFor(plural: plural, person: person);
     return '${article == 'el' ? 'al' : 'a $article'} '
-        '${plural ? pluralLower : lower}';
+        '${_noun(plural: plural, person: person)}';
   }
 
   /// Cómo se nombra a una persona: su forma si se sabe el género; si no, la palabra de la organización.
@@ -151,6 +151,12 @@ class Word {
         Gender.male => masculine,
         null => g(masculine, feminine),
       };
+
+  /// En minúscula; con [person], su forma ("tutora", "jugadores").
+  String _noun({required bool plural, Gender? person}) {
+    if (person == null) return plural ? pluralLower : lower;
+    return (plural ? forPeople([person]) : forPerson(person)).toLowerCase();
+  }
 
   String _articleFor({required bool plural, Gender? person}) {
     final feminine = person != null ? person == Gender.female : isFeminine;

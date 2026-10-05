@@ -49,6 +49,7 @@ class OrganizationDetails {
     required this.roles,
     this.permissions = const [],
     this.collectsToOrgCash = false,
+    this.cashBoxBalance = 0,
     this.vocabulary = const {},
     this.terminologyFeminine = const {},
     this.type,
@@ -75,6 +76,7 @@ class OrganizationDetails {
         membership?['permissions'] as List? ?? const [],
       ),
       collectsToOrgCash: membership?['collects_to_org_cash'] as bool? ?? false,
+      cashBoxBalance: membership?['cash_box_balance'] as int? ?? 0,
       vocabulary: {
         for (final entry in (json['vocabulary'] as Map? ?? const {}).entries)
           entry.key as String: Word.fromJson(
@@ -111,6 +113,10 @@ class OrganizationDetails {
   /// Lo que cobra en efectivo entra directo a la Caja del club (sin caja
   /// personal ni depósito). Lo decide quien administra los miembros.
   final bool collectsToOrgCash;
+
+  /// Efectivo en su caja personal, en guaraníes (0 si no tiene caja). Incluye
+  /// los depósitos por confirmar, que siguen en la caja hasta que se confirman.
+  final int cashBoxBalance;
 
   /// Cada palabra con plural, género, artículo y formas de persona (lo decide la API), más `organization`.
   final Map<String, Word> vocabulary;

@@ -18,10 +18,10 @@ class TodayClassesCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final allowed =
-        ref.watch(currentOrganizationProvider).value?.can('take_attendance') ??
-        false;
-    if (!allowed) return const SizedBox.shrink();
+    final organization = ref.watch(currentOrganizationProvider).value;
+    if (!(organization?.can('take_attendance') ?? false)) {
+      return const SizedBox.shrink();
+    }
 
     final theme = Theme.of(context);
     final classes = ref.watch(classesProvider(ref.watch(todayProvider)));
@@ -48,7 +48,7 @@ class TodayClassesCard extends ConsumerWidget {
                 ),
                 TextButton(
                   onPressed: () => context.go('/grupos'),
-                  child: const Text('Mis grupos'),
+                  child: Text('Mis ${organization!.word('group').pluralLower}'),
                 ),
               ],
             ),

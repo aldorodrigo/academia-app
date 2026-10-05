@@ -417,14 +417,14 @@ void main() {
       await tester.pumpAndSettle();
       await _scrollTo(
         tester,
-        find.widgetWithText(TextFormField, 'Nombre del tutor'),
+        find.widgetWithText(TextFormField, 'Nombre de la tutora'),
       );
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Nombre del tutor'),
+        find.widgetWithText(TextFormField, 'Nombre de la tutora'),
         'Rosa',
       );
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Apellido del tutor'),
+        find.widgetWithText(TextFormField, 'Apellido de la tutora'),
         'Aquino',
       );
       await tester.enterText(
@@ -590,6 +590,52 @@ void main() {
         'female',
       );
       expect(find.text('Alumna cargada'), findsOneWidget);
+    });
+
+    testWidgets('los datos del tutor siguen al parentesco', (tester) async {
+      await tester.pumpWidget(
+        _app(_base(permissions: ['create_students']), const AddStudentScreen()),
+      );
+      await tester.pumpAndSettle();
+
+      Future<void> choose(String relationship) async {
+        await _scrollTo(tester, find.widgetWithText(ChoiceChip, relationship));
+        await tester.tap(find.widgetWithText(ChoiceChip, relationship));
+        await tester.pumpAndSettle();
+      }
+
+      // Madre (elegida de entrada): "de la tutora".
+      await _scrollTo(
+        tester,
+        find.widgetWithText(TextFormField, 'Nombre de la tutora'),
+      );
+      expect(
+        find.widgetWithText(TextFormField, 'Apellido de la tutora'),
+        findsOneWidget,
+      );
+
+      await choose('Padre');
+      expect(
+        find.widgetWithText(TextFormField, 'Nombre del tutor'),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(TextFormField, 'Apellido del tutor'),
+        findsOneWidget,
+      );
+
+      await choose('Abuela');
+      expect(
+        find.widgetWithText(TextFormField, 'Nombre de la tutora'),
+        findsOneWidget,
+      );
+
+      // Otro: la palabra de la organización, sin género.
+      await choose('Otro');
+      expect(
+        find.widgetWithText(TextFormField, 'Nombre del tutor'),
+        findsOneWidget,
+      );
     });
   });
 }

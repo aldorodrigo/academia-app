@@ -32,6 +32,27 @@ void main() {
       expect(atleta.the(person: Gender.female), 'la atleta');
       expect(atleta.g('otro', 'otra'), 'otro');
     });
+
+    test('con una persona, su forma: "de la tutora", "del tutor"', () {
+      final tutor = Word.of('Tutor');
+      expect(tutor.of(person: Gender.female), 'de la tutora');
+      expect(tutor.of(person: Gender.male), 'del tutor');
+      expect(tutor.of(), 'del tutor');
+      expect(tutor.the(person: Gender.female), 'la tutora');
+      expect(tutor.to(person: Gender.female), 'a la tutora');
+      expect(
+        Word.of('Jugador').the(plural: true, person: Gender.female),
+        'las jugadoras',
+      );
+      expect(
+        validateGuardianName('', tutor, Relationship.mother.gender),
+        'Ingresá el nombre de la tutora.',
+      );
+      expect(
+        validateGuardianName('', tutor, Relationship.other.gender),
+        'Ingresá el nombre del tutor.',
+      );
+    });
   });
 
   test('artículos: "el aula" pero "las aulas" y "esta aula"', () {

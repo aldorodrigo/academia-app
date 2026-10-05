@@ -151,6 +151,8 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
     final group = organization?.word('group') ?? Word.of('Categoría');
     final student = organization?.word('student') ?? Word.of('Alumno');
     final guardian = organization?.word('guardian') ?? Word.of('Tutor');
+    // El género del tutor sale del parentesco: "Nombre de la tutora" con Madre.
+    final guardianGender = _relationship.gender;
     final birth = _birth;
     final options = birth == null
         ? null
@@ -223,13 +225,18 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
           TextFormField(
             controller: _guardianFirstName,
             textCapitalization: TextCapitalization.words,
-            decoration: InputDecoration(labelText: 'Nombre ${guardian.of()}'),
-            validator: (value) => validateGuardianName(value, guardian),
+            decoration: InputDecoration(
+              labelText: 'Nombre ${guardian.of(person: guardianGender)}',
+            ),
+            validator: (value) =>
+                validateGuardianName(value, guardian, guardianGender),
           ),
           TextFormField(
             controller: _guardianLastName,
             textCapitalization: TextCapitalization.words,
-            decoration: InputDecoration(labelText: 'Apellido ${guardian.of()}'),
+            decoration: InputDecoration(
+              labelText: 'Apellido ${guardian.of(person: guardianGender)}',
+            ),
           ),
           TextFormField(
             controller: _guardianPhone,

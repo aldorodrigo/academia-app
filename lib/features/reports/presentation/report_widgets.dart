@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/api/api_client.dart';
 import '../../../core/utils/format.dart';
 import '../../../core/utils/launcher.dart';
 import '../../organizations/data/organization_repository.dart';
 import '../data/models.dart';
+import '../../../core/widgets/error_view.dart';
 
 /// Botones de descarga (PDF y Excel) de un informe.
 class DownloadButtons extends ConsumerWidget {
@@ -108,12 +108,7 @@ class ReportBody<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) => value.when(
     loading: () => const Center(child: CircularProgressIndicator()),
-    error: (error, _) => Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text(apiErrorMessage(error), textAlign: TextAlign.center),
-      ),
-    ),
+    error: (error, _) => ErrorView(error, onRetry: onRefresh),
     data: (data) => RefreshIndicator(
       onRefresh: onRefresh,
       child: ListView(

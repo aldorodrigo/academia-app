@@ -60,7 +60,8 @@ String? validateRequestRejection(String? value) =>
     : null;
 
 /// [guardian]: la palabra del club ("Ingresá el nombre del encargado.").
-String? validateGuardianName(String? value, [Word? guardian]) =>
+/// [gender]: el del parentesco elegido ("Ingresá el nombre de la tutora").
+String? validateGuardianName(String? value, [Word? guardian, Gender? gender]) =>
     value == null || value.trim().isEmpty
-    ? 'Ingresá el nombre ${(guardian ?? Word.of('Tutor')).of()}.'
+    ? 'Ingresá el nombre ${(guardian ?? Word.of('Tutor')).of(person: gender)}.'
     : null;

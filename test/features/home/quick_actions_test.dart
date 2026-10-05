@@ -6,13 +6,21 @@ OrganizationDetails _organization({
   List<String> roles = const [],
   List<String> permissions = const [],
   List<String> features = const [],
+  Map<String, String> terminology = const {
+    'group': 'Grupo',
+    'student': 'Alumno',
+  },
+  bool collectsToOrgCash = false,
+  int cashBoxBalance = 0,
 }) => OrganizationDetails(
   slug: 'jakare',
   name: 'Club Jakare',
-  terminology: const {},
+  terminology: terminology,
   features: features,
   roles: [for (final r in roles) OrganizationRole(name: r, label: r)],
   permissions: permissions,
+  collectsToOrgCash: collectsToOrgCash,
+  cashBoxBalance: cashBoxBalance,
 );
 
 List<String> _labels(
@@ -82,5 +90,60 @@ void main() {
       ),
       ['Cargar alumno', 'Solicitudes'],
     );
+  });
+
+  test('los botones usan las palabras de la organización', () {
+    const permissions = ['take_attendance', 'create_students'];
+    expect(
+      _labels(
+        _organization(
+          permissions: permissions,
+          terminology: {'group': 'Nivel', 'student': 'Jugador'},
+        ),
+      ),
+      ['Mis niveles', 'Cargar jugador'],
+    );
+    // Sin terminología propia: las de siempre (Categoría, Jugador).
+    expect(_labels(_organization(permissions: permissions, terminology: {})), [
+      'Mis categorías',
+      'Cargar jugador',
+    ]);
+  });
+
+  group('"Mi caja" de quien cobra directo a la Caja', () {
+    List<String> labels({required bool direct, int balance = 0}) => _labels(
+      _organization(
+        permissions: ['collect_payments'],
+        collectsToOrgCash: direct,
+        cashBoxBalance: balance,
+      ),
+    );
+
+    test('sin plata en su caja, no aparece', () {
+      expect(labels(direct: true), ['Cobrar']);
+    });
+
+    test('si le quedó plata (o un depósito por confirmar), sí', () {
+      expect(labels(direct: true, balance: 150000), ['Cobrar', 'Mi caja']);
+    });
+
+    test('quien no cobra directo la ve siempre', () {
+      expect(labels(direct: false), ['Cobrar', 'Mi caja']);
+    });
+
+    test('lee el saldo de la caja en la membresía', () {
+      final organization = OrganizationDetails.fromJson({
+        'slug': 'jakare',
+        'name': 'Club Jakare',
+        'membership': {'collects_to_org_cash': true, 'cash_box_balance': 50000},
+      });
+      expect(organization.collectsToOrgCash, isTrue);
+      expect(organization.cashBoxBalance, 50000);
+      expect(
+        OrganizationDetails.fromJson({'slug': 'jakare', 'name': 'Club Jakare'})
+            .cashBoxBalance,
+        0,
+      );
+    });
   });
 }
