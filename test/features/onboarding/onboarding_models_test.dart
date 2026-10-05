@@ -2,6 +2,7 @@ import 'package:academia_app/core/utils/validators.dart';
 import 'package:academia_app/features/onboarding/data/models.dart';
 import 'package:academia_app/features/onboarding/data/onboarding_controller.dart';
 import 'package:academia_app/features/onboarding/data/step_controllers.dart';
+import 'package:academia_app/features/organizations/data/models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'onboarding_json.dart';
@@ -286,5 +287,106 @@ void main() {
     }
     expect(gendered('Grupo', 'cada uno', 'cada una'), 'cada uno');
     expect(gendered('Categoría', 'todos', 'todas'), 'todas');
+  });
+
+  test('propuesta de vocabulario de deporte', () {
+    expect(_onboarding().terminologySuggestion, isNull);
+
+    final onboarding = Onboarding.fromJson(
+      onboardingJson(
+            programs: 'done',
+            groups: 'pending',
+            terminologySuggestion: sportSuggestionJson,
+          )['data']!
+          as Map<String, dynamic>,
+    );
+    final suggestion = onboarding.terminologySuggestion!;
+    expect(suggestion.programsText, 'fútbol');
+    expect(suggestion.suggestedText, 'jugador, técnico, categoría y cancha');
+    expect(suggestion.currentText, 'alumno, profesor, grupo y sala');
+    expect(joinWords(['Fútbol', 'Básquet']), 'fútbol y básquet');
+  });
+
+  test('qué es la organización, para los textos de la guía', () {
+    OrganizationDetails org(String? type) => OrganizationDetails.fromJson({
+      ...(organizationJson()['data']! as Map<String, Object?>),
+      'type': type,
+    });
+    expect(org('club').typeNoun, 'club');
+    expect(org('club').typeWithArticle, 'el club');
+    expect(org('academy').typeWithArticle, 'la academia');
+    expect(org('school').typeNoun, 'escuela');
+    expect(org('parents_association').typeNoun, 'comisión');
+    expect(org(null).typeNoun, 'club');
+  });
+
+  test('cobro por día: la base dice el término del club', () {
+    expect(
+      dailyBasisOptions('Grupo')['entrenamiento']!.$2,
+      'Los días con horario del grupo.',
+    );
+    expect(
+      dailyBasisOptions('Categoría')['entrenamiento']!.$2,
+      'Los días con horario de la categoría.',
+    );
+  });
+
+  test('cuota de ejemplo con la fecha para los que se inscriben hoy', () {
+    final example = SeasonExample.fromJson({
+      'period': 'enero 2026',
+      'due_on': '12/01/2026',
+      'due_note': 'para los que se inscriben hoy',
+      'amount': '₲ 150.000',
+    });
+    expect(example.dueNote, 'para los que se inscriben hoy');
+    expect(
+      SeasonExample.fromJson({
+        'period': 'febrero 2026',
+        'due_on': '10/02/2026',
+        'amount': '₲ 150.000',
+      }).dueNote,
+      isNull,
+    );
+  });
+
+  test('borrador del paso 2: ida y vuelta', () {
+    final step = GroupsStep(
+      programs: [SetupProgram.fromJson(programJson(1, 'Fútbol'))],
+      groups: const [],
+      sites: const [],
+      levels: const ['Inicial'],
+      programId: 1,
+      capacity: 20,
+      drafts: const [
+        GroupDraft(
+          name: 'Sub-8',
+          minAge: 7,
+          maxAge: 8,
+          slots: [
+            WeeklyTime(weekdays: {4, 2}, venueId: 11),
+          ],
+        ),
+      ],
+    );
+    final json = step.toDraftJson()!;
+    expect(json['program_id'], 1);
+    expect(json['capacity'], 20);
+    expect(((json['groups']! as List).first as Map)['slots'], [
+      {
+        'weekdays': [2, 4],
+        'starts_at': '17:00',
+        'ends_at': '18:30',
+        'venue_id': 11,
+      },
+    ]);
+
+    final empty = step.copyWith(drafts: const []);
+    expect(empty.toDraftJson(), isNull);
+    final resumed = empty.withDraft(Map<String, dynamic>.from(json))!;
+    expect(resumed.drafts.single.name, 'Sub-8');
+    expect(resumed.drafts.single.slots.single.weekdays, {2, 4});
+    expect(resumed.capacity, 20);
+    // De una disciplina que ya no existe: se arranca de nuevo.
+    expect(empty.withDraft({...json, 'program_id': 99}), isNull);
   });
 }

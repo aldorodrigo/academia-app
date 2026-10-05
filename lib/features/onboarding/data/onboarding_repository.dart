@@ -304,6 +304,27 @@ class OnboardingRepository {
 
   Future<void> revokeInvitation(int id) =>
       _dio.delete<void>('/setup/invitations/$id');
+
+  // Borrador del paso 2 (lo que se está armando, guardado en la API para
+  // retomarlo desde cualquier dispositivo, en la app o en el panel).
+
+  Future<Map<String, dynamic>?> groupsDraft() async {
+    final data = _data(await _dio.get('/onboarding/steps/groups/draft'));
+    final draft = data['draft'];
+    return draft is Map ? Map<String, dynamic>.from(draft) : null;
+  }
+
+  /// null = no hay nada a medio armar (lo borra).
+  Future<void> saveGroupsDraft(Map<String, Object?>? draft) async {
+    if (draft == null) {
+      await _dio.delete<void>('/onboarding/steps/groups/draft');
+    } else {
+      await _dio.put<void>(
+        '/onboarding/steps/groups/draft',
+        data: {'draft': draft},
+      );
+    }
+  }
 }
 
 final onboardingRepositoryProvider = Provider<OnboardingRepository>(

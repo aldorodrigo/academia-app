@@ -89,6 +89,17 @@ class OrganizationDetails {
   /// Etiqueta configurable de la organización (ej. term('group') → "Categoría").
   String term(String key) => terminology[key] ?? defaultTerminology[key] ?? key;
 
+  /// Qué es, en minúscula: "club", "academia", "escuela", "comisión".
+  String get typeNoun => switch (type) {
+    'academy' => 'academia',
+    'school' => 'escuela',
+    'parents_association' => 'comisión',
+    _ => 'club',
+  };
+
+  /// "el club", "la academia".
+  String get typeWithArticle => '${typeNoun == 'club' ? 'el' : 'la'} $typeNoun';
+
   bool hasFeature(String feature) => features.contains(feature);
 
   bool hasRole(String name) => roles.any((r) => r.name == name);

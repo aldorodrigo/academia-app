@@ -62,6 +62,7 @@ class Onboarding {
     this.next,
     this.completed = false,
     this.dismissed = false,
+    this.terminologySuggestion,
   });
 
   factory Onboarding.fromJson(Map<String, dynamic> json) => Onboarding(
@@ -75,6 +76,11 @@ class Onboarding {
     next: json['next'] as String?,
     completed: json['completed'] as bool? ?? false,
     dismissed: json['dismissed'] as bool? ?? false,
+    terminologySuggestion: json['terminology_suggestion'] is Map
+        ? TerminologySuggestion.fromJson(
+            Map<String, dynamic>.from(json['terminology_suggestion'] as Map),
+          )
+        : null,
   );
 
   final List<OnboardingStep> steps;
@@ -88,6 +94,9 @@ class Onboarding {
   /// Se cerró: no se abre sola, pero sigue la tarjeta del inicio.
   final bool dismissed;
 
+  /// Palabras de deporte propuestas (la API decide cuándo); null si no hay.
+  final TerminologySuggestion? terminologySuggestion;
+
   OnboardingStep? step(String? key) {
     for (final step in steps) {
       if (step.key == key) return step;
@@ -99,6 +108,48 @@ class Onboarding {
 
   /// Posición del paso para "Paso 2 de 4".
   int numberOf(String key) => steps.indexWhere((s) => s.key == key) + 1;
+}
+
+/// Propuesta de vocabulario de deporte: una academia que enseña fútbol pasa de
+/// Grupo, Profesor y Sala a Categoría, Técnico y Cancha si el usuario quiere.
+class TerminologySuggestion {
+  const TerminologySuggestion({
+    required this.programs,
+    required this.current,
+    required this.suggested,
+  });
+
+  factory TerminologySuggestion.fromJson(Map<String, dynamic> json) =>
+      TerminologySuggestion(
+        programs: List<String>.from(json['programs'] as List? ?? const []),
+        current: Map<String, String>.from(json['current'] as Map? ?? const {}),
+        suggested: Map<String, String>.from(
+          json['suggested'] as Map? ?? const {},
+        ),
+      );
+
+  /// Disciplinas deportivas que la originan ("Fútbol").
+  final List<String> programs;
+
+  /// Lo que dicen hoy las pantallas, solo las palabras que se proponen cambiar.
+  final Map<String, String> current;
+  final Map<String, String> suggested;
+
+  /// "categoría, técnico y cancha".
+  String get suggestedText => joinWords(suggested.values);
+
+  /// "grupo, profesor y sala".
+  String get currentText => joinWords(current.values);
+
+  /// "fútbol", "fútbol y básquet".
+  String get programsText => joinWords(programs);
+}
+
+/// "a, b y c" en minúscula.
+String joinWords(Iterable<String> words) {
+  final list = words.map((w) => w.toLowerCase()).toList();
+  if (list.length <= 1) return list.join();
+  return '${list.sublist(0, list.length - 1).join(', ')} y ${list.last}';
 }
 
 /// Ruta de cada paso de la guía.
@@ -358,6 +409,23 @@ class WeeklyTime {
 
   bool get isEmpty => weekdays.isEmpty;
 
+  /// Para el borrador del paso (`onboarding/steps/groups/draft`).
+  Map<String, Object?> toJson() => {
+    'weekdays': weekdays.toList()..sort(),
+    'starts_at': startsAt,
+    'ends_at': endsAt,
+    'venue_id': venueId,
+  };
+
+  factory WeeklyTime.fromJson(Map<String, dynamic> json) => WeeklyTime(
+    weekdays: {
+      for (final day in (json['weekdays'] as List?) ?? const []) day as int,
+    },
+    startsAt: json['starts_at'] as String? ?? '17:00',
+    endsAt: json['ends_at'] as String? ?? '18:30',
+    venueId: json['venue_id'] as int?,
+  );
+
   /// null si está bien; si no, el problema.
   String? validate() {
     if (weekdays.isEmpty) return 'Elegí al menos un día.';
@@ -514,12 +582,28 @@ class GroupDraft {
     this.slots = const [WeeklyTime()],
   });
 
-  factory GroupDraft.fromJson(Map<String, dynamic> json) => GroupDraft(
-    name: json['name'] as String,
-    minAge: json['min_age'] as int?,
-    maxAge: json['max_age'] as int?,
-    level: json['level'] as String?,
-  );
+  /// Sugerida por la API (sin horarios) o del borrador (con sus horarios).
+  factory GroupDraft.fromJson(Map<String, dynamic> json) {
+    final slots = (json['slots'] as List?)
+        ?.map((s) => WeeklyTime.fromJson(Map<String, dynamic>.from(s as Map)))
+        .toList();
+    return GroupDraft(
+      name: json['name'] as String,
+      minAge: json['min_age'] as int?,
+      maxAge: json['max_age'] as int?,
+      level: json['level'] as String?,
+      slots: slots == null || slots.isEmpty ? const [WeeklyTime()] : slots,
+    );
+  }
+
+  /// Para el borrador del paso, con sus horarios.
+  Map<String, Object?> toJson() => {
+    'name': name,
+    'min_age': minAge,
+    'max_age': maxAge,
+    'level': level,
+    'slots': [for (final slot in slots) slot.toJson()],
+  };
 
   final String name;
   final int? minAge;
@@ -588,10 +672,11 @@ enum FeeFrequency {
   };
 }
 
-const dailyBasisOptions = {
+/// Bases del cobro por día; [group] es el término del club ("Categoría").
+Map<String, (String, String)> dailyBasisOptions(String group) => {
   'entrenamiento': (
     'Días de entrenamiento',
-    'Los días con horario de la categoría.',
+    'Los días con horario ${gendered(group, 'del', 'de la')} ${group.toLowerCase()}.',
   ),
   'asistencia': (
     'Clases asistidas',
@@ -836,17 +921,23 @@ class SeasonExample {
     required this.period,
     required this.dueOn,
     required this.amount,
+    this.dueNote,
   });
 
   factory SeasonExample.fromJson(Map<String, dynamic> json) => SeasonExample(
     period: json['period'] as String,
     dueOn: json['due_on'] as String,
     amount: json['amount'] as String,
+    dueNote: json['due_note'] as String?,
   );
 
   final String period;
   final String dueOn;
   final String amount;
+
+  /// "para los que se inscriben hoy": con la temporada empezada, la cuota en
+  /// curso vence más tarde para quien se inscribe ahora (la calcula la API).
+  final String? dueNote;
 }
 
 class SeasonKindOption {

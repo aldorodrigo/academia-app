@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../organizations/data/organization_repository.dart';
+import '../data/models.dart';
 import '../data/onboarding_controller.dart';
 
 /// Pantalla de un paso de la guía: "Paso 2 de 4", la pregunta, para qué sirve,
@@ -38,11 +40,13 @@ class StepScaffold extends ConsumerWidget {
     final onboarding = ref.watch(onboardingProvider).value;
     final number = onboarding?.numberOf(stepKey) ?? 0;
     final total = onboarding?.steps.length ?? 0;
+    final noun =
+        ref.watch(currentOrganizationProvider).value?.typeNoun ?? 'club';
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          number > 0 ? 'Paso $number de $total' : 'Configurá tu club',
+          number > 0 ? 'Paso $number de $total' : 'Configurá tu $noun',
         ),
         leading: IconButton(
           tooltip: 'Volver al inicio',
@@ -150,14 +154,24 @@ mixin StepEntry<T extends ConsumerStatefulWidget> on ConsumerState<T> {
 
   /// Guarda el paso y sigue: al siguiente pendiente, o a "¡Listo!" si con este
   /// se completó la guía. Devuelve false si hubo un error (ya mostrado).
-  Future<bool> finishStep(Future<String?> Function() save) async {
+  /// [beforeNext] corre antes de seguir (ej. proponer el vocabulario); si
+  /// cambia algo, se sigue con la guía actualizada.
+  Future<bool> finishStep(
+    Future<String?> Function() save, {
+    Future<void> Function(Onboarding? after)? beforeNext,
+  }) async {
     final error = await save();
     if (!mounted) return false;
     if (error != null) {
       showMessage(context, error);
       return false;
     }
-    final after = await ref.read(onboardingProvider.notifier).reload();
+    var after = await ref.read(onboardingProvider.notifier).reload();
+    if (beforeNext != null && mounted) {
+      await beforeNext(after);
+      if (!mounted) return true;
+      after = await ref.read(onboardingProvider.future);
+    }
     if (mounted) context.go(nextRoute(after, wasCompleted: wasCompleted));
     return true;
   }

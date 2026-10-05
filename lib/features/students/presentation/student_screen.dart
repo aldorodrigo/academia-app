@@ -164,7 +164,7 @@ class _EnrollmentCard extends StatelessWidget {
             ),
             Text(
               '${_term('program', 'Disciplina')}: ${group.program.name} · '
-              'Temporada ${enrollment.season}',
+              '${seasonLabel(enrollment.season)}',
             ),
             if (startsOn != null && endsOn != null)
               Text(

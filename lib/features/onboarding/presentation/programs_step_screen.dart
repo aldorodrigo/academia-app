@@ -6,6 +6,7 @@ import '../../organizations/data/organization_repository.dart';
 import '../data/models.dart';
 import '../data/step_controllers.dart';
 import 'step_scaffold.dart';
+import 'terminology_suggestion_sheet.dart';
 
 /// Paso 1: "¿Qué enseñan?" — disciplinas sugeridas como chips, "Otra" y cómo
 /// se arman las categorías de cada una.
@@ -22,7 +23,18 @@ class _ProgramsStepScreenState extends ConsumerState<ProgramsStepScreen>
 
   Future<void> _save() async {
     setState(() => _saving = true);
-    await finishStep(() => ref.read(programsStepProvider.notifier).save());
+    await finishStep(
+      () => ref.read(programsStepProvider.notifier).save(),
+      // Una academia que enseña fútbol: ¿categorías, técnicos y canchas?
+      beforeNext: (after) async {
+        final suggestion = after?.terminologySuggestion;
+        if (suggestion != null && mounted) {
+          // Ya se guardó: el botón de atrás no sigue cargando.
+          setState(() => _saving = false);
+          await showTerminologySuggestion(context, suggestion);
+        }
+      },
+    );
     if (mounted) setState(() => _saving = false);
   }
 

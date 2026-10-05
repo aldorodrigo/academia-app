@@ -123,3 +123,15 @@ String formatPhone(String phone) {
   if (match == null) return phone;
   return '0${match[1]} ${match[2]} ${match[3]}';
 }
+
+/// Cantidad con su palabra en singular o plural: count(1, 'familia',
+/// 'familias') → "1 familia"; count(3, …) → "3 familias".
+String countOf(int n, String singular, String plural) =>
+    '$n ${n == 1 ? singular : plural}';
+
+/// "Temporada 2026" sin repetir la palabra si el nombre ya la trae
+/// ("Temporada 2026" no pasa a "Temporada Temporada 2026").
+String seasonLabel(String name) =>
+    name.trim().toLowerCase().startsWith('temporada')
+    ? name
+    : 'Temporada $name';

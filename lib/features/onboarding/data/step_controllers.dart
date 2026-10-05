@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
@@ -245,7 +248,47 @@ class GroupsStep {
 
   /// Categorías que todavía no tienen días.
   int get withoutSchedule => drafts.where((d) => d.withoutSchedule).length;
+
+  /// Lo que se está armando, para el borrador en la API (null si no hay nada).
+  Map<String, Object?>? toDraftJson() => programId == null || drafts.isEmpty
+      ? null
+      : {
+          'program_id': programId,
+          'ages': {'from': agesFrom, 'to': agesTo, 'span': agesSpan},
+          'levels': levels,
+          'capacity': capacity,
+          'groups': [for (final draft in drafts) draft.toJson()],
+        };
+
+  /// Retoma el borrador (de esta app, de otro dispositivo o del panel) si su
+  /// disciplina sigue existiendo; si no, null.
+  GroupsStep? withDraft(Map<String, dynamic> json) {
+    final id = json['program_id'];
+    if (id is! int || !programs.any((p) => p.id == id)) return null;
+    final ages = json['ages'] is Map ? json['ages'] as Map : const {};
+    final groups = ((json['groups'] as List?) ?? const [])
+        .map((g) => GroupDraft.fromJson(Map<String, dynamic>.from(g as Map)))
+        .toList();
+    if (groups.isEmpty) return null;
+    return copyWith(
+      programId: id,
+      drafts: groups,
+      agesFrom: ages['from'] as int?,
+      agesTo: ages['to'] as int?,
+      agesSpan: ages['span'] as int?,
+      levels: json['levels'] is List
+          ? List<String>.from(json['levels'] as List)
+          : null,
+      capacity: json['capacity'] as int?,
+    );
+  }
 }
+
+/// Cuánto se espera después del último cambio para guardar el borrador del
+/// paso 2 (cero en los tests: se guarda enseguida).
+final draftSaveDelayProvider = Provider<Duration>(
+  (_) => const Duration(milliseconds: 800),
+);
 
 class GroupsStepController extends AsyncNotifier<GroupsStep> {
   OnboardingRepository get _repository =>
@@ -253,6 +296,7 @@ class GroupsStepController extends AsyncNotifier<GroupsStep> {
 
   @override
   Future<GroupsStep> build() async {
+    _keepDraft();
     final templates = await ref.watch(onboardingTemplatesProvider.future);
     final programs = await _repository.programs();
     final groups = await _repository.groups();
@@ -269,6 +313,11 @@ class GroupsStepController extends AsyncNotifier<GroupsStep> {
       // Con una sola cancha, se sugiere en todos los horarios.
       lastVenueId: spaces.length == 1 ? spaces.first.id : null,
     );
+    // Lo que quedó a medio armar (acá o en el panel) sigue donde estaba.
+    final saved = await _savedDraft();
+    final resumed = saved == null ? null : step.withDraft(saved);
+    if (resumed != null) return resumed;
+
     final first = programs.where((p) => step.groupsOf(p.id).isEmpty);
     final program = first.isNotEmpty
         ? first.first
@@ -281,6 +330,56 @@ class GroupsStepController extends AsyncNotifier<GroupsStep> {
   }
 
   GroupsStep? get _step => state.value;
+
+  Future<Map<String, dynamic>?> _savedDraft() async {
+    try {
+      return await _repository.groupsDraft();
+    } catch (_) {
+      return null; // Sin borrador (o sin red): se arranca de nuevo.
+    }
+  }
+
+  /// "Se guarda solo": cada cambio va a la API como borrador del paso (con
+  /// una pausa para no mandar cada tecla) y lo pendiente sale al irse.
+  void _keepDraft() {
+    final repository = _repository;
+    final delay = ref.read(draftSaveDelayProvider);
+    Timer? timer;
+    String? last;
+    Map<String, Object?>? pending;
+    var dirty = false;
+
+    void flush() {
+      timer?.cancel();
+      timer = null;
+      if (!dirty) return;
+      dirty = false;
+      unawaited(repository.saveGroupsDraft(pending).catchError((_) {}));
+    }
+
+    listenSelf((previous, next) {
+      final step = next.value;
+      if (step == null) return;
+      final draft = step.toDraftJson();
+      final encoded = jsonEncode(draft);
+      // Lo que se acaba de cargar no es un cambio.
+      if (previous?.value == null || last == null) {
+        last = encoded;
+        return;
+      }
+      if (encoded == last) return;
+      last = encoded;
+      pending = draft;
+      dirty = true;
+      if (delay == Duration.zero) {
+        flush();
+      } else {
+        timer?.cancel();
+        timer = Timer(delay, flush);
+      }
+    });
+    ref.onDispose(flush);
+  }
 
   Future<List<GroupDraft>> _suggest(GroupsStep step) async {
     final program = step.program;

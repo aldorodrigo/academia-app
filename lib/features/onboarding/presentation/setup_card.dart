@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../organizations/data/organization_repository.dart';
 import '../data/onboarding_controller.dart';
+import '../data/models.dart';
 import 'setup_steps.dart';
 import 'step_scaffold.dart';
+import 'terminology_suggestion_sheet.dart';
 
-/// La guía "Configurá tu club" dentro del inicio del administrador: la lista de
+/// La guía "Configurá tu club" (o academia, escuela…) dentro del inicio del administrador: la lista de
 /// pasos mientras esté incompleta; "Seguir después" la achica a una barra y
 /// "Seguir" la vuelve a abrir. Completa, desaparece.
 class SetupCard extends ConsumerWidget {
@@ -31,12 +34,27 @@ class SetupCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final onboarding = ref.watch(onboardingProvider).value;
-    if (onboarding == null || onboarding.completed) {
+    final suggestion = onboarding?.terminologySuggestion;
+    if (onboarding == null || (onboarding.completed && suggestion == null)) {
       return const SizedBox.shrink();
     }
 
     final theme = Theme.of(context);
+    // Completa pero sin contestar cómo les dicen: queda solo el recordatorio.
+    if (onboarding.completed) {
+      return Card(
+        key: const Key('setup-terminology-only'),
+        color: theme.colorScheme.primaryContainer,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: TerminologyReminder(suggestion: suggestion!),
+        ),
+      );
+    }
+
     final next = onboarding.nextStep;
+    final noun =
+        ref.watch(currentOrganizationProvider).value?.typeNoun ?? 'club';
     final progress = Row(
       children: [
         Expanded(
@@ -71,7 +89,7 @@ class SetupCard extends ConsumerWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Configurá tu club',
+                      'Configurá tu $noun',
                       style: theme.textTheme.titleMedium,
                     ),
                   ),
@@ -88,6 +106,8 @@ class SetupCard extends ConsumerWidget {
                 const SizedBox(height: 8),
                 Text('Sigue: ${next.title}'),
               ],
+              if (suggestion != null)
+                TerminologyReminder(suggestion: suggestion),
             ],
           ),
         ),
@@ -113,7 +133,7 @@ class SetupCard extends ConsumerWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Configurá tu club',
+                          'Configurá tu $noun',
                           style: theme.textTheme.titleMedium,
                         ),
                       ),
@@ -130,6 +150,7 @@ class SetupCard extends ConsumerWidget {
                 ],
               ),
             ),
+            if (suggestion != null) TerminologyReminder(suggestion: suggestion),
             for (final step in onboarding.steps)
               SetupStepTile(
                 step: step,
@@ -155,4 +176,24 @@ class SetupCard extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// "Elegí cómo les dicen": la propuesta de vocabulario que quedó sin contestar.
+class TerminologyReminder extends StatelessWidget {
+  const TerminologyReminder({super.key, required this.suggestion});
+
+  final TerminologySuggestion suggestion;
+
+  @override
+  Widget build(BuildContext context) => ListTile(
+    key: const Key('setup-terminology'),
+    leading: const Icon(Icons.translate_outlined),
+    title: const Text('Elegí cómo les dicen'),
+    subtitle: Text(
+      'En ${suggestion.programsText} se suele decir '
+      '${suggestion.suggestedText}.',
+    ),
+    trailing: const Icon(Icons.chevron_right),
+    onTap: () => showTerminologySuggestion(context, suggestion),
+  );
 }
