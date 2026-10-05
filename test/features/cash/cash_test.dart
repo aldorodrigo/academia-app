@@ -1011,7 +1011,16 @@ void main() {
       await tester.tap(find.text('Depositar'));
       await tester.pumpAndSettle();
       expect(find.text('Tenés ₲ 285.000 para depositar.'), findsOneWidget);
+      // Viene con todo lo disponible y se puede cambiar (N3).
+      final amount = find.byKey(const Key('deposit-amount'));
+      expect(tester.widget<TextFormField>(amount).controller!.text, '285000');
       expect(find.text('285000'), findsOneWidget);
+      expect(
+        find.text('Puesto: todo lo que tenés (₲ 285.000). Podés cambiarlo.'),
+        findsOneWidget,
+      );
+      await tester.enterText(amount, '200000');
+      await tester.pump();
 
       // Sin elegir la cuenta no se manda.
       await tester.tap(find.text('Informar depósito'));
@@ -1033,7 +1042,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(requests.firstWhere((r) => r.method == 'POST').data, {
-        'amount': 285000,
+        'amount': 200000,
         'money_account_id': 2,
         'deposited_on': '2026-10-04',
         'reference': '5521',
@@ -1068,7 +1077,24 @@ void main() {
       expect(find.text('Juan Pérez'), findsNWidgets(2));
       expect(find.textContaining('Ya no está en el club'), findsOneWidget);
 
+      // Confirmar pregunta antes (N4): cancelar no mueve nada.
+      const question =
+          '¿Confirmás que llegaron ₲ 300.000 de Juan Pérez a Banco Itaú? '
+          'Depositado el 04/10/2026 · Boleta 5521. '
+          'Se pasa a la cuenta del club y le avisamos.';
       await tester.tap(find.text('Confirmar'));
+      await tester.pumpAndSettle();
+      expect(find.text(question), findsOneWidget);
+      await tester.tap(find.text('Cancelar'));
+      await tester.pumpAndSettle();
+      expect(
+        requests.where((r) => r.path == '/cash-deposits/4/confirm'),
+        isEmpty,
+      );
+
+      await tester.tap(find.text('Confirmar'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('deposit-confirm-ok')));
       await tester.pumpAndSettle();
       expect(
         requests.map((r) => '${r.method} ${r.path}'),

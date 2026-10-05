@@ -31,6 +31,19 @@ class _GroupsStepScreenState extends ConsumerState<GroupsStepScreen>
   GroupsStepController get _controller => ref.read(groupsStepProvider.notifier);
 
   @override
+  void initState() {
+    super.initState();
+    // El cupo del borrador (de acá, de otro dispositivo o del panel) vuelve al
+    // campo; lo que se escribe va al estado y de ahí al borrador.
+    ref.listenManual(groupsStepProvider, (_, next) {
+      final capacity = next.value?.capacity;
+      if (parseAmount(_capacity.text) != capacity) {
+        _capacity.text = capacity?.toString() ?? '';
+      }
+    }, fireImmediately: true);
+  }
+
+  @override
   void dispose() {
     _capacity.dispose();
     super.dispose();

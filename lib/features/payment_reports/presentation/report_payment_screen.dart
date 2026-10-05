@@ -53,6 +53,7 @@ class _ReportForm extends ConsumerStatefulWidget {
 
 class _ReportFormState extends ConsumerState<_ReportForm> {
   final _formKey = GlobalKey<FormState>();
+  final _amountField = GlobalKey<FormFieldState<String>>();
   final _amount = TextEditingController();
   final _reference = TextEditingController();
   late final List<Charge> _charges = reportableCharges(widget.account);
@@ -93,10 +94,20 @@ class _ReportFormState extends ConsumerState<_ReportForm> {
     _amount.text = total > 0 ? '$total' : '';
   }
 
-  void _toggle(Charge charge, bool selected) => setState(() {
-    selected ? _selected.add(charge.id) : _selected.remove(charge.id);
-    _syncAmount();
-  });
+  void _toggle(Charge charge, bool selected) {
+    setState(() {
+      selected ? _selected.add(charge.id) : _selected.remove(charge.id);
+      _syncAmount();
+    });
+    _revalidateAmount();
+  }
+
+  /// Si el monto mostraba un error ("Ingresá el monto…"), se vuelve a revisar
+  /// cuando cambia (a mano o porque se eligieron cuotas).
+  void _revalidateAmount() {
+    final field = _amountField.currentState;
+    if (field != null && field.hasError) field.validate();
+  }
 
   Future<void> _pickDate() async {
     final today = ref.read(todayProvider);
@@ -194,23 +205,30 @@ class _ReportFormState extends ConsumerState<_ReportForm> {
             for (final charge in upcoming) _chargeTile(charge, showStudent),
           ],
           const SizedBox(height: 16),
-          TextFormField(
+          KeyedSubtree(
             key: const Key('report-amount'),
-            controller: _amount,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: InputDecoration(
-              labelText: 'Monto transferido',
-              prefixText: '₲ ',
-              helperText: reportAmountHint(
-                int.tryParse(_amount.text),
-                _selectedTotal,
+            child: TextFormField(
+              key: _amountField,
+              controller: _amount,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: InputDecoration(
+                labelText: 'Monto transferido',
+                prefixText: '₲ ',
+                helperText: reportAmountHint(
+                  int.tryParse(_amount.text),
+                  _selectedTotal,
+                ),
+                helperMaxLines: 3,
               ),
-              helperMaxLines: 3,
-            ),
-            validator: validateReportAmount,
-            onChanged: (value) => setState(
-              () => _amountEdited = amountEditedByHand(value, _selectedTotal),
+              validator: validateReportAmount,
+              onChanged: (value) {
+                setState(
+                  () =>
+                      _amountEdited = amountEditedByHand(value, _selectedTotal),
+                );
+                _revalidateAmount();
+              },
             ),
           ),
           const SizedBox(height: 16),

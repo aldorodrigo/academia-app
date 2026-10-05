@@ -625,6 +625,43 @@ void main() {
       },
     );
 
+    testWidgets('el error del monto se va cuando el monto cambia (N6)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _app(_routes(), const ReportPaymentScreen(), picked: _proof()),
+      );
+      await _settle(tester);
+
+      // Sin cuotas elegidas el monto queda vacío y "Enviar" marca el error.
+      await tester.tap(find.text('Sofía · Cuota septiembre 2026'));
+      await tester.tap(find.text('Mateo · Cuota agosto 2026'));
+      await tester.pump();
+      expect(find.text('150000'), findsNothing);
+      await _scrollTo(tester, find.text('Enviar comprobante'));
+      await tester.tap(find.text('Enviar comprobante'));
+      await tester.pump();
+      expect(find.text('Ingresá el monto que transferiste.'), findsOneWidget);
+
+      // Al tildar una cuota el monto se completa y el error se va.
+      await _scrollTo(tester, find.text('Mateo · Cuota agosto 2026'));
+      await tester.tap(find.text('Mateo · Cuota agosto 2026'));
+      await tester.pump();
+      expect(find.text('150000'), findsOneWidget);
+      expect(find.text('Ingresá el monto que transferiste.'), findsNothing);
+
+      // Y lo mismo escribiéndolo a mano.
+      await tester.enterText(find.byKey(const Key('report-amount')), '');
+      await tester.pump();
+      await _scrollTo(tester, find.text('Enviar comprobante'));
+      await tester.tap(find.text('Enviar comprobante'));
+      await tester.pump();
+      expect(find.text('Ingresá el monto que transferiste.'), findsOneWidget);
+      await tester.enterText(find.byKey(const Key('report-amount')), '90000');
+      await tester.pump();
+      expect(find.text('Ingresá el monto que transferiste.'), findsNothing);
+    });
+
     testWidgets('el monto cambiado a mano no se pisa', (tester) async {
       await tester.pumpWidget(
         _app(_routes(), const ReportPaymentScreen(), picked: _proof()),

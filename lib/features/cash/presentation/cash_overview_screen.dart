@@ -49,6 +49,26 @@ class _OverviewView extends ConsumerWidget {
     CashDeposit deposit,
   ) async {
     final messenger = ScaffoldMessenger.of(context);
+    // Mueve la plata: se pregunta antes, con quién, cuánto, adónde y cuándo.
+    final sure = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Confirmar depósito'),
+        content: Text(confirmDepositQuestion(deposit)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            key: const Key('deposit-confirm-ok'),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Sí, llegó'),
+          ),
+        ],
+      ),
+    );
+    if (sure != true) return;
     try {
       await ref.read(cashRepositoryProvider).confirmDeposit(deposit.id);
       ref.invalidate(cashOverviewProvider);

@@ -55,23 +55,29 @@ class SetupCard extends ConsumerWidget {
     final next = onboarding.nextStep;
     final noun =
         ref.watch(currentOrganizationProvider).value?.typeNoun ?? 'club';
-    final progress = Row(
-      children: [
-        Expanded(
-          child: LinearProgressIndicator(
-            value: onboarding.total == 0
-                ? 0
-                : onboarding.done / onboarding.total,
-            minHeight: 6,
-            borderRadius: BorderRadius.circular(4),
+    // Nodo propio para el lector de pantalla ("1 de 4"), sin fundirse con el
+    // título ni con el recordatorio de la tarjeta.
+    final progress = Semantics(
+      container: true,
+      label: 'Progreso',
+      child: Row(
+        children: [
+          Expanded(
+            child: LinearProgressIndicator(
+              value: onboarding.total == 0
+                  ? 0
+                  : onboarding.done / onboarding.total,
+              minHeight: 6,
+              borderRadius: BorderRadius.circular(4),
+            ),
           ),
-        ),
-        const SizedBox(width: 12),
-        Text(
-          '${onboarding.done} de ${onboarding.total}',
-          style: theme.textTheme.labelLarge,
-        ),
-      ],
+          const SizedBox(width: 12),
+          Text(
+            '${onboarding.done} de ${onboarding.total}',
+            style: theme.textTheme.labelLarge,
+          ),
+        ],
+      ),
     );
 
     if (onboarding.dismissed) {
@@ -184,16 +190,22 @@ class TerminologyReminder extends StatelessWidget {
 
   final TerminologySuggestion suggestion;
 
+  /// Un botón propio para el lector de pantalla (con su título y el texto): la
+  /// tarjeta de la guía es un contenedor y, sin esto, lo fundía con el resto.
   @override
-  Widget build(BuildContext context) => ListTile(
-    key: const Key('setup-terminology'),
-    leading: const Icon(Icons.translate_outlined),
-    title: const Text('Elegí cómo les dicen'),
-    subtitle: Text(
-      'En ${suggestion.programsText} se suele decir '
-      '${suggestion.suggestedText}.',
+  Widget build(BuildContext context) => Semantics(
+    container: true,
+    button: true,
+    child: ListTile(
+      key: const Key('setup-terminology'),
+      leading: const Icon(Icons.translate_outlined),
+      title: const Text('Elegí cómo les dicen'),
+      subtitle: Text(
+        'En ${suggestion.programsText} se suele decir '
+        '${suggestion.suggestedText}.',
+      ),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => showTerminologySuggestion(context, suggestion),
     ),
-    trailing: const Icon(Icons.chevron_right),
-    onTap: () => showTerminologySuggestion(context, suggestion),
   );
 }

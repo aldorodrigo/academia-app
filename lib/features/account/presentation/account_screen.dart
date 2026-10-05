@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../auth/data/session_controller.dart';
+import '../../inbox/data/inbox_repository.dart';
 import '../../onboarding/data/onboarding_controller.dart';
 import '../../organizations/data/organization_repository.dart';
 import '../../organizations/presentation/roles_list.dart';
@@ -16,6 +17,7 @@ class AccountScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final organization = ref.watch(currentOrganizationProvider).value;
     final onboarding = ref.watch(onboardingProvider).value;
+    final unread = ref.watch(unreadNotificationsProvider);
     final teaches =
         (organization?.hasFeature('private_lessons') ?? false) &&
         (organization!.can('teach_lessons') ||
@@ -88,6 +90,23 @@ class AccountScreen extends ConsumerWidget {
             title: const Text('Inscribir a un hijo'),
             subtitle: const Text('El club revisa la solicitud'),
             onTap: () => context.go('/hijos/inscribir'),
+          ),
+          ListTile(
+            key: const Key('account-inbox'),
+            leading: Badge(
+              isLabelVisible: unread > 0,
+              label: Text('$unread'),
+              child: const Icon(Icons.inbox_outlined),
+            ),
+            title: const Text('Avisos'),
+            subtitle: Text(
+              unread == 0
+                  ? 'Lo que te mandó el club'
+                  : unread == 1
+                  ? '1 sin leer'
+                  : '$unread sin leer',
+            ),
+            onTap: () => context.push('/avisos'),
           ),
           ListTile(
             leading: const Icon(Icons.notifications_outlined),

@@ -155,6 +155,62 @@ class ManagedCharge {
   final bool canUnwaive;
 }
 
+/// A quién le llega el aviso de baja y por dónde (`notice.reach`, lo decide la
+/// API): `app` (tiene cuenta: le queda en "Avisos"), `push` (la app instalada
+/// con notificaciones), `mail` (correo). Sin canales no tiene la app: si tiene
+/// celular, se le manda por WhatsApp a mano.
+class NoticeReach {
+  const NoticeReach({
+    required this.name,
+    this.channels = const [],
+    this.phone,
+    this.whatsappPhone,
+  });
+
+  factory NoticeReach.fromJson(Map<String, dynamic> json) => NoticeReach(
+    name: json['name'] as String? ?? '',
+    channels: List<String>.from(json['channels'] as List? ?? const []),
+    phone: json['phone'] as String?,
+    whatsappPhone: json['whatsapp_phone'] as String?,
+  );
+
+  final String name;
+  final List<String> channels;
+  final String? phone;
+
+  /// Solo dígitos (`595981222333`), para el link `wa.me`.
+  final String? whatsappPhone;
+
+  bool get hasApp => channels.isNotEmpty;
+
+  bool get canWhatsApp => !hasApp && whatsappPhone != null;
+
+  /// "A Laura Benítez le llega en la app y por correo." / "Pedro Benítez no
+  /// tiene la app: no le llega."
+  String get description {
+    if (!hasApp) {
+      return '$name no tiene la app: no le llega.'
+          '${canWhatsApp ? ' Podés mandárselo por WhatsApp.' : ' Avisale por otro medio.'}';
+    }
+    final words = [
+      for (final channel in channels)
+        switch (channel) {
+          'app' => 'en la app',
+          'push' => 'como notificación en el celular',
+          'mail' => 'por correo',
+          _ => channel,
+        },
+    ];
+    final last = words.removeLast();
+    return 'A $name le llega ${words.isEmpty ? last : '${words.join(', ')} y $last'}.';
+  }
+
+  /// `wa.me` al celular con el mensaje ya escrito.
+  Uri whatsappUri(String message) => Uri.parse(
+    'https://wa.me/$whatsappPhone?text=${Uri.encodeComponent(message.trim())}',
+  );
+}
+
 /// Ficha del alumno para quien da de baja o condona (`GET staff/students/{id}`).
 class ManagedStudent {
   const ManagedStudent({
@@ -164,6 +220,7 @@ class ManagedStudent {
     this.enrollments = const [],
     this.noticeRecipients = 0,
     this.noticeMessage = '',
+    this.noticeReach = const [],
     this.charges,
     this.balance = 0,
   });
@@ -180,6 +237,9 @@ class ManagedStudent {
           .toList(),
       noticeRecipients: notice?['recipients'] as int? ?? 0,
       noticeMessage: notice?['message'] as String? ?? '',
+      noticeReach: ((notice?['reach'] as List?) ?? const [])
+          .map((r) => NoticeReach.fromJson(r as Map<String, dynamic>))
+          .toList(),
       charges: charges
           ?.map((c) => ManagedCharge.fromJson(c as Map<String, dynamic>))
           .toList(),
@@ -197,6 +257,9 @@ class ManagedStudent {
 
   /// Mensaje sugerido para la familia (amable, con las puertas abiertas).
   final String noticeMessage;
+
+  /// A quién le llega y por dónde (cada tutor y el alumno adulto con cuenta).
+  final List<NoticeReach> noticeReach;
 
   /// Solo con el permiso `waive_charges`.
   final List<ManagedCharge>? charges;

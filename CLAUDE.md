@@ -99,7 +99,9 @@ lib/
 - **Bajas y condonación** (`features/withdrawals/`, `academia-api/docs/PLAN_BAJAS.md`): avisos de baja del técnico
   ("Dejó de venir" en `/grupos/:id`) y del tutor ("Avisar que deja el club" en la ficha del hijo, `LeavingMenu`); quien
   tiene `withdraw_students` los ve en `DropoutReportsCard` y `/bajas`, y en `/alumnos/:id` (`ManageStudentScreen`) da la
-  baja (`WithdrawForm`: fecha, motivo y aviso a la familia prellenado y editable) o "Sigue viniendo"; con
+  baja (`WithdrawForm`: fecha, motivo y aviso a la familia prellenado y editable; dice a quién le llega y por dónde con
+  `notice.reach` de la API, `NoticeReach.description`, y a los tutores sin la app ofrece "Mandar por WhatsApp" con el
+  mensaje ya escrito, `urlLauncherProvider`) o "Sigue viniendo"; con
   `waive_charges` condona y deshace desde la cuenta del alumno. `WithdrawalsRepository`; estado `ChargeStatus.waived`.
 - **Fecha de hoy:** `todayProvider` y `nowProvider` (con hora) en `core/utils/clock.dart`, reemplazables en los tests.
 - **Asistencia** (técnico, permiso `take_attendance`): tarjeta "Hoy" en el inicio con las clases de sus grupos,
@@ -113,6 +115,11 @@ lib/
   `GET classes` y el detalle de cada clase; sin red devuelve lo guardado. Guardar sin red encola en
   `AttendanceOutbox` (una entrada por clase) y se envía al volver la señal (`connectivityProvider`), al volver a la app
   o con "Enviar ahora". Suspender y reprogramar requieren conexión. Al cerrar sesión se borra todo.
+- **Avisos** (`features/inbox/`, `/avisos`, desde "Mi cuenta" y `InboxCard` en el inicio si hay sin leer): la copia de
+  cada push o correo que le llegó a la cuenta en la organización activa (`GET me/notifications`, paginado, más nuevos
+  primero; `meta.unread`). Le llega aunque no tenga notificaciones ni correo. Tocar uno lo marca leído
+  (`POST me/notifications/{id}/read`) y abre su `route`; "Marcar todos como leídos". `inboxProvider`,
+  `unreadNotificationsProvider`.
 - **Notificaciones** (`/notificaciones`, desde "Mi cuenta"): hasta 3 avisos por clase para técnico y tutor
   (`GET/PUT me/notification-settings`). Los push `class_reminder` ("Sí, va" / "No va" por link firmado) y
   `class_today` ("Tomar asistencia") se dibujan con `flutter_local_notifications` (`core/push/class_notifications.dart`;
@@ -165,5 +172,11 @@ lib/
 - Estado con Riverpod; sin lógica de negocio en los widgets.
 - Todo repositorio recibe `Dio` y `SessionStorage` por constructor (testeable con fakes, ver `test/fakes.dart`).
 - Tests para redirecciones, repositorios y validaciones de formularios.
+- Accesibilidad: una fila tocable dentro de una tarjeta con otros textos (ej. `SetupCard`) va en
+  `Semantics(container: true, button: true)` para que el lector de pantalla la lea y active como botón propio (test con
+  `tester.ensureSemantics()` y `find.semantics`). En la web, el lector no lee el valor de un campo prellenado: repetilo
+  en el `helperText` si importa (ej. el monto de "Depositar").
+- Un formulario que marcó un error lo vuelve a validar cuando el campo cambia (ej. el monto de "Informar
+  transferencia" al tildar cuotas).
 - Nada se borra de verdad: lo que la app "borra" (retirar un comprobante o un depósito, cancelar una solicitud) la API
   lo archiva (soft delete) y guarda quién lo hizo; los cargos y pagos se anulan. Ver `academia-api/CLAUDE.md`.

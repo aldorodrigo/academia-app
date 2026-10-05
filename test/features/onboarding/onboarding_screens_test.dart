@@ -9,6 +9,7 @@ import 'package:academia_app/features/onboarding/data/step_controllers.dart';
 import 'package:academia_app/router.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -706,6 +707,9 @@ void main() {
           stored = null;
           return null;
         },
+        'POST /setup/groups': (_) => {
+          'data': [groupJson(3, 'Sub-8'), groupJson(4, 'Sub-10')],
+        },
       },
       location: '/configurar/categorias',
       requests: requests,
@@ -720,6 +724,11 @@ void main() {
       'Sub-10',
     ]);
     expect(stored!['program_id'], 1);
+
+    // El cupo también va al borrador (N2).
+    await tester.enterText(find.byKey(const Key('capacity')), '20');
+    await _settle(tester);
+    expect(stored!['capacity'], 20);
 
     await tester.tap(find.text('Siguiente: horarios'));
     await _settle(tester);
@@ -737,6 +746,14 @@ void main() {
 
     expect(find.text('Sub-8'), findsOneWidget);
     expect(find.text('Sub-12'), findsNothing);
+    // El cupo vuelve al campo.
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('capacity')))
+          .controller!
+          .text,
+      '20',
+    );
     expect(
       requests.where((r) => r.path == '/setup/groups/suggestions'),
       hasLength(1),
@@ -744,6 +761,20 @@ void main() {
     await tester.tap(find.text('Siguiente: horarios'));
     await _settle(tester);
     expect(find.text('Falta el horario'), findsOneWidget);
+
+    // Y se aplica al crear las categorías.
+    await tester.tap(find.textContaining('Crear 2 categorías'));
+    await _settle(tester);
+    final created = requests.lastWhere(
+      (r) => r.method == 'POST' && r.path == '/setup/groups',
+    );
+    expect(
+      [
+        for (final g in (created.data as Map)['groups'] as List)
+          (g as Map)['capacity'],
+      ],
+      [20, 20],
+    );
   });
 
   testWidgets('"Yo también doy clases" arranca sin ninguna y pide elegir', (
@@ -1303,6 +1334,63 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets(
+      'el recordatorio y cada paso son botones para el lector de pantalla (N7)',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        await _pumpApp(tester, {
+          ..._admin(
+            onboarding: () => onboardingJson(
+              programs: 'done',
+              groups: 'pending',
+              terminologySuggestion: sportSuggestionJson,
+            ),
+          ),
+          'GET /organization': (_) => academy(),
+        });
+        expect(find.byKey(const Key('setup-guide')), findsOneWidget);
+
+        // "Elegí cómo les dicen": un botón propio, con su texto, que se activa.
+        final reminder = find.semantics.byPredicate(
+          (node) =>
+              node.label.contains('Elegí cómo les dicen') &&
+              node.flagsCollection.isButton,
+        );
+        expect(reminder, findsOne);
+        expect(
+          reminder.evaluate().single.label,
+          contains('En fútbol se suele decir'),
+        );
+        expect(
+          reminder.evaluate().single.getSemanticsData().hasAction(
+            SemanticsAction.tap,
+          ),
+          isTrue,
+        );
+        // No queda fundido con la barra de progreso ni con la tarjeta.
+        expect(reminder.evaluate().single.label, isNot(contains('de 4')));
+
+        // Cada paso, también.
+        for (final title in ['¿Qué enseñan?', 'Categorías y horarios']) {
+          expect(
+            find.semantics.byPredicate(
+              (node) =>
+                  node.label.startsWith(title) &&
+                  node.flagsCollection.isButton &&
+                  node.getSemanticsData().hasAction(SemanticsAction.tap),
+            ),
+            findsOne,
+            reason: title,
+          );
+        }
+
+        tester.semantics.tap(reminder);
+        await _settle(tester);
+        expect(find.byKey(const Key('terminology-use')), findsOneWidget);
+        handle.dispose();
+      },
+    );
 
     testWidgets('sin propuesta sigue directo', (tester) async {
       final requests = <RequestOptions>[];

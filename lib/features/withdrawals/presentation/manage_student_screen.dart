@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/utils/clock.dart';
 import '../../../core/utils/format.dart';
+import '../../../core/utils/launcher.dart';
 import '../../billing/presentation/charge_tile.dart';
 import '../../organizations/data/organization_repository.dart';
 import '../data/models.dart';
@@ -233,7 +234,8 @@ class _ChargeRow extends ConsumerWidget {
 }
 
 /// Dar de baja: fecha, motivo y, si hay tutores con la app, el aviso a la familia (prellenado,
-/// amable y con las puertas abiertas; se puede cambiar antes de mandar).
+/// amable y con las puertas abiertas; se puede cambiar antes de mandar). Dice a quién le llega y
+/// por dónde (`notice.reach`) y, a los tutores sin la app, ofrece mandarlo por WhatsApp.
 class WithdrawForm extends ConsumerStatefulWidget {
   const WithdrawForm({
     super.key,
@@ -270,6 +272,11 @@ class _WithdrawFormState extends ConsumerState<WithdrawForm> {
   Widget build(BuildContext context) {
     final today = ref.watch(todayProvider);
     final recipients = widget.student.noticeRecipients;
+    final reach = widget.student.noticeReach;
+    final withoutApp = [
+      for (final person in reach)
+        if (person.canWhatsApp) person,
+    ];
 
     return Scaffold(
       appBar: AppBar(title: Text('Dar de baja a ${widget.student.firstName}')),
@@ -307,35 +314,50 @@ class _WithdrawFormState extends ConsumerState<WithdrawForm> {
             maxLength: 255,
           ),
           const SizedBox(height: 8),
-          if (recipients == 0)
-            const Text(
-              'No tiene tutores con la app: si querés avisarle a la familia, '
-              'hacelo por WhatsApp.',
-            )
-          else ...[
+          if (recipients > 0)
             SwitchListTile(
+              key: const Key('withdraw-notify'),
               contentPadding: EdgeInsets.zero,
               title: const Text('Avisar a la familia'),
-              subtitle: Text(
-                recipients == 1
-                    ? 'Le llega al tutor por la app y por correo.'
-                    : 'Les llega a los $recipients tutores por la app y por correo.',
-              ),
               value: _notify,
               onChanged: (value) => setState(() => _notify = value),
             ),
-            if (_notify)
-              TextField(
-                controller: _message,
-                decoration: const InputDecoration(
-                  labelText: 'Mensaje',
-                  helperText: 'Podés cambiarlo antes de mandarlo.',
-                ),
-                maxLines: 6,
-                minLines: 3,
-                maxLength: 1000,
+          // Lo que de verdad pasa: a quién le llega y por dónde.
+          for (final person in reach)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(person.description),
+            ),
+          if (reach.isEmpty)
+            const Text(
+              'No tiene tutores cargados: si querés avisarle a la familia, '
+              'hacelo por otro medio.',
+            ),
+          if (_notify || withoutApp.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            TextField(
+              key: const Key('withdraw-message'),
+              controller: _message,
+              decoration: const InputDecoration(
+                labelText: 'Mensaje',
+                helperText: 'Podés cambiarlo antes de mandarlo.',
               ),
+              maxLines: 6,
+              minLines: 3,
+              maxLength: 1000,
+            ),
           ],
+          for (final person in withoutApp)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                icon: const Icon(Icons.chat_outlined),
+                label: Text('Mandar por WhatsApp a ${person.name}'),
+                onPressed: () => ref.read(urlLauncherProvider)(
+                  person.whatsappUri(_message.text),
+                ),
+              ),
+            ),
           const SizedBox(height: 16),
           FilledButton(onPressed: _submit, child: const Text('Dar de baja')),
         ],

@@ -1,6 +1,7 @@
 import 'package:academia_app/core/api/api_client.dart';
 import 'package:academia_app/core/storage/session_storage.dart';
 import 'package:academia_app/core/utils/clock.dart';
+import 'package:academia_app/core/utils/launcher.dart';
 import 'package:academia_app/features/billing/data/models.dart';
 import 'package:academia_app/features/students/data/models.dart';
 import 'package:academia_app/features/students/presentation/student_screen.dart';
@@ -40,7 +41,10 @@ Map<String, Object?> chargeJson({
   'can_unwaive': canUnwaive,
 };
 
-Map<String, Object?> managedJson({bool withdrawn = false}) => {
+Map<String, Object?> managedJson({
+  bool withdrawn = false,
+  bool withPedro = false,
+}) => {
   'id': 9,
   'full_name': 'Matías Zárate',
   'first_name': 'Matías',
@@ -70,6 +74,22 @@ Map<String, Object?> managedJson({bool withdrawn = false}) => {
     'message':
         'Hola, te contamos que registramos la baja de Matías en Club Jakare. '
         'Las puertas siempre van a estar abiertas.',
+    // Rosa usa la app web, sin notificaciones ni correo verificado.
+    'reach': [
+      {
+        'name': 'Rosa Zárate',
+        'channels': ['app'],
+        'phone': null,
+        'whatsapp_phone': null,
+      },
+      if (withPedro)
+        {
+          'name': 'Pedro Zárate',
+          'channels': <String>[],
+          'phone': '0981 222 333',
+          'whatsapp_phone': '595981222333',
+        },
+    ],
   },
   'balance': 300000,
   'charges': [
@@ -144,6 +164,8 @@ Widget _app(
   Widget home, {
   List<String> permissions = const ['withdraw_students', 'waive_charges'],
   List<RequestOptions>? requests,
+  Map<String, Object?>? student,
+  List<Uri>? launched,
 }) => ProviderScope(
   overrides: [
     sessionStorageProvider.overrideWithValue(
@@ -152,9 +174,16 @@ Widget _app(
         ..organization = 'jakare',
     ),
     apiClientProvider.overrideWithValue(
-      fakeDio(_routes(permissions: permissions), requests: requests),
+      fakeDio(
+        _routes(permissions: permissions, student: student),
+        requests: requests,
+      ),
     ),
     todayProvider.overrideWithValue(DateTime(2026, 6, 3)),
+    urlLauncherProvider.overrideWithValue((uri) async {
+      launched?.add(uri);
+      return true;
+    }),
   ],
   child: MaterialApp(home: home),
 );
@@ -278,6 +307,65 @@ void main() {
     expect(
       find.text('Baja registrada. Le avisamos a la familia.'),
       findsOneWidget,
+    );
+  });
+
+  testWidgets(
+    'dice a quién le llega y ofrece WhatsApp a quien no tiene la app (N1)',
+    (tester) async {
+      tester.view.physicalSize = const Size(800, 2000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final launched = <Uri>[];
+      await tester.pumpWidget(
+        _app(
+          const ManageStudentScreen(id: 9),
+          student: managedJson(withPedro: true),
+          launched: launched,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Dar de baja'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('A Rosa Zárate le llega en la app.'), findsOneWidget);
+      expect(
+        find.text(
+          'Pedro Zárate no tiene la app: no le llega. Podés mandárselo por WhatsApp.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.textContaining('por la app y por correo'), findsNothing);
+
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Mensaje'),
+        'Hola, ¡gracias!',
+      );
+      await tester.tap(find.text('Mandar por WhatsApp a Pedro Zárate'));
+      await tester.pump();
+      expect(
+        launched.single.toString(),
+        'https://wa.me/595981222333?text=Hola%2C%20%C2%A1gracias!',
+      );
+
+      // Sin avisar por la app, el mensaje sigue para WhatsApp.
+      await tester.tap(find.byType(Switch));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(TextField, 'Mensaje'), findsOneWidget);
+    },
+  );
+
+  test('cómo se dice cada canal', () {
+    NoticeReach reach(List<String> channels) =>
+        NoticeReach(name: 'Laura Benítez', channels: channels);
+    expect(reach(['app']).description, 'A Laura Benítez le llega en la app.');
+    expect(
+      reach(['app', 'push', 'mail']).description,
+      'A Laura Benítez le llega en la app, como notificación en el celular y por correo.',
+    );
+    expect(
+      reach([]).description,
+      'Laura Benítez no tiene la app: no le llega. Avisale por otro medio.',
     );
   });
 

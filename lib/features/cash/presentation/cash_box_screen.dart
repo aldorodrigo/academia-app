@@ -286,9 +286,15 @@ class _DepositSheetState extends ConsumerState<DepositSheet> {
                 controller: _amount,
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: const InputDecoration(
+                // Viene con todo lo que tiene para depositar; se puede cambiar.
+                // (El texto de ayuda lo repite: en la web, el lector de
+                // pantalla no lee el valor del campo.)
+                decoration: InputDecoration(
                   labelText: 'Monto',
                   prefixText: '₲ ',
+                  helperText:
+                      'Puesto: todo lo que tenés '
+                      '(${formatMoney(widget.box.available)}). Podés cambiarlo.',
                 ),
                 validator: (v) =>
                     validateDepositAmount(v, widget.box.available),

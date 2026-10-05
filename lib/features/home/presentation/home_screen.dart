@@ -9,6 +9,7 @@ import '../../billing/presentation/account_summary_card.dart';
 import '../../enrollment/data/enrollment_repository.dart';
 import '../../enrollment/presentation/enrollment_requests_card.dart';
 import '../../enrollment/presentation/my_requests.dart';
+import '../../inbox/presentation/inbox_screen.dart';
 import '../../lessons/presentation/lessons_card.dart';
 import '../../lessons/presentation/today_lessons_card.dart';
 import '../../onboarding/presentation/setup_card.dart';
@@ -58,6 +59,8 @@ class HomeScreen extends ConsumerWidget {
           // La guía del administrador, arriba de todo hasta completarla.
           const SetupCard(),
           const QuickActionsBar(),
+          // Avisos sin leer (la copia de cada push y correo).
+          const InboxCard(),
           const TodayClassesCard(),
           const TodayLessonsCard(),
           const PaymentReportsCard(),

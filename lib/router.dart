@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'core/theme/brand.dart';
 import 'features/account/presentation/account_screen.dart';
+import 'features/inbox/presentation/inbox_screen.dart';
 import 'features/attendance/presentation/class_attendance_screen.dart';
 import 'features/attendance/presentation/group_screen.dart';
 import 'features/attendance/presentation/groups_screen.dart';
@@ -242,6 +243,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/notificaciones',
         builder: (_, _) => const NotificationSettingsScreen(),
       ),
+      GoRoute(path: '/avisos', builder: (_, _) => const InboxScreen()),
       GoRoute(
         path: '/grupos',
         builder: (_, _) => const GroupsScreen(),
