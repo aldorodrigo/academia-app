@@ -14,10 +14,10 @@ class QuickAction {
   final String route;
 }
 
-/// Los botones según lo que hace cada uno en la organización: el técnico, sus
-/// grupos; la comisión, los comprobantes y los informes; la familia, su estado
-/// de cuenta y sus reservas; el profesor de clases particulares, su agenda y sus
-/// alumnos.
+/// Los botones según lo que hace cada uno en la organización: todos, el
+/// calendario; el técnico, sus grupos; la comisión, los comprobantes y los
+/// informes; la familia, su estado de cuenta y sus reservas; el profesor de
+/// clases particulares, su agenda y sus alumnos.
 List<QuickAction> quickActionsFor(
   OrganizationDetails? organization, {
   required bool hasStudents,
@@ -26,6 +26,11 @@ List<QuickAction> quickActionsFor(
   final family = organization.hasRole('tutor') || hasStudents;
 
   return [
+    const QuickAction(
+      'Calendario',
+      Icons.calendar_month_outlined,
+      '/calendario',
+    ),
     if (organization.can('take_attendance'))
       const QuickAction('Mis grupos', Icons.groups_outlined, '/grupos'),
     if (family)
@@ -41,11 +46,7 @@ List<QuickAction> quickActionsFor(
         '/reservas',
       ),
     if (organization.can('teach_lessons')) ...const [
-      QuickAction(
-        'Agenda',
-        Icons.calendar_month_outlined,
-        '/particulares/agenda',
-      ),
+      QuickAction('Agenda', Icons.event_note_outlined, '/particulares/agenda'),
       QuickAction(
         'Alumnos particulares',
         Icons.school_outlined,

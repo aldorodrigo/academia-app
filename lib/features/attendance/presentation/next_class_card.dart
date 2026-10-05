@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/utils/clock.dart';
@@ -16,7 +17,18 @@ class NextClassesList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final agenda = ref.watch(agendaProvider).value ?? const [];
-    return Column(children: [for (final item in agenda) NextClassCard(item)]);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        for (final item in agenda) NextClassCard(item),
+        if (agenda.isNotEmpty)
+          TextButton.icon(
+            onPressed: () => context.push('/calendario'),
+            icon: const Icon(Icons.calendar_month_outlined),
+            label: const Text('Ver calendario'),
+          ),
+      ],
+    );
   }
 }
 

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/push/push_service.dart';
+import '../../calendar/data/calendar_providers.dart';
 import '../../students/data/students_repository.dart';
 import 'attendance_repository.dart';
 
@@ -35,6 +36,7 @@ class GuardianActions {
   }) async {
     await _repository.respond(classId, studentId, going: going);
     _ref.invalidate(agendaProvider);
+    _ref.invalidate(calendarProvider);
   }
 
   /// Guarda la preferencia; al activarla pide permiso de notificaciones.
