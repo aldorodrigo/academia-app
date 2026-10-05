@@ -88,6 +88,9 @@ const _months = [
   'Diciembre',
 ];
 
+/// Nombre del mes en minúscula: 10 → "octubre".
+String monthName(int month) => _months[(month - 1) % 12].toLowerCase();
+
 /// Período mensual de la API: "2026-09" → "Septiembre 2026".
 String formatPeriod(String period) {
   final parts = period.split('-');

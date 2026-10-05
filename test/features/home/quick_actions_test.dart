@@ -26,28 +26,32 @@ List<String> _labels(
 void main() {
   test('cada uno ve los botones de lo suyo', () {
     expect(_labels(null), isEmpty);
-    expect(_labels(_organization()), isEmpty);
+    // El calendario es para todos.
+    expect(_labels(_organization()), ['Calendario']);
 
     // Técnico.
     expect(
       _labels(
         _organization(roles: ['instructor'], permissions: ['take_attendance']),
       ),
-      ['Mis grupos'],
+      ['Calendario', 'Mis grupos'],
     );
 
     // Tutor con clases particulares.
     expect(
       _labels(_organization(roles: ['tutor'], features: ['private_lessons'])),
-      ['Estado de cuenta', 'Mis reservas'],
+      ['Calendario', 'Estado de cuenta', 'Mis reservas'],
     );
     // Alumno adulto (sin rol de tutor, con inscripciones propias).
-    expect(_labels(_organization(), hasStudents: true), ['Estado de cuenta']);
+    expect(_labels(_organization(), hasStudents: true), [
+      'Calendario',
+      'Estado de cuenta',
+    ]);
 
     // Profesor de particulares y comisión.
     expect(
       _labels(_organization(permissions: ['teach_lessons', 'view_reports'])),
-      ['Agenda', 'Alumnos particulares', 'Informes'],
+      ['Calendario', 'Agenda', 'Alumnos particulares', 'Informes'],
     );
 
     // Tesorero: valida comprobantes y ve informes.
@@ -58,7 +62,7 @@ void main() {
           permissions: ['view_reports', 'review_payment_reports'],
         ),
       ),
-      ['Comprobantes', 'Informes'],
+      ['Calendario', 'Comprobantes', 'Informes'],
     );
   });
 }

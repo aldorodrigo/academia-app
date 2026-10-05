@@ -108,7 +108,18 @@ lib/
   `step_controllers.dart`) → `/configurar/listo`. No se abre sola. La API decide todo (pasos hechos,
   sugerencias de categorías, fechas y montos de la temporada): la app no calcula.
 - **Botones del inicio:** `QuickActionsBar` con `quickActionsFor()` (`features/home/data/quick_actions.dart`) según
-  permisos y roles: Mis grupos, Estado de cuenta, Mis reservas, Agenda, Alumnos particulares, Informes.
+  permisos y roles: Calendario (todos), Mis grupos, Estado de cuenta, Mis reservas, Agenda, Alumnos particulares,
+  Informes.
+- **Calendario de actividades** (`features/calendar/`, plan en `academia-api/docs/PLAN_CALENDARIO.md`): `/calendario`
+  (`GET calendar?from&to`, grilla de 6 semanas con `gridRange`) junta clases, recuperaciones, suspendidas, particulares,
+  eventos y días sin clase; mes plegable a semana, lista, dos paneles desde 840 px, filtros por hijo, grupo y tipo.
+  Marcas con forma y color (`CalendarMarkerDot`) y `Semantics` por día. Tocar una clase: el técnico va a `/clases/:id`,
+  el tutor ve `showClassEntrySheet` con "¿Lo llevás?". Quien tiene `publish_events` publica desde el botón "Publicar"
+  (`/calendario/nuevo?tipo=evento|sin_clase`, `EventFormController` con vista previa `POST events/preview`): eventos
+  solo informativos y días sin clase que suspenden las clases (la API decide cuáles). `/eventos/:id` (editar y
+  cancelar, nunca borrar) y `UpcomingEventsCard` en el inicio. `/calendario/sincronizar`: link personal de suscripción
+  iCal (`GET me/calendar-feed`) para Google Calendar, el Calendario de iPhone/Mac (webcal) u otros; se abre con
+  `urlLauncherProvider`, "Copiar link" y "Generar un link nuevo" (anula el anterior).
 - **Organización activa:** `currentOrganizationProvider` (`GET /organization`) da vocabulario
   (`term('group')`), módulos (`hasFeature`) y perfiles del usuario con mandato (`roles`).
 - **Contrato de API:** `academia-api/docs/API_V1.md`. La app se construye primero contra el

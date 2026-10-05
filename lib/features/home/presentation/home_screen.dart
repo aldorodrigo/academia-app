@@ -6,6 +6,7 @@ import '../../attendance/presentation/next_class_card.dart';
 import '../../attendance/presentation/today_classes_card.dart';
 import '../../auth/data/session_controller.dart';
 import '../../billing/presentation/account_summary_card.dart';
+import '../../calendar/presentation/upcoming_events_card.dart';
 import '../../lessons/presentation/lessons_card.dart';
 import '../../lessons/presentation/today_lessons_card.dart';
 import '../../onboarding/presentation/setup_card.dart';
@@ -53,6 +54,7 @@ class HomeScreen extends ConsumerWidget {
           // La guía del administrador, arriba de todo hasta completarla.
           const SetupCard(),
           const QuickActionsBar(),
+          const UpcomingEventsCard(),
           const TodayClassesCard(),
           const TodayLessonsCard(),
           const PaymentReportsCard(),

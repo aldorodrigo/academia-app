@@ -85,6 +85,22 @@ void main() {
     }
   });
 
+  test('calendario y eventos requieren sesión y organización', () {
+    for (final path in [
+      '/calendario',
+      '/calendario/nuevo',
+      '/eventos/7',
+      '/eventos/7/editar',
+    ]) {
+      expect(sessionRedirect(const AsyncData(null), path), '/ingresar');
+      expect(sessionRedirect(AsyncData(_session()), path), '/organizaciones');
+      expect(
+        sessionRedirect(AsyncData(_session(slug: 'jakare')), path),
+        isNull,
+      );
+    }
+  });
+
   test('el estado de cuenta requiere sesión', () {
     expect(
       sessionRedirect(const AsyncData(null), '/estado-de-cuenta'),
@@ -118,6 +134,26 @@ void main() {
       '/hijos/5',
     );
   });
+
+  test(
+    'el link directo conserva sus parámetros (ej. el día del calendario)',
+    () {
+      final redirect = sessionRedirect(
+        const AsyncLoading(),
+        '/calendario',
+        requested: '/calendario?fecha=2026-10-19',
+      );
+      expect(redirect, '/?from=%2Fcalendario%3Ffecha%3D2026-10-19');
+      expect(
+        sessionRedirect(
+          AsyncData(_session(slug: 'jakare')),
+          '/',
+          from: Uri.parse(redirect!).queryParameters['from'],
+        ),
+        '/calendario?fecha=2026-10-19',
+      );
+    },
+  );
 
   test('from solo acepta rutas internas', () {
     final session = AsyncData(_session(slug: 'jakare'));

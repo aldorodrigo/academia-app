@@ -9,6 +9,11 @@ import 'features/attendance/presentation/group_screen.dart';
 import 'features/attendance/presentation/groups_screen.dart';
 import 'features/auth/data/models.dart';
 import 'features/billing/presentation/balance_screen.dart';
+import 'features/calendar/data/models.dart';
+import 'features/calendar/presentation/calendar_screen.dart';
+import 'features/calendar/presentation/calendar_sync_screen.dart';
+import 'features/calendar/presentation/event_form_screen.dart';
+import 'features/calendar/presentation/event_screen.dart';
 import 'features/auth/data/session_controller.dart';
 import 'features/auth/presentation/create_account_screen.dart';
 import 'features/auth/presentation/forgot_password_screen.dart';
@@ -40,18 +45,23 @@ import 'features/students/presentation/students_screen.dart';
 /// Decide a dónde ir según el estado de la sesión.
 ///
 /// Mientras se restaura la sesión se espera en `/`, recordando la ruta pedida
-/// en `from` (link directo o recarga en la web) para volver ahí después.
+/// en `from` (link directo o recarga en la web) para volver ahí después, con
+/// sus parámetros ([requested], ej. `/calendario?fecha=2026-10-19`).
 String? sessionRedirect(
   AsyncValue<Session?> session,
   String location, {
   String? from,
+  String? requested,
 }) {
   // Las invitaciones se abren con o sin sesión (link o QR).
   if (location.startsWith('/invitacion')) return null;
 
   if (session.isLoading) {
     if (location == '/') return null;
-    return Uri(path: '/', queryParameters: {'from': location}).toString();
+    return Uri(
+      path: '/',
+      queryParameters: {'from': requested ?? location},
+    ).toString();
   }
 
   final value = session.value;
@@ -104,6 +114,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ref.read(sessionControllerProvider),
       state.matchedLocation,
       from: state.uri.queryParameters['from'],
+      requested: state.uri.toString(),
     ),
     routes: [
       GoRoute(path: '/', builder: (_, _) => const TukuSplash()),
@@ -202,6 +213,41 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: ':id',
             builder: (_, state) =>
                 GroupScreen(id: int.parse(state.pathParameters['id']!)),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/calendario',
+        builder: (_, state) => CalendarScreen(
+          initialDate: DateTime.tryParse(
+            state.uri.queryParameters['fecha'] ?? '',
+          ),
+          studentId: int.tryParse(state.uri.queryParameters['alumno'] ?? ''),
+        ),
+        routes: [
+          GoRoute(
+            path: 'sincronizar',
+            builder: (_, _) => const CalendarSyncScreen(),
+          ),
+          GoRoute(
+            path: 'nuevo',
+            builder: (_, state) => EventFormScreen(
+              kind: EventKind.parse(state.uri.queryParameters['tipo']),
+              date: DateTime.tryParse(state.uri.queryParameters['fecha'] ?? ''),
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/eventos/:id',
+        builder: (_, state) =>
+            EventScreen(id: int.parse(state.pathParameters['id']!)),
+        routes: [
+          GoRoute(
+            path: 'editar',
+            builder: (_, state) => EventFormScreen(
+              eventId: int.parse(state.pathParameters['id']!),
+            ),
           ),
         ],
       ),
