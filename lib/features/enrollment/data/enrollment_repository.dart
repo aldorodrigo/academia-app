@@ -40,6 +40,7 @@ class EnrollmentRepository {
         'birth_date': apiDate(draft.birthDate),
         'document': document,
         'relationship': draft.relationship.value,
+        if (draft.gender != null) 'gender': draft.gender!.value,
         'season_id': draft.seasonId,
         'group_id': draft.groupId,
         if (notes.isNotEmpty) 'notes': notes,
@@ -119,6 +120,7 @@ class EnrollmentRepository {
         'document': draft.document.trim(),
         'season_id': draft.seasonId,
         'group_id': draft.groupId,
+        if (draft.gender != null) 'gender': draft.gender!.value,
         'guardian': draft.guardian.toJson(),
       },
     );

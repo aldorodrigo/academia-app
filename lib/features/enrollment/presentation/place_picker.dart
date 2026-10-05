@@ -5,6 +5,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/utils/format.dart';
 import '../data/models.dart';
 import '../data/request_form.dart';
+import '../../../core/vocabulary/vocabulary.dart';
 
 /// La opción elegida (disciplina y temporada) dentro de las que trajo la API.
 EnrollmentOption? selectedOption(List<EnrollmentOption>? loaded, int index) =>
@@ -22,7 +23,8 @@ class PlacePicker extends StatelessWidget {
     required this.optionIndex,
     required this.groupId,
     required this.showError,
-    required this.groupTerm,
+    required this.group,
+    required this.organization,
     required this.today,
     required this.onOptionChanged,
     required this.onGroupChanged,
@@ -35,7 +37,10 @@ class PlacePicker extends StatelessWidget {
   /// `null` = la que se elige sola (la sugerida o la única).
   final int? groupId;
   final bool showError;
-  final String groupTerm;
+
+  /// La palabra del club para los grupos ("Categoría") y qué es la organización ("club", "academia").
+  final Word group;
+  final Word organization;
   final DateTime today;
   final ValueChanged<int> onOptionChanged;
   final ValueChanged<int?> onGroupChanged;
@@ -51,7 +56,7 @@ class PlacePicker extends StatelessWidget {
     if (options == null) {
       return [
         Text(
-          'Con la fecha de nacimiento te sugerimos la ${groupTerm.toLowerCase()}.',
+          'Con la fecha de nacimiento te sugerimos ${group.the()}.',
           style: theme.textTheme.bodySmall,
         ),
       ];
@@ -62,9 +67,10 @@ class PlacePicker extends StatelessWidget {
     final loaded = options.value!;
     final option = selectedOption(loaded, optionIndex);
     if (option == null) {
-      return const [
+      return [
         Text(
-          'El club todavía no tiene inscripciones abiertas. Consultá con el club.',
+          '${organization.theUpper()} todavía no tiene inscripciones '
+          'abiertas. Consultá con ${organization.the()}.',
         ),
       ];
     }
@@ -87,7 +93,7 @@ class PlacePicker extends StatelessWidget {
         const SizedBox(height: 8),
       ],
       Text(
-        '$groupTerm · ${option.program.name}',
+        '${group.word} · ${option.program.name}',
         style: theme.textTheme.titleSmall,
       ),
       if (option.season.startsAfter(today))
@@ -96,7 +102,10 @@ class PlacePicker extends StatelessWidget {
           style: theme.textTheme.bodySmall,
         ),
       if (option.groups.isEmpty)
-        const Text('Todavía no hay categorías abiertas.'),
+        Text(
+          'Todavía no hay ${group.pluralLower} '
+          '${group.g('abiertos', 'abiertas')}.',
+        ),
       RadioGroup<int>(
         groupValue: groupId ?? option.defaultGroupId,
         onChanged: onGroupChanged,
@@ -114,7 +123,7 @@ class PlacePicker extends StatelessWidget {
       ),
       if (showError)
         Text(
-          validateGroup(null)!,
+          validateGroup(null, group)!,
           style: TextStyle(color: theme.colorScheme.error),
         ),
     ];
@@ -128,7 +137,7 @@ class PlacePicker extends StatelessWidget {
             .map((s) => '${weekdayShort(s.weekday)} ${s.startsAt}')
             .join(', '),
       if (group.full)
-        'Completo: el club decide si hay lugar'
+        'Completo: ${organization.the()} decide si hay lugar'
       else
         ?group.spotsLabel,
     ];

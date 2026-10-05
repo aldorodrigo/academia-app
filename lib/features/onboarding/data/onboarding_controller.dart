@@ -5,6 +5,8 @@ import '../../auth/data/session_controller.dart';
 import '../../organizations/data/organization_repository.dart';
 import 'models.dart';
 import 'onboarding_repository.dart';
+import '../../../core/vocabulary/vocabulary.dart';
+import '../../organizations/data/models.dart' show typeNounFor;
 
 /// Plantillas del alta y de la guía (no cambian durante la sesión).
 final onboardingTemplatesProvider = FutureProvider<OnboardingTemplates>(
@@ -125,7 +127,9 @@ class ClubDraft {
       'y ${pluralize(term('group')).toLowerCase()}';
 
   String? validate() {
-    if (name.trim().length < 3) return 'Ingresá el nombre del club.';
+    if (name.trim().length < 3) {
+      return 'Ingresá el nombre ${Word.of(typeNounFor(type)).of()}.';
+    }
     if (slug == null) return 'Esperá a que revisemos el nombre.';
     return null;
   }

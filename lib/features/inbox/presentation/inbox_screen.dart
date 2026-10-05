@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/utils/format.dart';
 import '../data/inbox_repository.dart';
+import '../../organizations/data/organization_repository.dart';
 
 /// `/avisos`: la bandeja con la copia de cada aviso (push y correo), los más
 /// nuevos primero. Le llega a toda cuenta, aunque no tenga notificaciones ni
@@ -64,10 +65,10 @@ class InboxScreen extends ConsumerWidget {
           data: (page) => page.items.isEmpty
               ? ListView(
                   padding: const EdgeInsets.all(24),
-                  children: const [
+                  children: [
                     Text(
                       'Todavía no tenés avisos. Acá van a quedar los que te '
-                      'mande el club.',
+                      'mande ${ref.watch(orgWordProvider).the()}.',
                     ),
                   ],
                 )

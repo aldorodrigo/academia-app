@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/utils/format.dart';
 import '../../billing/data/amount_hint.dart';
 import 'models.dart';
+import '../../../core/vocabulary/vocabulary.dart';
 
 /// Cuotas elegidas al abrir el cobro: las que hay que pagar ahora, salvo las
 /// que tienen una transferencia en revisión. Las próximas, sin elegir.
@@ -50,13 +51,15 @@ String? validateDepositAccount(int? accountId) =>
 
 /// "¿Confirmás que llegaron ₲ 300.000 de Juan Pérez a Banco Itaú? Depositado el
 /// 04/10/2026 · Boleta 5521." (lo mismo que pregunta el panel).
-String confirmDepositQuestion(CashDeposit deposit) {
+/// [organization]: qué es ("la cuenta del club", "de la academia").
+String confirmDepositQuestion(CashDeposit deposit, [Word? organization]) {
   final who = deposit.holderName == null ? '' : ' de ${deposit.holderName}';
   final where = deposit.account == null ? '' : ' a ${deposit.account!.name}';
   return '¿Confirmás que llegaron ${formatMoney(deposit.amount)}$who$where? '
       'Depositado el ${formatDate(deposit.depositedOn)}'
       '${deposit.reference == null ? '' : ' · ${deposit.reference}'}. '
-      'Se pasa a la cuenta del club y le avisamos.';
+      'Se pasa a la cuenta ${(organization ?? Word.of('club')).of()} y le '
+      'avisamos.';
 }
 
 String? validateDepositRejection(String? value) =>

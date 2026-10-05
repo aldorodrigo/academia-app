@@ -11,6 +11,7 @@ import '../../organizations/data/organization_repository.dart';
 import '../data/models.dart';
 import '../data/withdrawals_repository.dart';
 import 'dropout_reports.dart';
+import '../../../core/vocabulary/vocabulary.dart';
 
 /// `/alumnos/:id`: ficha para quien da de baja (`withdraw_students`) o condona (`waive_charges`).
 /// Inscripciones con "Dar de baja" y "Sigue viniendo"; cuenta con "Condonar" y "Deshacer".
@@ -101,7 +102,10 @@ class _Details extends ConsumerWidget {
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
-                        describeReport(enrollment.dropoutReport!),
+                        describeReport(
+                          enrollment.dropoutReport!,
+                          ref.watch(orgWordProvider),
+                        ),
                         style: TextStyle(color: theme.colorScheme.tertiary),
                       ),
                     ),
@@ -251,6 +255,10 @@ class WithdrawForm extends ConsumerStatefulWidget {
 }
 
 class _WithdrawFormState extends ConsumerState<WithdrawForm> {
+  Word get _guardian =>
+      ref.watch(currentOrganizationProvider).value?.word('guardian') ??
+      Word.of('Tutor');
+
   late final _reason = TextEditingController(
     text: widget.enrollment.dropoutReport?.note,
   );
@@ -308,7 +316,9 @@ class _WithdrawFormState extends ConsumerState<WithdrawForm> {
             controller: _reason,
             decoration: InputDecoration(
               labelText: 'Motivo',
-              hintText: 'Ej.: se mudó, dejó de venir, cambió de club',
+              hintText:
+                  'Ej.: se mudó, dejó de venir, cambió de '
+                  '${ref.watch(orgWordProvider).word}',
               errorText: _reasonError,
             ),
             maxLength: 255,
@@ -329,9 +339,10 @@ class _WithdrawFormState extends ConsumerState<WithdrawForm> {
               child: Text(person.description),
             ),
           if (reach.isEmpty)
-            const Text(
-              'No tiene tutores cargados: si querés avisarle a la familia, '
-              'hacelo por otro medio.',
+            Text(
+              'No tiene ${_guardian.pluralLower} '
+              '${_guardian.g('cargados', 'cargadas')}: si querés avisarle a la '
+              'familia, hacelo por otro medio.',
             ),
           if (_notify || withoutApp.isNotEmpty) ...[
             const SizedBox(height: 8),

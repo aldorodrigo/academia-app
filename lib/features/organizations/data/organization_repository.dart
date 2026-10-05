@@ -5,6 +5,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/storage/session_storage.dart';
 import '../../auth/data/session_controller.dart';
 import 'models.dart';
+import '../../../core/vocabulary/vocabulary.dart';
 
 class OrganizationRepository {
   OrganizationRepository(this._dio, this._storage);
@@ -24,12 +25,16 @@ class OrganizationRepository {
 
   /// Cambia cómo les dicen (`PUT organization/terminology`); vacío = solo
   /// confirma lo que hay ("Dejar como estaba"). Devuelve el vocabulario entero.
+  ///
+  /// [feminine]: formas para nombrar a una mujer cuando la regla no alcanza (`{"instructor": "Entrenadora"}`;
+  /// vacía = la de la regla). null = no se tocan.
   Future<Map<String, String>> updateTerminology(
-    Map<String, String> terminology,
-  ) async {
+    Map<String, String> terminology, {
+    Map<String, String>? feminine,
+  }) async {
     final response = await _dio.put<Map<String, dynamic>>(
       '/organization/terminology',
-      data: {'terminology': terminology},
+      data: {'terminology': terminology, 'feminine': ?feminine},
     );
     final data = response.data!['data'] as Map<String, dynamic>;
     return Map<String, String>.from(data['terminology'] as Map? ?? const {});
@@ -44,6 +49,11 @@ final organizationRepositoryProvider = Provider<OrganizationRepository>(
 );
 
 /// Se vuelve a pedir cada vez que cambia la organización elegida.
+/// Qué es la organización activa, para concordar: ref.watch(orgWordProvider).the() → "la academia".
+final orgWordProvider = Provider<Word>(
+  (ref) => ref.watch(currentOrganizationProvider).value?.org ?? Word.of('club'),
+);
+
 final currentOrganizationProvider = FutureProvider<OrganizationDetails?>((
   ref,
 ) async {

@@ -7,6 +7,7 @@ import '../../../core/utils/format.dart';
 import '../../organizations/data/organization_repository.dart';
 import '../data/models.dart';
 import '../data/withdrawals_repository.dart';
+import '../../../core/vocabulary/vocabulary.dart';
 
 /// Tarjeta del inicio para quien da de baja: avisos del técnico o del tutor sin decidir.
 class DropoutReportsCard extends ConsumerWidget {
@@ -34,7 +35,8 @@ class DropoutReportsCard extends ConsumerWidget {
         title: const Text('Avisos de baja'),
         subtitle: Text(
           reports.length == 1
-              ? '${reports.single.studentName} · ${reports.single.summary}'
+              ? '${reports.single.studentName} · '
+                    '${reports.single.summaryFor(ref.watch(orgWordProvider))}'
               : '${reports.length} para decidir',
         ),
         trailing: const Icon(Icons.chevron_right),
@@ -82,7 +84,8 @@ class DropoutReportsScreen extends ConsumerWidget {
                     ),
                     subtitle: Text(
                       [
-                        '${report.summary} (${formatDate(report.reportedOn)})',
+                        '${report.summaryFor(ref.watch(orgWordProvider))} '
+                            '(${formatDate(report.reportedOn)})',
                         if (report.note != null) '«${report.note}»',
                       ].join('\n'),
                     ),
@@ -102,9 +105,16 @@ class DropoutReportsScreen extends ConsumerWidget {
 
 /// Mensaje al tutor que avisa que su hijo deja el club, o null si cancela.
 class LeavingDialog extends StatefulWidget {
-  const LeavingDialog({super.key, required this.name});
+  const LeavingDialog({
+    super.key,
+    required this.name,
+    required this.organization,
+  });
 
   final String name;
+
+  /// Qué es la organización ("el club", "la academia").
+  final Word organization;
 
   @override
   State<LeavingDialog> createState() => _LeavingDialogState();
@@ -121,20 +131,20 @@ class _LeavingDialogState extends State<LeavingDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: Text('¿${widget.name} deja el club?'),
+    title: Text('¿${widget.name} deja ${widget.organization.the()}?'),
     content: Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Le avisamos al club para que registre la baja. '
+        Text(
+          'Le avisamos ${widget.organization.to()} para que registre la baja. '
           'Lo que esté pendiente de pago sigue en tu estado de cuenta.',
         ),
         const SizedBox(height: 12),
         TextField(
           controller: _message,
-          decoration: const InputDecoration(
-            labelText: 'Mensaje para el club (opcional)',
+          decoration: InputDecoration(
+            labelText: 'Mensaje para ${widget.organization.the()} (opcional)',
             hintText: 'Ej.: nos mudamos, gracias por todo',
           ),
           maxLength: 500,
@@ -150,7 +160,7 @@ class _LeavingDialogState extends State<LeavingDialog> {
       ),
       FilledButton(
         onPressed: () => Navigator.pop(context, _message.text),
-        child: const Text('Avisar al club'),
+        child: Text('Avisar ${widget.organization.to()}'),
       ),
     ],
   );
@@ -243,6 +253,6 @@ class _ReasonDialogState extends State<_ReasonDialog> {
 }
 
 /// Para mostrar quién avisó en la ficha: "Carlos Gómez avisó que dejó de venir (03/06/2026)".
-String describeReport(DropoutReport report) =>
-    '${report.summary} (${formatDate(report.reportedOn)})'
+String describeReport(DropoutReport report, Word organization) =>
+    '${report.summaryFor(organization)} (${formatDate(report.reportedOn)})'
     '${report.note == null ? '' : ': «${report.note}»'}';

@@ -12,6 +12,8 @@ import '../data/models.dart';
 import '../data/request_form.dart';
 import '../../students/data/students_repository.dart';
 import 'place_picker.dart';
+import '../../../core/vocabulary/vocabulary.dart';
+import '../../../core/vocabulary/gender_choice.dart';
 
 /// El tutor pide la inscripción de un hijo: datos, dónde (la API sugiere la
 /// categoría por edad) y ficha médica opcional. Queda en revisión del club.
@@ -37,6 +39,7 @@ class _EnrollChildScreenState extends ConsumerState<EnrollChildScreen> {
   final _emergencyPhone = TextEditingController();
 
   Relationship _relationship = Relationship.mother;
+  Gender? _gender;
   DateTime? _birth;
   int _optionIndex = 0;
 
@@ -111,6 +114,7 @@ class _EnrollChildScreenState extends ConsumerState<EnrollChildScreen> {
               birthDate: _birth!,
               document: _document.text,
               relationship: _relationship,
+              gender: _gender,
               seasonId: option.season.id,
               groupId: groupId,
               notes: _notes.text,
@@ -143,14 +147,22 @@ class _EnrollChildScreenState extends ConsumerState<EnrollChildScreen> {
         title: const Text('Inscribir a un hijo'),
         leading: BackButton(onPressed: () => context.go('/inicio')),
       ),
-      body: sent != null ? _Sent(sent) : _form(context),
+      body: sent != null
+          ? _Sent(
+              sent,
+              organization:
+                  ref.watch(currentOrganizationProvider).value?.org ??
+                  Word.of('club'),
+            )
+          : _form(context),
     );
   }
 
   Widget _form(BuildContext context) {
     final today = ref.watch(todayProvider);
     final organization = ref.watch(currentOrganizationProvider).value;
-    final groupTerm = organization?.term('group') ?? 'Categoría';
+    final group = organization?.word('group') ?? Word.of('Categoría');
+    final org = organization?.org ?? Word.of('club');
     final birth = _birth;
     final options = birth == null
         ? null
@@ -164,8 +176,8 @@ class _EnrollChildScreenState extends ConsumerState<EnrollChildScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           Text(
-            'Completá los datos: tu hijo ya puede ir a las clases y el club '
-            'confirma la inscripción.',
+            'Completá los datos: tu hijo ya puede ir a las clases y '
+            '${org.the()} confirma la inscripción.',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 16),
@@ -229,7 +241,8 @@ class _EnrollChildScreenState extends ConsumerState<EnrollChildScreen> {
             optionIndex: _optionIndex,
             groupId: _groupId,
             showError: _showGroupError,
-            groupTerm: groupTerm,
+            group: group,
+            organization: org,
             today: today,
             onOptionChanged: (index) => setState(() {
               _optionIndex = index;
@@ -239,6 +252,11 @@ class _EnrollChildScreenState extends ConsumerState<EnrollChildScreen> {
               _groupId = id;
               _showGroupError = false;
             }),
+          ),
+          const SizedBox(height: 8),
+          GenderChoice(
+            value: _gender,
+            onChanged: (gender) => setState(() => _gender = gender),
           ),
           const SizedBox(height: 8),
           ExpansionTile(
@@ -284,8 +302,8 @@ class _EnrollChildScreenState extends ConsumerState<EnrollChildScreen> {
             controller: _notes,
             maxLines: 2,
             maxLength: 500,
-            decoration: const InputDecoration(
-              labelText: 'Algo que el club tenga que saber (opcional)',
+            decoration: InputDecoration(
+              labelText: 'Algo que ${org.the()} tenga que saber (opcional)',
             ),
           ),
           const SizedBox(height: 16),
@@ -308,9 +326,10 @@ class _EnrollChildScreenState extends ConsumerState<EnrollChildScreen> {
 
 /// "Listo": ya puede ir a clases; falta (o no) que el club la confirme.
 class _Sent extends StatelessWidget {
-  const _Sent(this.request);
+  const _Sent(this.request, {required this.organization});
 
   final EnrollmentRequest request;
+  final Word organization;
 
   @override
   Widget build(BuildContext context) {
@@ -342,7 +361,8 @@ class _Sent extends StatelessWidget {
                   ? '$name ya está en ${request.placeLabel}. Sus cuotas ya '
                         'aparecen en el estado de cuenta.'
                   : '$name ya puede ir a las clases de ${request.placeLabel}. '
-                        'Te avisamos cuando el club confirme la inscripción.',
+                        'Te avisamos cuando ${organization.the()} confirme la '
+                        'inscripción.',
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),

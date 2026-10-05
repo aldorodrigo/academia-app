@@ -1,3 +1,4 @@
+import 'package:academia_app/core/vocabulary/vocabulary.dart';
 import 'package:academia_app/core/utils/validators.dart';
 import 'package:academia_app/features/onboarding/data/models.dart';
 import 'package:academia_app/features/onboarding/data/onboarding_controller.dart';
@@ -280,10 +281,10 @@ void main() {
       'Actividad',
       'Disciplina',
     ]) {
-      expect(isFeminine(word), isTrue, reason: word);
+      expect(wordGender(word), 'f', reason: word);
     }
     for (final word in ['Grupo', 'Nivel', 'Técnico', 'Profesor', 'Estilo']) {
-      expect(isFeminine(word), isFalse, reason: word);
+      expect(wordGender(word), 'm', reason: word);
     }
     expect(gendered('Grupo', 'cada uno', 'cada una'), 'cada uno');
     expect(gendered('Categoría', 'todos', 'todas'), 'todas');

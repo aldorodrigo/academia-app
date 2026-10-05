@@ -7,6 +7,8 @@ import '../../inbox/data/inbox_repository.dart';
 import '../../onboarding/data/onboarding_controller.dart';
 import '../../organizations/data/organization_repository.dart';
 import '../../organizations/presentation/roles_list.dart';
+import '../../../core/vocabulary/gender_choice.dart';
+import '../../../core/api/api_client.dart';
 
 class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
@@ -41,6 +43,29 @@ class AccountScreen extends ConsumerWidget {
               ].whereType<String>().join('\n'),
             ),
           ),
+          if (session != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: GenderChoice(
+                key: const Key('my-gender'),
+                title: 'Género (opcional, para nombrarte bien)',
+                value: session.gender,
+                onChanged: (gender) async {
+                  try {
+                    await ref
+                        .read(sessionControllerProvider.notifier)
+                        .setGender(gender);
+                    ref.invalidate(currentOrganizationProvider);
+                  } catch (error) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(apiErrorMessage(error))),
+                      );
+                    }
+                  }
+                },
+              ),
+            ),
           ListTile(
             leading: const Icon(Icons.groups_outlined),
             title: Text(session?.organization?.name ?? ''),
@@ -60,9 +85,7 @@ class AccountScreen extends ConsumerWidget {
           if (onboarding != null && !onboarding.completed)
             ListTile(
               leading: const Icon(Icons.tune),
-              title: Text(
-                'Configurar ${organization?.typeWithArticle ?? 'el club'}',
-              ),
+              title: Text('Configurar ${organization?.org.the() ?? 'el club'}'),
               subtitle: Text(
                 'Guía de primeros pasos · ${onboarding.done} de ${onboarding.total}',
               ),
@@ -88,7 +111,10 @@ class AccountScreen extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.person_add_alt_outlined),
             title: const Text('Inscribir a un hijo'),
-            subtitle: const Text('El club revisa la solicitud'),
+            subtitle: Text(
+              '${organization?.org.theUpper() ?? 'El club'} revisa la '
+              'solicitud',
+            ),
             onTap: () => context.go('/hijos/inscribir'),
           ),
           ListTile(
@@ -101,7 +127,7 @@ class AccountScreen extends ConsumerWidget {
             title: const Text('Avisos'),
             subtitle: Text(
               unread == 0
-                  ? 'Lo que te mandó el club'
+                  ? 'Lo que te mandó ${organization?.org.the() ?? 'el club'}'
                   : unread == 1
                   ? '1 sin leer'
                   : '$unread sin leer',

@@ -35,6 +35,7 @@ Routes _base({List<String> permissions = const []}) => {
     'data': {
       'slug': 'jakare',
       'name': 'Club Jakare',
+      'terminology': {'student': 'Alumno'},
       'membership': {'roles': [], 'permissions': permissions},
     },
   },
@@ -363,6 +364,8 @@ void main() {
     );
     await tester.pumpAndSettle();
     await _scrollTo(tester, find.text('Enviar solicitud'));
+    await tester.ensureVisible(find.text('Enviar solicitud'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Enviar solicitud'));
     await tester.pumpAndSettle();
 
@@ -544,6 +547,49 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Mandar por WhatsApp'), findsNothing);
+    });
+
+    testWidgets('con género: lo manda y la nombra ("Alumna cargada")', (
+      tester,
+    ) async {
+      final requests = <RequestOptions>[];
+      await tester.pumpWidget(
+        _app(
+          {
+            ..._base(permissions: ['create_students']),
+            'POST /students': (_) => {
+              'data': {
+                'student': {
+                  'id': 41,
+                  'full_name': 'Sofía Benítez',
+                  'place': 'Sub-8 · Fútbol (2026)',
+                },
+                'guardian': {'name': 'Ana Benítez', 'has_account': true},
+                'invitation': null,
+              },
+            },
+          },
+          const AddStudentScreen(),
+          requests: requests,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await fill(tester);
+      await _scrollTo(tester, find.byKey(const Key('gender-female')));
+      await tester.tap(find.byKey(const Key('gender-female')));
+      await _scrollTo(
+        tester,
+        find.widgetWithText(FilledButton, 'Cargar alumno'),
+      );
+      await tester.tap(find.widgetWithText(FilledButton, 'Cargar alumno'));
+      await tester.pumpAndSettle();
+
+      expect(
+        (requests.lastWhere((r) => r.method == 'POST').data as Map)['gender'],
+        'female',
+      );
+      expect(find.text('Alumna cargada'), findsOneWidget);
     });
   });
 }

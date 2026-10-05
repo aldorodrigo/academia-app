@@ -6,6 +6,12 @@ import 'organization_repository.dart';
 /// Palabras que se cambian desde la app, en el orden de la pantalla.
 const vocabularyKeys = ['student', 'instructor', 'group', 'space'];
 
+/// Las de persona: se puede ajustar cómo se nombra a una mujer ("Si es mujer").
+const personVocabularyKeys = ['student', 'instructor'];
+
+/// En el borrador, la forma femenina de [key] va en `feminine.<key>`.
+String feminineKey(String key) => 'feminine.$key';
+
 /// Guarda cómo les dicen y vuelve a pedir la organización (y con ella la
 /// guía, que usa esas palabras en sus títulos).
 class VocabularyActions {
@@ -15,11 +21,14 @@ class VocabularyActions {
 
   /// [terminology] vacío = "Dejar como estaba" (solo lo confirma). Devuelve el
   /// error o null.
-  Future<String?> save(Map<String, String> terminology) async {
+  Future<String?> save(
+    Map<String, String> terminology, {
+    Map<String, String>? feminine,
+  }) async {
     try {
       await _ref
           .read(organizationRepositoryProvider)
-          .updateTerminology(terminology);
+          .updateTerminology(terminology, feminine: feminine);
     } catch (error) {
       return apiErrorMessage(error);
     }
@@ -39,6 +48,8 @@ class VocabularyController extends AsyncNotifier<Map<String, String>> {
     final organization = await ref.read(currentOrganizationProvider.future);
     return {
       for (final key in vocabularyKeys) key: organization?.term(key) ?? key,
+      for (final key in personVocabularyKeys)
+        feminineKey(key): ?organization?.terminologyFeminine[key],
     };
   }
 
@@ -49,10 +60,27 @@ class VocabularyController extends AsyncNotifier<Map<String, String>> {
     state = AsyncData({...draft, key: word});
   }
 
+  /// "Si es mujer": vacía = la de la regla (Jugador → Jugadora).
+  void setFeminine(String key, String value) {
+    final draft = state.value;
+    if (draft == null) return;
+    state = AsyncData({...draft, feminineKey(key): value.trim()});
+  }
+
   Future<String?> save() async {
     final draft = state.value;
     if (draft == null) return null;
-    return ref.read(vocabularyActionsProvider).save(draft);
+    return ref.read(vocabularyActionsProvider).save(
+      {for (final key in vocabularyKeys) key: draft[key]!},
+      // Solo las que se tocaron (o ya estaban ajustadas); sin ninguna, no se mandan.
+      feminine:
+          personVocabularyKeys.any((key) => draft.containsKey(feminineKey(key)))
+          ? {
+              for (final key in personVocabularyKeys)
+                key: draft[feminineKey(key)] ?? '',
+            }
+          : null,
+    );
   }
 }
 

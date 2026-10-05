@@ -1,6 +1,8 @@
 /// Solicitudes de inscripción (`API_V1.md`, «Inscripción desde la app»).
 library;
 
+import '../../../core/vocabulary/vocabulary.dart';
+
 /// Estado de una solicitud de inscripción.
 enum EnrollmentRequestStatus {
   pending('pendiente', 'Por confirmar'),
@@ -20,18 +22,23 @@ enum EnrollmentRequestStatus {
   );
 }
 
-/// Parentesco con el chico, como lo guarda la API.
+/// Parentesco con el chico, como lo guarda la API. Del parentesco sale el género del tutor (no se le pregunta):
+/// Madre, Abuela, Tía → femenino; Padre, Abuelo, Tío → masculino; Tutor/a y Otro → sin especificar.
 enum Relationship {
-  mother('madre', 'Madre'),
-  father('padre', 'Padre'),
-  guardian('tutor', 'Tutor/a'),
-  grandparent('abuelo', 'Abuelo/a'),
-  other('otro', 'Otro');
+  mother('madre', 'Madre', Gender.female),
+  father('padre', 'Padre', Gender.male),
+  guardian('tutor', 'Tutor/a', null),
+  grandmother('abuela', 'Abuela', Gender.female),
+  grandparent('abuelo', 'Abuelo', Gender.male),
+  aunt('tia', 'Tía', Gender.female),
+  uncle('tio', 'Tío', Gender.male),
+  other('otro', 'Otro', null);
 
-  const Relationship(this.value, this.label);
+  const Relationship(this.value, this.label, this.gender);
 
   final String value;
   final String label;
+  final Gender? gender;
 
   static Relationship parse(Object? value) => values.firstWhere(
     (r) => r.value == value,
@@ -398,6 +405,7 @@ class EnrollmentRequestDraft {
     required this.groupId,
     this.document,
     this.relationship = Relationship.guardian,
+    this.gender,
     this.notes,
     this.medical = const MedicalDraft(),
   });
@@ -409,6 +417,9 @@ class EnrollmentRequestDraft {
   final int groupId;
   final String? document;
   final Relationship relationship;
+
+  /// Del chico (opcional): para nombrarlo bien ("Jugadora").
+  final Gender? gender;
   final String? notes;
   final MedicalDraft medical;
 }
@@ -454,6 +465,7 @@ class StudentRegistrationDraft {
     required this.seasonId,
     required this.groupId,
     required this.guardian,
+    this.gender,
   });
 
   final String firstName;
@@ -463,6 +475,9 @@ class StudentRegistrationDraft {
   final int seasonId;
   final int groupId;
   final GuardianDraft guardian;
+
+  /// Opcional: para nombrarlo bien ("Jugadora").
+  final Gender? gender;
 }
 
 /// Resultado del alta: el alumno y, si el tutor no usa la app, su invitación.

@@ -164,6 +164,11 @@ lib/
   (`term('group')`), módulos (`hasFeature`) y perfiles del usuario con mandato (`roles`).
 - **Contrato de API:** `academia-api/docs/API_V1.md`. La app se construye primero contra el
   contrato (fakes en tests, ver `fakeDio` en `test/fakes.dart`) y después se implementa la API.
+- **Vocabulario y género** (`academia-api/docs/PLAN_GENERO.md`): textos con palabras del club con `Word`
+  (`core/vocabulary/vocabulary.dart`: `organization.word('group').the()` → "el grupo", `.a`, `.of()`, `.to()`,
+  `.forPerson(gender)` → "Técnica"); la API decide plural, género y artículo en `GET organization` → `vocabulary`.
+  Qué es la organización ("del club / de la academia"): `orgWordProvider`. Nunca "club" fijo ni artículos a mano.
+  Género opcional de personas (`Gender`, `GenderChoice`); el del tutor sale del parentesco.
 - Dinero: montos enteros en guaraníes, formateados como `₲ 150.000`.
 - **Marca Tuku:** tema en `core/theme/tuku_theme.dart` (tokens del sistema de diseño: verde, brote, sol, aviso en
   `tertiary`, sin azul ni rojo de marca; claro y oscuro según el sistema) y `TukuLogo`/`TukuSplash` en

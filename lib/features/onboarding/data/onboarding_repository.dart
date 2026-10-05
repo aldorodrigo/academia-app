@@ -5,6 +5,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/storage/session_storage.dart';
 import '../../attendance/data/models.dart';
 import 'models.dart';
+import '../../../core/vocabulary/vocabulary.dart';
 
 /// Alta del club y guía "Primeros pasos" (`API_V1.md`, Sprint 5d).
 class OnboardingRepository {
@@ -247,6 +248,7 @@ class OnboardingRepository {
     String? phone,
     String? email,
     required List<int> groupIds,
+    Gender? gender,
   }) async => SetupInstructor.fromJson(
     _data(
       await _dio.post(
@@ -256,6 +258,7 @@ class OnboardingRepository {
           'phone': ?phone,
           'email': ?email,
           'group_ids': groupIds,
+          'gender': ?gender?.value,
         },
       ),
     ),
