@@ -8,6 +8,7 @@ import '../../organizations/data/organization_repository.dart';
 import 'models.dart';
 import 'onboarding_controller.dart';
 import 'onboarding_repository.dart';
+import '../../../core/vocabulary/vocabulary.dart';
 
 // ---------------------------------------------------------------------------
 // Paso 1: ¿Qué enseñan?
@@ -953,6 +954,7 @@ class InstructorsStepController extends AsyncNotifier<InstructorsStep> {
     required String name,
     required String contact,
     required List<int> groupIds,
+    Gender? gender,
   }) async {
     final value = contact.trim();
     final byEmail = value.contains('@');
@@ -961,6 +963,7 @@ class InstructorsStepController extends AsyncNotifier<InstructorsStep> {
       phone: byEmail ? null : value,
       email: byEmail ? value : null,
       groupIds: groupIds,
+      gender: gender,
     );
     await _reload();
     return invited;

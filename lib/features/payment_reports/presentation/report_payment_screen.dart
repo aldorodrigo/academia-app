@@ -13,6 +13,7 @@ import '../data/models.dart';
 import '../data/payment_reports_repository.dart';
 import '../data/report_form.dart';
 import 'proof_field.dart';
+import '../../organizations/data/organization_repository.dart';
 
 /// El tutor informa una transferencia: datos para transferir, qué cuotas paga,
 /// monto, fecha y el comprobante (foto o PDF). Queda en revisión.
@@ -271,7 +272,8 @@ class _ReportFormState extends ConsumerState<_ReportForm> {
           ),
           const SizedBox(height: 8),
           Text(
-            'El club revisa el comprobante y registra el pago. Te avisamos cuando esté listo.',
+            '${ref.watch(orgWordProvider).theUpper()} revisa el comprobante y '
+            'registra el pago. Te avisamos cuando esté listo.',
             style: theme.textTheme.bodySmall,
             textAlign: TextAlign.center,
           ),

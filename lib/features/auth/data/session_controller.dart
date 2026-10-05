@@ -7,6 +7,7 @@ import '../../attendance/data/attendance_outbox.dart';
 import '../../invitations/data/invitation_repository.dart';
 import 'auth_repository.dart';
 import 'models.dart';
+import '../../../core/vocabulary/vocabulary.dart';
 
 /// Estado de la sesión: null = no autenticado.
 class SessionController extends AsyncNotifier<Session?> {
@@ -36,6 +37,13 @@ class SessionController extends AsyncNotifier<Session?> {
       captchaToken: await ref.read(captchaProvider).token(),
     );
     state = AsyncData(await _repository.restore());
+  }
+
+  /// "Mi cuenta": el género (opcional). Los perfiles (`GET organization`) cambian de nombre: quien llama
+  /// invalida la organización.
+  Future<void> setGender(Gender? gender) async {
+    await _repository.updateGender(gender);
+    state = AsyncData(state.value?.withGender(gender));
   }
 
   Future<void> verify(String code) async {

@@ -144,6 +144,8 @@ Routes _routes({
   List<Map<String, Object?>> options = const [],
   List<Map<String, Object?>> mine = const [],
   List<Map<String, Object?>> review = const [],
+  String? type,
+  Map<String, String> terminology = const {},
 }) => {
   'GET /me': (_) => {
     'data': {
@@ -158,6 +160,8 @@ Routes _routes({
     'data': {
       'slug': 'jakare',
       'name': 'Club Jakare',
+      'type': ?type,
+      'terminology': terminology,
       'membership': {
         'roles': [
           for (final r in roles) {'name': r, 'label': r},
@@ -468,6 +472,8 @@ void main() {
       );
 
       await _scrollTo(tester, find.text('Enviar solicitud'));
+      await tester.ensureVisible(find.text('Enviar solicitud'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Enviar solicitud'));
       await tester.pumpAndSettle();
 
@@ -554,6 +560,8 @@ void main() {
 
       // Sin sugerencia: hay que elegir la categoría.
       await _scrollTo(tester, find.text('Enviar solicitud'));
+      await tester.ensureVisible(find.text('Enviar solicitud'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Enviar solicitud'));
       await tester.pumpAndSettle();
       await _scrollTo(tester, find.text('Elegí la categoría.'));
@@ -569,6 +577,8 @@ void main() {
       await tester.pumpAndSettle();
 
       await _scrollTo(tester, find.text('Enviar solicitud'));
+      await tester.ensureVisible(find.text('Enviar solicitud'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Enviar solicitud'));
       await tester.pumpAndSettle();
 
@@ -597,6 +607,8 @@ void main() {
       await tester.pumpAndSettle();
 
       await _scrollTo(tester, find.text('Enviar solicitud'));
+      await tester.ensureVisible(find.text('Enviar solicitud'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Enviar solicitud'));
       await tester.pumpAndSettle();
       await tester.dragUntilVisible(
@@ -625,6 +637,8 @@ void main() {
       );
       await tester.pumpAndSettle();
       await _scrollTo(tester, find.text('Enviar solicitud'));
+      await tester.ensureVisible(find.text('Enviar solicitud'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Enviar solicitud'));
       await tester.pumpAndSettle();
 
@@ -635,6 +649,105 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Solicitud enviada'), findsNothing);
+    });
+
+    testWidgets('los textos concuerdan con la palabra y el tipo (4 tipos)', (
+      tester,
+    ) async {
+      const cases = {
+        'club': ('Categoría', 'te sugerimos la categoría.', 'El club'),
+        'academy': ('Grupo', 'te sugerimos el grupo.', 'La academia'),
+        'school': ('Clase', 'te sugerimos la clase.', 'La escuela'),
+        'parents_association': (
+          'Nivel',
+          'te sugerimos el nivel.',
+          'La comisión',
+        ),
+      };
+      for (final MapEntry(key: type, value: (word, hint, org))
+          in cases.entries) {
+        await tester.pumpWidget(
+          _app(
+            _routes(type: type, terminology: {'group': word}),
+            EnrollChildScreen(key: ValueKey(type)),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.text('Con la fecha de nacimiento $hint'),
+          findsOneWidget,
+          reason: type,
+        );
+
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'Fecha de nacimiento'),
+          '02/07/2018',
+        );
+        await tester.pumpAndSettle();
+        final lower = org.toLowerCase();
+        await _scrollTo(
+          tester,
+          find.text(
+            '$org todavía no tiene inscripciones abiertas. Consultá con $lower.',
+          ),
+        );
+      }
+    });
+
+    testWidgets('el género del chico es opcional y se manda si se elige', (
+      tester,
+    ) async {
+      final requests = <RequestOptions>[];
+      await tester.pumpWidget(
+        _app(
+          {
+            ..._routes(options: [optionJson()], type: 'academy'),
+            'POST /enrollment-requests': (_) => {'data': requestJson()},
+          },
+          const EnrollChildScreen(),
+          requests: requests,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Nombre'),
+        'Sofía',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Apellido'),
+        'Benítez',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Fecha de nacimiento'),
+        '02/07/2018',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Número de documento'),
+        '7123456',
+      );
+      await tester.pumpAndSettle();
+      await _scrollTo(tester, find.byKey(const Key('gender-female')));
+      await tester.tap(find.byKey(const Key('gender-female')));
+      await _scrollTo(tester, find.text('Enviar solicitud'));
+      await tester.ensureVisible(find.text('Enviar solicitud'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Enviar solicitud'));
+      await tester.pumpAndSettle();
+
+      expect(requests.lastWhere((r) => r.method == 'POST').data, {
+        'first_name': 'Sofía',
+        'last_name': 'Benítez',
+        'birth_date': '2018-07-02',
+        'document': '7123456',
+        'relationship': 'madre',
+        'gender': 'female',
+        'season_id': 1,
+        'group_id': 3,
+      });
+      expect(
+        find.textContaining('cuando la academia confirme la inscripción.'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('sin inscripciones abiertas no se puede enviar', (

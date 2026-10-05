@@ -6,6 +6,7 @@ import '../../../core/api/api_client.dart';
 import '../../onboarding/data/onboarding_controller.dart';
 import '../data/vocabulary_controller.dart';
 import 'term_choices.dart';
+import '../../../core/vocabulary/vocabulary.dart';
 
 /// "Cómo les dicen" (desde "Mi cuenta", quien configura la organización):
 /// las palabras que usan las pantallas de la app y del panel.
@@ -62,13 +63,31 @@ class _VocabularyScreenState extends ConsumerState<VocabularyScreen> {
                     'palabras. Elegí una o escribí la que usan ustedes.',
                   ),
                   const SizedBox(height: 16),
-                  for (final key in vocabularyKeys)
+                  for (final key in vocabularyKeys) ...[
                     TermChoices(
                       termKey: key,
                       options: options[key] ?? const [],
                       selected: draft[key],
                       onSelected: (word) => controller.set(key, word),
                     ),
+                    if (personVocabularyKeys.contains(key))
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: TextFormField(
+                          key: Key('feminine-$key'),
+                          initialValue: draft[feminineKey(key)],
+                          maxLength: 30,
+                          decoration: InputDecoration(
+                            labelText: 'Si es mujer (opcional)',
+                            hintText: feminineOf(draft[key] ?? ''),
+                            helperText:
+                                'Vacío: "${feminineOf(draft[key] ?? '')}".',
+                          ),
+                          onChanged: (word) =>
+                              controller.setFeminine(key, word),
+                        ),
+                      ),
+                  ],
                 ],
               ),
             ),

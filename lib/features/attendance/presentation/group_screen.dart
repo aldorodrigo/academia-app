@@ -10,6 +10,7 @@ import '../../organizations/data/organization_repository.dart';
 import '../data/attendance_repository.dart';
 import '../data/models.dart';
 import 'attendance_status_style.dart';
+import '../../../core/vocabulary/vocabulary.dart';
 
 /// Menú de cada alumno del grupo.
 enum _StudentAction { report, cancel, open }
@@ -251,14 +252,17 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
   ) async {
     final note = await showDialog<String>(
       context: context,
-      builder: (_) => _DropoutDialog(name: student.fullName),
+      builder: (_) => _DropoutDialog(
+        name: student.fullName,
+        organization: ref.read(orgWordProvider),
+      ),
     );
     if (note == null || !mounted) return;
     await _run(
       () => ref
           .read(attendanceRepositoryProvider)
           .reportDropout(data.group.id, student.id, note: note),
-      'Listo: le avisamos al club.',
+      'Listo: le avisamos ${ref.read(orgWordProvider).to()}.',
     );
   }
 
@@ -286,9 +290,10 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
 
 /// Aviso del técnico: nota opcional. Devuelve la nota ('' sin nota) o null si se cancela.
 class _DropoutDialog extends StatefulWidget {
-  const _DropoutDialog({required this.name});
+  const _DropoutDialog({required this.name, required this.organization});
 
   final String name;
+  final Word organization;
 
   @override
   State<_DropoutDialog> createState() => _DropoutDialogState();
@@ -311,8 +316,8 @@ class _DropoutDialogState extends State<_DropoutDialog> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Le avisamos al club que ${widget.name} dejó de venir. '
-          'La baja la decide el club.',
+          'Le avisamos ${widget.organization.to()} que ${widget.name} dejó '
+          'de venir. La baja la decide ${widget.organization.the()}.',
         ),
         const SizedBox(height: 12),
         TextField(

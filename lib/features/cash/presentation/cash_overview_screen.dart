@@ -8,6 +8,7 @@ import '../data/cash_form.dart';
 import '../data/cash_repository.dart';
 import '../data/models.dart';
 import 'cash_deposit_tile.dart';
+import '../../organizations/data/organization_repository.dart';
 
 /// "Efectivo" (quien valida): cuánta plata del club tiene cada uno que cobra en
 /// efectivo y los depósitos por confirmar.
@@ -124,9 +125,12 @@ class _OverviewView extends ConsumerWidget {
         const SizedBox(height: 16),
         Text('Cajas', style: theme.textTheme.titleMedium),
         if (overview.boxes.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Text('Nadie tiene efectivo del club en su poder.'),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'Nadie tiene efectivo ${ref.watch(orgWordProvider).of()} en su '
+              'poder.',
+            ),
           ),
         for (final box in overview.boxes)
           ListTile(
@@ -134,7 +138,8 @@ class _OverviewView extends ConsumerWidget {
             title: Text(box.holderName),
             subtitle: Text(
               [
-                if (!box.holderActive) 'Ya no está en el club',
+                if (!box.holderActive)
+                  'Ya no está en ${ref.watch(orgWordProvider).the()}',
                 if (box.pendingDeposits > 0)
                   '${formatMoney(box.pendingDeposits)} por confirmar',
                 if (box.lastMovementOn != null)

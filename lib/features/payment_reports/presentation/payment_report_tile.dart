@@ -7,6 +7,7 @@ import '../../../core/utils/launcher.dart';
 import '../../billing/data/account_repository.dart';
 import '../data/models.dart';
 import '../data/payment_reports_repository.dart';
+import '../../organizations/data/organization_repository.dart';
 
 /// Comprobante informado por el tutor: en revisión (se puede retirar) o
 /// rechazado con el motivo.
@@ -20,8 +21,9 @@ class PaymentReportTile extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('¿Retirar el comprobante?'),
-        content: const Text(
-          'El club no lo va a revisar. Podés informar el pago de nuevo.',
+        content: Text(
+          '${ref.read(orgWordProvider).theUpper()} no lo va a revisar. '
+          'Podés informar el pago de nuevo.',
         ),
         actions: [
           TextButton(

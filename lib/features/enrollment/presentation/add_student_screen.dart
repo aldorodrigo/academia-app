@@ -12,6 +12,8 @@ import '../data/enrollment_repository.dart';
 import '../data/models.dart';
 import '../data/request_form.dart';
 import 'place_picker.dart';
+import '../../../core/vocabulary/vocabulary.dart';
+import '../../../core/vocabulary/gender_choice.dart';
 
 /// "Cargar alumno" (quien puede crear alumnos, ej. el admin desde el celular):
 /// alta directa con la categoría sugerida y su tutor, y la invitación del tutor
@@ -35,6 +37,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
   final _guardianEmail = TextEditingController();
 
   Relationship _relationship = Relationship.mother;
+  Gender? _gender;
   DateTime? _birth;
   int _optionIndex = 0;
   int? _groupId;
@@ -83,6 +86,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
       _optionIndex = 0;
       _groupId = null;
       _relationship = Relationship.mother;
+      _gender = null;
       _done = null;
     });
   }
@@ -106,6 +110,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
               document: _document.text,
               seasonId: option.season.id,
               groupId: groupId,
+              gender: _gender,
               guardian: GuardianDraft(
                 firstName: _guardianFirstName.text,
                 lastName: _guardianLastName.text,
@@ -128,10 +133,14 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
     final done = _done;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Cargar alumno'),
+        title: Text(
+          'Cargar ${(ref.watch(currentOrganizationProvider).value?.word('student') ?? Word.of('Alumno')).lower}',
+        ),
         leading: BackButton(onPressed: () => context.go('/inicio')),
       ),
-      body: done != null ? _Done(done, onAnother: _another) : _form(context),
+      body: done != null
+          ? _Done(done, onAnother: _another, gender: _gender)
+          : _form(context),
     );
   }
 
@@ -139,7 +148,9 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
     final theme = Theme.of(context);
     final today = ref.watch(todayProvider);
     final organization = ref.watch(currentOrganizationProvider).value;
-    final groupTerm = organization?.term('group') ?? 'Categoría';
+    final group = organization?.word('group') ?? Word.of('Categoría');
+    final student = organization?.word('student') ?? Word.of('Alumno');
+    final guardian = organization?.word('guardian') ?? Word.of('Tutor');
     final birth = _birth;
     final options = birth == null
         ? null
@@ -152,7 +163,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('Alumno', style: theme.textTheme.titleMedium),
+          Text(student.word, style: theme.textTheme.titleMedium),
           TextFormField(
             controller: _firstName,
             textCapitalization: TextCapitalization.words,
@@ -190,7 +201,8 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
             optionIndex: _optionIndex,
             groupId: _groupId,
             showError: _showGroupError,
-            groupTerm: groupTerm,
+            group: group,
+            organization: organization?.org ?? Word.of('club'),
             today: today,
             onOptionChanged: (index) => setState(() {
               _optionIndex = index;
@@ -201,21 +213,23 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
               _showGroupError = false;
             }),
           ),
-          const SizedBox(height: 24),
-          Text(
-            organization?.term('guardian') ?? 'Tutor',
-            style: theme.textTheme.titleMedium,
+          const SizedBox(height: 8),
+          GenderChoice(
+            value: _gender,
+            onChanged: (gender) => setState(() => _gender = gender),
           ),
+          const SizedBox(height: 24),
+          Text(guardian.word, style: theme.textTheme.titleMedium),
           TextFormField(
             controller: _guardianFirstName,
             textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(labelText: 'Nombre del tutor'),
-            validator: validateGuardianName,
+            decoration: InputDecoration(labelText: 'Nombre ${guardian.of()}'),
+            validator: (value) => validateGuardianName(value, guardian),
           ),
           TextFormField(
             controller: _guardianLastName,
             textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(labelText: 'Apellido del tutor'),
+            decoration: InputDecoration(labelText: 'Apellido ${guardian.of()}'),
           ),
           TextFormField(
             controller: _guardianPhone,
@@ -255,7 +269,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
                     dimension: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Cargar alumno'),
+                : Text('Cargar ${student.lower}'),
           ),
         ],
       ),
@@ -265,15 +279,22 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
 
 /// Listo: el alumno y la invitación del tutor para mandar por WhatsApp.
 class _Done extends ConsumerWidget {
-  const _Done(this.done, {required this.onAnother});
+  const _Done(this.done, {required this.onAnother, this.gender});
 
   final RegisteredStudent done;
   final VoidCallback onAnother;
 
+  /// El que se cargó (o null): "Jugadora cargada".
+  final Gender? gender;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final guardian = done.guardianName ?? 'el tutor';
+    final organization = ref.watch(currentOrganizationProvider).value;
+    final student = organization?.word('student') ?? Word.of('Alumno');
+    final guardian =
+        done.guardianName ??
+        (organization?.word('guardian') ?? Word.of('Tutor')).the();
     final whatsapp = done.whatsappUrl;
     final link = done.invitationLink;
 
@@ -287,7 +308,8 @@ class _Done extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
         Text(
-          'Alumno cargado',
+          '${student.forPerson(gender)} '
+          '${student.agree(gender, 'cargado', 'cargada')}',
           textAlign: TextAlign.center,
           style: theme.textTheme.headlineSmall,
         ),

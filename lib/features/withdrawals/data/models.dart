@@ -1,4 +1,5 @@
 import '../../billing/data/models.dart';
+import '../../../core/vocabulary/vocabulary.dart';
 
 DateTime? _date(Object? value) =>
     value == null ? null : DateTime.parse(value as String);
@@ -56,9 +57,9 @@ class DropoutReport {
   final String? studentName;
   final String? group;
 
-  /// "Carlos Gómez avisó que dejó de venir" / "Ana Benítez avisó que deja el club".
-  String get summary =>
-      '$reportedBy avisó que ${source == DropoutSource.guardian ? 'deja el club' : 'dejó de venir'}';
+  /// "Carlos Gómez avisó que dejó de venir" / "Ana Benítez avisó que deja la academia".
+  String summaryFor(Word organization) =>
+      '$reportedBy avisó que ${source == DropoutSource.guardian ? 'deja ${organization.the()}' : 'dejó de venir'}';
 }
 
 /// Inscripción vista por quien da de baja.

@@ -6,6 +6,7 @@ import '../../../core/api/api_client.dart';
 import '../../students/data/students_repository.dart';
 import '../data/enrollment_repository.dart';
 import '../data/models.dart';
+import '../../organizations/data/organization_repository.dart';
 
 /// Las solicitudes propias (por confirmar o no aprobadas), arriba de "Mis hijos".
 class MyEnrollmentRequests extends ConsumerWidget {
@@ -32,7 +33,7 @@ class _RequestCard extends ConsumerWidget {
         title: const Text('Cancelar la solicitud'),
         content: Text(
           '${request.child.firstName} sale de la lista de ${request.group.name} '
-          'y el club ya no ve el pedido.',
+          'y ${ref.read(orgWordProvider).the()} ya no ve el pedido.',
         ),
         actions: [
           TextButton(

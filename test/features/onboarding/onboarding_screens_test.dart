@@ -931,6 +931,7 @@ void main() {
             'name': 'Marta Ríos',
             'email': null,
             'phone': '+595981555444',
+            'gender': (options.data as Map)['gender'],
             'status': 'invitado',
             'groups': [
               {'id': 4, 'name': 'Sub-10'},
@@ -958,6 +959,8 @@ void main() {
       '0981 555 444',
     );
     await tester.tap(find.widgetWithText(FilterChip, 'Sub-10').last);
+    // Opcional: para nombrarla bien en la invitación ("como técnica").
+    await tester.tap(find.byKey(const Key('gender-female')));
     await tester.tap(find.byKey(const Key('invite-send')));
     await _settle(tester);
 
@@ -971,6 +974,7 @@ void main() {
         'name': 'Marta Ríos',
         'phone': '0981 555 444',
         'group_ids': [4],
+        'gender': 'female',
       },
     );
     expect(find.text('Invitación lista'), findsOneWidget);
@@ -983,6 +987,10 @@ void main() {
     expect(
       launched.single.queryParameters['text'],
       contains('https://app.test/invitacion/abc'),
+    );
+    expect(
+      launched.single.queryParameters['text'],
+      contains('te invito a sumarte como técnica de'),
     );
 
     await tester.tap(find.text('Listo'));
@@ -1395,6 +1403,74 @@ void main() {
       );
       expect(find.text('Listo: las pantallas ya dicen así.'), findsOneWidget);
       expect(find.text('Mi cuenta'), findsOneWidget);
+    });
+
+    testWidgets('"Si es mujer": la forma femenina que ajusta la organización', (
+      tester,
+    ) async {
+      final requests = <RequestOptions>[];
+      await _pumpApp(
+        tester,
+        {
+          ..._admin(),
+          'PUT /organization/terminology': (_) => {
+            'data': {'terminology': <String, String>{}},
+          },
+        },
+        location: '/vocabulario',
+        requests: requests,
+      );
+
+      // La regla ya la sugiere: "Técnico" → "Técnica".
+      expect(find.text('Vacío: "Técnica".'), findsOneWidget);
+      await tester.enterText(
+        find.byKey(const Key('feminine-instructor')),
+        'Entrenadora',
+      );
+      await tester.tap(find.byKey(const Key('vocabulary-save')));
+      await _settle(tester);
+
+      expect(
+        requests.firstWhere((r) => r.path == '/organization/terminology').data,
+        {
+          'terminology': {
+            'student': 'Jugador',
+            'instructor': 'Técnico',
+            'group': 'Categoría',
+            'space': 'Cancha',
+          },
+          'feminine': {'student': '', 'instructor': 'Entrenadora'},
+        },
+      );
+    });
+
+    testWidgets('Mi cuenta: el género (opcional) de la persona', (
+      tester,
+    ) async {
+      final requests = <RequestOptions>[];
+      await _pumpApp(
+        tester,
+        {..._admin(), 'PATCH /me': (_) => meJson()},
+        location: '/cuenta',
+        requests: requests,
+      );
+      final before = requests.where((r) => r.path == '/organization').length;
+
+      await tester.tap(find.byKey(const Key('gender-female')));
+      await _settle(tester);
+
+      expect(requests.firstWhere((r) => r.method == 'PATCH').data, {
+        'gender': 'female',
+      });
+      // Los perfiles se vuelven a pedir: ahora dicen "Técnica", "Tesorera".
+      expect(
+        requests.where((r) => r.path == '/organization').length,
+        greaterThan(before),
+      );
+      final chip = tester.widget<ChoiceChip>(
+        find.byKey(const Key('gender-female')),
+      );
+      expect(chip.selected, isTrue);
     });
 
     testWidgets('sin permiso no aparece', (tester) async {

@@ -1,6 +1,8 @@
 /// Validaciones de la solicitud de inscripción (las mismas reglas que la API).
 library;
 
+import '../../../core/vocabulary/vocabulary.dart';
+
 String? validateChildFirstName(String? value) =>
     value == null || value.trim().isEmpty ? 'Ingresá el nombre.' : null;
 
@@ -47,8 +49,9 @@ String? validateDocument(String? value) {
   return null;
 }
 
-String? validateGroup(int? groupId) =>
-    groupId == null ? 'Elegí la categoría.' : null;
+/// [group]: la palabra del club ("Elegí el grupo.").
+String? validateGroup(int? groupId, [Word? group]) =>
+    groupId == null ? 'Elegí ${(group ?? Word.of('Categoría')).the()}.' : null;
 
 /// Motivo del rechazo, que le llega al tutor.
 String? validateRequestRejection(String? value) =>
@@ -56,7 +59,8 @@ String? validateRequestRejection(String? value) =>
     ? 'Contale a la familia por qué no la aprobás.'
     : null;
 
-String? validateGuardianName(String? value) =>
+/// [guardian]: la palabra del club ("Ingresá el nombre del encargado.").
+String? validateGuardianName(String? value, [Word? guardian]) =>
     value == null || value.trim().isEmpty
-    ? 'Ingresá el nombre del tutor.'
+    ? 'Ingresá el nombre ${(guardian ?? Word.of('Tutor')).of()}.'
     : null;

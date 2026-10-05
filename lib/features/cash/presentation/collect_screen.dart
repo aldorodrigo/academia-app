@@ -14,6 +14,7 @@ import '../../payment_reports/presentation/proof_field.dart';
 import '../data/cash_form.dart';
 import '../data/cash_repository.dart';
 import '../data/models.dart';
+import '../../organizations/data/organization_repository.dart';
 
 /// Cobrar a un alumno: cuotas pendientes de su familia, monto prellenado con
 /// lo elegido, quién pagó y el recibo. En efectivo entra en la caja de quien
@@ -389,7 +390,8 @@ class _CollectFormState extends ConsumerState<_CollectForm> {
             const SizedBox(height: 8),
             Text(
               box == null
-                  ? 'Queda en tu caja hasta que lo deposites en la cuenta del club. '
+                  ? 'Queda en tu caja hasta que lo deposites en la cuenta '
+                        '${ref.watch(orgWordProvider).of()}. '
                         'La familia recibe el recibo.'
                   : 'Queda en tu caja (${formatMoney(box.balance)} en tu poder) '
                         'hasta que lo deposites. La familia recibe el recibo.',

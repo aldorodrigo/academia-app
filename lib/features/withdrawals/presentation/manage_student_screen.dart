@@ -100,7 +100,10 @@ class _Details extends ConsumerWidget {
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
-                        describeReport(enrollment.dropoutReport!),
+                        describeReport(
+                          enrollment.dropoutReport!,
+                          ref.watch(orgWordProvider),
+                        ),
                         style: TextStyle(color: theme.colorScheme.tertiary),
                       ),
                     ),
@@ -301,7 +304,9 @@ class _WithdrawFormState extends ConsumerState<WithdrawForm> {
             controller: _reason,
             decoration: InputDecoration(
               labelText: 'Motivo',
-              hintText: 'Ej.: se mudó, dejó de venir, cambió de club',
+              hintText:
+                  'Ej.: se mudó, dejó de venir, cambió de '
+                  '${ref.watch(orgWordProvider).word}',
               errorText: _reasonError,
             ),
             maxLength: 255,

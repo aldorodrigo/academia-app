@@ -1,3 +1,4 @@
+import 'package:academia_app/core/vocabulary/vocabulary.dart';
 import 'package:academia_app/core/api/api_client.dart';
 import 'package:academia_app/core/storage/session_storage.dart';
 import 'package:academia_app/core/utils/clock.dart';
@@ -168,8 +169,12 @@ void main() {
     expect(enrollment.canWithdraw, isTrue);
     expect(enrollment.dropoutReport!.source, DropoutSource.guardian);
     expect(
-      enrollment.dropoutReport!.summary,
+      enrollment.dropoutReport!.summaryFor(Word.of('club')),
       'Rosa Zárate avisó que deja el club',
+    );
+    expect(
+      enrollment.dropoutReport!.summaryFor(Word.of('academia')),
+      'Rosa Zárate avisó que deja la academia',
     );
     expect(student.noticeRecipients, 1);
     expect(student.charges, hasLength(3));
@@ -231,7 +236,10 @@ void main() {
     expect(on, DateTime(2026, 6, 2));
     expect(requests[5].method, 'DELETE');
     expect(reports.single.studentId, 9);
-    expect(reports.single.summary, 'Carlos Gómez avisó que dejó de venir');
+    expect(
+      reports.single.summaryFor(Word.of('academia')),
+      'Carlos Gómez avisó que dejó de venir',
+    );
   });
 
   testWidgets('dar de baja con el aviso a la familia, personalizado', (
@@ -458,6 +466,12 @@ void main() {
       'leaving_reported_on': '2026-06-02',
     });
     expect(student.leavingReportedOn, DateTime(2026, 6, 2));
-    expect(LeavingDialog(name: student.firstName).name, 'Matías');
+    expect(
+      LeavingDialog(
+        name: student.firstName,
+        organization: Word.of('club'),
+      ).name,
+      'Matías',
+    );
   });
 }

@@ -15,6 +15,7 @@ import '../data/models.dart';
 import '../data/students_repository.dart';
 import 'enrollment_status_chip.dart';
 import 'students_list.dart';
+import '../../../core/vocabulary/vocabulary.dart';
 
 /// Ficha del alumno: datos, inscripciones con horarios, tutores y ficha médica.
 class StudentScreen extends ConsumerWidget {
@@ -68,6 +69,8 @@ class LeavingMenu extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final reported = student.leavingReportedOn != null;
+    final org =
+        ref.watch(currentOrganizationProvider).value?.org ?? Word.of('club');
     return PopupMenuButton<bool>(
       tooltip: 'Más opciones',
       onSelected: (report) async {
@@ -77,14 +80,15 @@ class LeavingMenu extends ConsumerWidget {
           if (report) {
             final message = await showDialog<String>(
               context: context,
-              builder: (_) => LeavingDialog(name: student.firstName),
+              builder: (_) =>
+                  LeavingDialog(name: student.firstName, organization: org),
             );
             if (message == null) return;
             await repository.reportLeaving(student.id, message: message);
             messenger.showSnackBar(
-              const SnackBar(
+              SnackBar(
                 content: Text(
-                  'Listo: le avisamos al club. ¡Gracias por avisar!',
+                  'Listo: le avisamos ${org.to()}. ¡Gracias por avisar!',
                 ),
               ),
             );
@@ -105,7 +109,9 @@ class LeavingMenu extends ConsumerWidget {
         PopupMenuItem(
           value: !reported,
           child: Text(
-            reported ? 'Ya no deja el club' : 'Avisar que deja el club',
+            reported
+                ? 'Ya no deja ${org.the()}'
+                : 'Avisar que deja ${org.the()}',
           ),
         ),
       ],
@@ -149,9 +155,12 @@ class _StudentDetails extends ConsumerWidget {
             child: ListTile(
               leading: const Icon(Icons.info_outline),
               title: Text(
-                'Avisaste que deja el club el ${formatDate(student.leavingReportedOn!)}.',
+                'Avisaste que deja ${organization?.org.the() ?? 'el club'} '
+                'el ${formatDate(student.leavingReportedOn!)}.',
               ),
-              subtitle: const Text('El club registra la baja.'),
+              subtitle: Text(
+                '${organization?.org.theUpper() ?? 'El club'} registra la baja.',
+              ),
             ),
           ),
         const _SectionTitle('Datos'),
@@ -208,6 +217,18 @@ class _EnrollmentCard extends StatelessWidget {
 
   String _term(String key, String fallback) =>
       organization?.term(key) ?? fallback;
+
+  /// "Técnica" (una mujer), "Técnico", "Técnicas" (todas mujeres) o "Técnicos".
+  String _instructorsLabel(Group group) {
+    final word = organization?.word('instructor') ?? Word.of('Técnico');
+    final genders = [
+      for (var i = 0; i < group.instructors.length; i++)
+        i < group.instructorGenders.length ? group.instructorGenders[i] : null,
+    ];
+    return genders.length == 1
+        ? word.forPerson(genders.single)
+        : word.forPeople(genders);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -266,7 +287,7 @@ class _EnrollmentCard extends StatelessWidget {
             if (group.instructors.isNotEmpty) ...[
               const SizedBox(height: 12),
               Text(
-                '${_term('instructor', 'Técnico')}: '
+                '${_instructorsLabel(group)}: '
                 '${group.instructors.join(', ')}',
               ),
             ],

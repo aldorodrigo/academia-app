@@ -9,6 +9,7 @@ import '../data/models.dart';
 import '../data/step_controllers.dart';
 import 'step_scaffold.dart';
 import 'weekly_time_editor.dart';
+import '../../../core/vocabulary/vocabulary.dart';
 
 final _ages = [for (var age = 3; age <= 18; age++) age];
 
@@ -440,9 +441,7 @@ class _GroupsStepScreenState extends ConsumerState<GroupsStepScreen>
               ].join(' · '),
             ),
             trailing: IconButton(
-              tooltip:
-                  'Agregar ${gendered(space, 'un', 'una')} '
-                  '${space.toLowerCase()} en ${site.name}',
+              tooltip: 'Agregar ${Word.of(space).a} en ${site.name}',
               icon: const Icon(Icons.add),
               onPressed: () => _addSpace(site, space),
             ),

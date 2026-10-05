@@ -1,5 +1,8 @@
 import '../../../core/utils/format.dart';
 
+export '../../../core/vocabulary/vocabulary.dart' show gendered, pluralize;
+import '../../../core/vocabulary/vocabulary.dart' show Gender, Word;
+
 /// Estado de un paso de la guía, calculado por la API desde los datos.
 enum StepStatus {
   done,
@@ -275,24 +278,7 @@ class SlugCheck {
   String? get usable => available ? slug : suggestion;
 }
 
-/// Género de un término del club (Categoría / Grupo, Técnico / Profesora),
-/// para que los textos concuerden: "la categoría" / "el grupo".
-bool isFeminine(String word) {
-  final lower = word.trim().toLowerCase();
-  return lower == 'clase' || lower.endsWith('a') || lower.endsWith('dad');
-}
-
-/// La forma según el género: gendered('Grupo', 'otro', 'otra') → "otro".
-String gendered(String word, String masculine, String feminine) =>
-    isFeminine(word) ? feminine : masculine;
-
-/// Plural en español de los términos habituales (categoría → categorías).
-String pluralize(String word) {
-  final lower = word.toLowerCase();
-  if (lower.endsWith('z')) return '${word.substring(0, word.length - 1)}ces';
-  if (RegExp(r'[aeiouáéó]$').hasMatch(lower)) return '${word}s';
-  return '${word}es';
-}
+// Concordancia con el vocabulario: ver core/vocabulary/vocabulary.dart (una sola fuente en la app).
 
 // ---------------------------------------------------------------------------
 // Paso 1: disciplinas
@@ -676,7 +662,7 @@ enum FeeFrequency {
 Map<String, (String, String)> dailyBasisOptions(String group) => {
   'entrenamiento': (
     'Días de entrenamiento',
-    'Los días con horario ${gendered(group, 'del', 'de la')} ${group.toLowerCase()}.',
+    'Los días con horario ${Word.of(group).of()}.',
   ),
   'asistencia': (
     'Clases asistidas',
@@ -1086,6 +1072,7 @@ class SetupInstructor {
     this.invitationId,
     this.groups = const [],
     this.link,
+    this.gender,
   });
 
   factory SetupInstructor.fromJson(Map<String, dynamic> json) =>
@@ -1103,8 +1090,11 @@ class SetupInstructor {
             .map((g) => GroupRef.fromJson(g as Map<String, dynamic>))
             .toList(),
         link: json['link'] as String?,
+        gender: Gender.fromApi(json['gender']),
       );
 
+  /// Opcional: para nombrarlo en la invitación ("como técnica").
+  final Gender? gender;
   final int? userId;
   final int? invitationId;
   final String name;
