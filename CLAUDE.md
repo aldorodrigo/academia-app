@@ -165,3 +165,5 @@ lib/
 - Estado con Riverpod; sin lógica de negocio en los widgets.
 - Todo repositorio recibe `Dio` y `SessionStorage` por constructor (testeable con fakes, ver `test/fakes.dart`).
 - Tests para redirecciones, repositorios y validaciones de formularios.
+- Nada se borra de verdad: lo que la app "borra" (retirar un comprobante o un depósito, cancelar una solicitud) la API
+  lo archiva (soft delete) y guarda quién lo hizo; los cargos y pagos se anulan. Ver `academia-api/CLAUDE.md`.
