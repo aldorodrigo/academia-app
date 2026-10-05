@@ -9,10 +9,13 @@ import '../../attendance/presentation/student_attendance_section.dart';
 import '../../billing/presentation/student_account_section.dart';
 import '../../organizations/data/models.dart';
 import '../../organizations/data/organization_repository.dart';
+import '../../withdrawals/data/withdrawals_repository.dart';
+import '../../withdrawals/presentation/dropout_reports.dart';
 import '../data/models.dart';
 import '../data/students_repository.dart';
 import 'enrollment_status_chip.dart';
 import 'students_list.dart';
+import '../../../core/vocabulary/vocabulary.dart';
 
 /// Ficha del alumno: datos, inscripciones con horarios, tutores y ficha médica.
 class StudentScreen extends ConsumerWidget {
@@ -28,6 +31,10 @@ class StudentScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(student.value?.firstName ?? 'Ficha'),
         leading: BackButton(onPressed: () => context.go('/inicio')),
+        actions: [
+          if (student.value case final s? when _canLeave(s))
+            LeavingMenu(student: s),
+        ],
       ),
       body: student.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -42,6 +49,72 @@ class StudentScreen extends ConsumerWidget {
           child: _StudentDetails(student),
         ),
       ),
+    );
+  }
+}
+
+/// Con alguna inscripción que no esté de baja, el tutor puede avisar que deja el club.
+bool _canLeave(Student student) => student.enrollments.any(
+  (e) =>
+      e.status == EnrollmentStatus.active ||
+      e.status == EnrollmentStatus.scholarship,
+);
+
+/// "Avisar que deja el club" (o "Ya no se va"): le llega a quien da de baja, que decide.
+class LeavingMenu extends ConsumerWidget {
+  const LeavingMenu({super.key, required this.student});
+
+  final Student student;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final reported = student.leavingReportedOn != null;
+    final org =
+        ref.watch(currentOrganizationProvider).value?.org ?? Word.of('club');
+    return PopupMenuButton<bool>(
+      tooltip: 'Más opciones',
+      onSelected: (report) async {
+        final messenger = ScaffoldMessenger.of(context);
+        final repository = ref.read(withdrawalsRepositoryProvider);
+        try {
+          if (report) {
+            final message = await showDialog<String>(
+              context: context,
+              builder: (_) =>
+                  LeavingDialog(name: student.firstName, organization: org),
+            );
+            if (message == null) return;
+            await repository.reportLeaving(student.id, message: message);
+            messenger.showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Listo: le avisamos ${org.to()}. ¡Gracias por avisar!',
+                ),
+              ),
+            );
+          } else {
+            await repository.cancelLeaving(student.id);
+            messenger.showSnackBar(
+              const SnackBar(content: Text('Listo: sacamos el aviso.')),
+            );
+          }
+          ref.invalidate(studentProvider(student.id));
+        } catch (error) {
+          messenger.showSnackBar(
+            SnackBar(content: Text(apiErrorMessage(error))),
+          );
+        }
+      },
+      itemBuilder: (_) => [
+        PopupMenuItem(
+          value: !reported,
+          child: Text(
+            reported
+                ? 'Ya no deja ${org.the()}'
+                : 'Avisar que deja ${org.the()}',
+          ),
+        ),
+      ],
     );
   }
 }
@@ -77,6 +150,19 @@ class _StudentDetails extends ConsumerWidget {
             ),
           ],
         ),
+        if (student.leavingReportedOn != null)
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.info_outline),
+              title: Text(
+                'Avisaste que deja ${organization?.org.the() ?? 'el club'} '
+                'el ${formatDate(student.leavingReportedOn!)}.',
+              ),
+              subtitle: Text(
+                '${organization?.org.theUpper() ?? 'El club'} registra la baja.',
+              ),
+            ),
+          ),
         const _SectionTitle('Datos'),
         if (birthDate != null)
           _Field('Fecha de nacimiento', formatDate(birthDate)),
@@ -132,6 +218,18 @@ class _EnrollmentCard extends StatelessWidget {
   String _term(String key, String fallback) =>
       organization?.term(key) ?? fallback;
 
+  /// "Técnica" (una mujer), "Técnico", "Técnicas" (todas mujeres) o "Técnicos".
+  String _instructorsLabel(Group group) {
+    final word = organization?.word('instructor') ?? Word.of('Técnico');
+    final genders = [
+      for (var i = 0; i < group.instructors.length; i++)
+        i < group.instructorGenders.length ? group.instructorGenders[i] : null,
+    ];
+    return genders.length == 1
+        ? word.forPerson(genders.single)
+        : word.forPeople(genders);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -164,7 +262,7 @@ class _EnrollmentCard extends StatelessWidget {
             ),
             Text(
               '${_term('program', 'Disciplina')}: ${group.program.name} · '
-              'Temporada ${enrollment.season}',
+              '${seasonLabel(enrollment.season)}',
             ),
             if (startsOn != null && endsOn != null)
               Text(
@@ -189,7 +287,7 @@ class _EnrollmentCard extends StatelessWidget {
             if (group.instructors.isNotEmpty) ...[
               const SizedBox(height: 12),
               Text(
-                '${_term('instructor', 'Técnico')}: '
+                '${_instructorsLabel(group)}: '
                 '${group.instructors.join(', ')}',
               ),
             ],

@@ -56,6 +56,21 @@ bool isNetworkError(Object error) =>
     error.type != DioExceptionType.cancel &&
     error.type != DioExceptionType.badCertificate;
 
+/// La API dijo que no tiene permiso (403).
+bool isForbidden(Object error) =>
+    error is DioException && error.response?.statusCode == 403;
+
+/// Reintentos automáticos de los providers (`ProviderScope(retry: apiRetry)`):
+/// un error de la petición (4xx: sin permiso, no existe, datos inválidos) no se
+/// arregla reintentando y se muestra enseguida; sin conexión o con un error del
+/// servidor se reintenta como siempre. Sin esto, una pantalla que recibe un 403
+/// queda cargando mientras dura cada reintento.
+Duration? apiRetry(int retryCount, Object error) {
+  final status = error is DioException ? error.response?.statusCode : null;
+  if (status != null && status >= 400 && status < 500) return null;
+  return ProviderContainer.defaultRetry(retryCount, error);
+}
+
 /// Mensaje de error legible para mostrar al usuario.
 String apiErrorMessage(Object error) {
   if (error is DioException) {

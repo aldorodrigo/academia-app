@@ -9,6 +9,7 @@ import '../data/models.dart';
 import '../data/step_controllers.dart';
 import 'step_scaffold.dart';
 import 'weekly_time_editor.dart';
+import '../../../core/vocabulary/vocabulary.dart';
 
 final _ages = [for (var age = 3; age <= 18; age++) age];
 
@@ -29,6 +30,19 @@ class _GroupsStepScreenState extends ConsumerState<GroupsStepScreen>
   final _capacity = TextEditingController();
 
   GroupsStepController get _controller => ref.read(groupsStepProvider.notifier);
+
+  @override
+  void initState() {
+    super.initState();
+    // El cupo del borrador (de acá, de otro dispositivo o del panel) vuelve al
+    // campo; lo que se escribe va al estado y de ahí al borrador.
+    ref.listenManual(groupsStepProvider, (_, next) {
+      final capacity = next.value?.capacity;
+      if (parseAmount(_capacity.text) != capacity) {
+        _capacity.text = capacity?.toString() ?? '';
+      }
+    }, fireImmediately: true);
+  }
 
   @override
   void dispose() {
@@ -440,9 +454,7 @@ class _GroupsStepScreenState extends ConsumerState<GroupsStepScreen>
               ].join(' · '),
             ),
             trailing: IconButton(
-              tooltip:
-                  'Agregar ${gendered(space, 'un', 'una')} '
-                  '${space.toLowerCase()} en ${site.name}',
+              tooltip: 'Agregar ${Word.of(space).a} en ${site.name}',
               icon: const Icon(Icons.add),
               onPressed: () => _addSpace(site, space),
             ),

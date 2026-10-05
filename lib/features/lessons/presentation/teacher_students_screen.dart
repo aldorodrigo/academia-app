@@ -15,7 +15,7 @@ String describeStudentPack(ClassPack? pack) {
   if (pack == null) return 'Sin paquete (clase suelta)';
   return switch (pack.status) {
     ClassPackStatus.pendingPayment =>
-      'Paquete de ${pack.classes} clases pendiente de pago',
+      'Paquete de ${countOf(pack.classes, 'clase', 'clases')} pendiente de pago',
     ClassPackStatus.active =>
       'Paquete: le ${pack.remaining == 1 ? 'queda 1' : 'quedan ${pack.remaining}'} de ${pack.classes} · ${pack.validity}',
     ClassPackStatus.finished => 'Usó todas las clases del paquete',

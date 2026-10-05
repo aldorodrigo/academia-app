@@ -4,17 +4,25 @@ import 'package:go_router/go_router.dart';
 
 import 'core/theme/brand.dart';
 import 'features/account/presentation/account_screen.dart';
+import 'features/inbox/presentation/inbox_screen.dart';
 import 'features/attendance/presentation/class_attendance_screen.dart';
 import 'features/attendance/presentation/group_screen.dart';
 import 'features/attendance/presentation/groups_screen.dart';
 import 'features/auth/data/models.dart';
-import 'features/billing/presentation/balance_screen.dart';
 import 'features/auth/data/session_controller.dart';
 import 'features/auth/presentation/create_account_screen.dart';
 import 'features/auth/presentation/forgot_password_screen.dart';
 import 'features/auth/presentation/login_screen.dart';
 import 'features/auth/presentation/register_screen.dart';
 import 'features/auth/presentation/verify_account_screen.dart';
+import 'features/billing/presentation/balance_screen.dart';
+import 'features/cash/presentation/cash_box_screen.dart';
+import 'features/cash/presentation/cash_overview_screen.dart';
+import 'features/cash/presentation/collect_screen.dart';
+import 'features/cash/presentation/collect_students_screen.dart';
+import 'features/enrollment/presentation/add_student_screen.dart';
+import 'features/enrollment/presentation/enroll_child_screen.dart';
+import 'features/enrollment/presentation/enrollment_requests_screen.dart';
 import 'features/home/presentation/home_screen.dart';
 import 'features/invitations/presentation/invitation_code_screen.dart';
 import 'features/invitations/presentation/invitation_screen.dart';
@@ -31,11 +39,14 @@ import 'features/onboarding/presentation/programs_step_screen.dart';
 import 'features/onboarding/presentation/season_step_screen.dart';
 import 'features/onboarding/presentation/setup_done_screen.dart';
 import 'features/organizations/presentation/organization_picker_screen.dart';
+import 'features/organizations/presentation/vocabulary_screen.dart';
 import 'features/payment_reports/presentation/payment_reports_screen.dart';
 import 'features/payment_reports/presentation/report_payment_screen.dart';
 import 'features/reports/presentation/reports_screen.dart';
 import 'features/students/presentation/student_screen.dart';
 import 'features/students/presentation/students_screen.dart';
+import 'features/withdrawals/presentation/dropout_reports.dart';
+import 'features/withdrawals/presentation/manage_student_screen.dart';
 
 /// Decide a dónde ir según el estado de la sesión.
 ///
@@ -160,6 +171,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/inicio', builder: (_, _) => const HomeScreen()),
       GoRoute(path: '/cuenta', builder: (_, _) => const AccountScreen()),
       GoRoute(path: '/informes', builder: (_, _) => const ReportsScreen()),
+      GoRoute(path: '/bajas', builder: (_, _) => const DropoutReportsScreen()),
+      // Antes que `/alumnos/:id`: "nuevo" no es un número.
+      GoRoute(
+        path: '/alumnos/nuevo',
+        builder: (_, _) => const AddStudentScreen(),
+      ),
+      GoRoute(
+        path: '/alumnos/:id',
+        builder: (_, state) =>
+            ManageStudentScreen(id: int.parse(state.pathParameters['id']!)),
+      ),
       GoRoute(
         path: '/estado-de-cuenta',
         builder: (_, _) => const BalanceScreen(),
@@ -175,9 +197,32 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const PaymentReportsScreen(),
       ),
       GoRoute(
+        path: '/solicitudes',
+        builder: (_, _) => const EnrollmentRequestsScreen(),
+      ),
+      GoRoute(
+        path: '/cobrar',
+        builder: (_, _) => const CollectStudentsScreen(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            builder: (_, state) => CollectScreen(
+              studentId: int.parse(state.pathParameters['id']!),
+            ),
+          ),
+        ],
+      ),
+      GoRoute(path: '/mi-caja', builder: (_, _) => const CashBoxScreen()),
+      GoRoute(path: '/efectivo', builder: (_, _) => const CashOverviewScreen()),
+      GoRoute(
         path: '/hijos',
         builder: (_, _) => const StudentsScreen(),
         routes: [
+          // Antes que `:id`: "inscribir" no es un número.
+          GoRoute(
+            path: 'inscribir',
+            builder: (_, _) => const EnrollChildScreen(),
+          ),
           GoRoute(
             path: ':id',
             builder: (_, state) =>
@@ -191,9 +236,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             ClassAttendanceScreen(id: int.parse(state.pathParameters['id']!)),
       ),
       GoRoute(
+        path: '/vocabulario',
+        builder: (_, _) => const VocabularyScreen(),
+      ),
+      GoRoute(
         path: '/notificaciones',
         builder: (_, _) => const NotificationSettingsScreen(),
       ),
+      GoRoute(path: '/avisos', builder: (_, _) => const InboxScreen()),
       GoRoute(
         path: '/grupos',
         builder: (_, _) => const GroupsScreen(),

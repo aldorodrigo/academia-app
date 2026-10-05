@@ -98,12 +98,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(
-        find.text(
-          'Todavía no hay hijos cargados. Si falta alguno, avisá al club.',
-        ),
-        findsOneWidget,
-      );
+      expect(find.text('Todavía no hay hijos cargados.'), findsOneWidget);
+      expect(find.text('Inscribir a mi hijo'), findsOneWidget);
     });
 
     testWidgets('sin rol de tutor ni alumnos no muestra la sección', (
@@ -157,6 +153,52 @@ void main() {
       expect(find.text('Ficha médica'), findsOneWidget);
       expect(find.text('Penicilina'), findsOneWidget);
       expect(find.text('Vigente hasta 01/03/2027'), findsOneWidget);
+    });
+
+    testWidgets('nombra a quienes dan clase según su género', (tester) async {
+      Map<String, Object?> withInstructors(List<Map<String, Object?>> list) {
+        final detail = studentDetailJson();
+        final enrollment =
+            (detail['enrollments']! as List).first as Map<String, Object?>;
+        final group = enrollment['group']! as Map<String, Object?>;
+        return {
+          ...detail,
+          'enrollments': [
+            {
+              ...enrollment,
+              'group': {...group, 'instructors': list},
+            },
+          ],
+        };
+      }
+
+      const cases = [
+        ([('Ana López', 'female')], 'Técnica: Ana López'),
+        (
+          [('Ana López', 'female'), ('Lía Paz', 'female')],
+          'Técnicas: Ana López, Lía Paz',
+        ),
+        (
+          [('Ana López', 'female'), ('Juan Paz', 'male')],
+          'Técnicos: Ana López, Juan Paz',
+        ),
+        ([('Juan Paz', null)], 'Técnico: Juan Paz'),
+      ];
+      for (final (list, expected) in cases) {
+        await tester.pumpWidget(
+          _app(
+            _routes(
+              student: withInstructors([
+                for (final (name, gender) in list)
+                  {'name': name, 'gender': gender},
+              ]),
+            ),
+            StudentScreen(key: ValueKey(expected), id: 12),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text(expected), findsOneWidget);
+      }
     });
 
     testWidgets('muestra las fechas y marca la temporada que no empezó', (

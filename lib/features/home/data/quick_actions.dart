@@ -15,19 +15,38 @@ class QuickAction {
 }
 
 /// Los botones según lo que hace cada uno en la organización: el técnico, sus
-/// grupos; la comisión, los comprobantes y los informes; la familia, su estado
-/// de cuenta y sus reservas; el profesor de clases particulares, su agenda y sus
-/// alumnos.
+/// grupos, cobrar en efectivo y su caja; la comisión, los comprobantes, el
+/// efectivo en poder de quienes cobran, las solicitudes de inscripción y los
+/// informes; la familia, su estado de cuenta y sus reservas; el profesor de
+/// clases particulares, su agenda y sus alumnos. Con las palabras de la
+/// organización ("Mis niveles", "Cargar jugador").
 List<QuickAction> quickActionsFor(
   OrganizationDetails? organization, {
   required bool hasStudents,
 }) {
   if (organization == null) return const [];
   final family = organization.hasRole('tutor') || hasStudents;
+  // Quien cobra directo a la Caja no tiene caja propia: "Mi caja" solo si le
+  // quedó plata de antes (o un depósito por confirmar).
+  final hasCashBox =
+      !organization.collectsToOrgCash || organization.cashBoxBalance != 0;
 
   return [
     if (organization.can('take_attendance'))
-      const QuickAction('Mis grupos', Icons.groups_outlined, '/grupos'),
+      QuickAction(
+        'Mis ${organization.word('group').pluralLower}',
+        Icons.groups_outlined,
+        '/grupos',
+      ),
+    if (organization.can('collect_payments')) ...[
+      const QuickAction('Cobrar', Icons.payments_outlined, '/cobrar'),
+      if (hasCashBox)
+        const QuickAction(
+          'Mi caja',
+          Icons.account_balance_wallet_outlined,
+          '/mi-caja',
+        ),
+    ],
     if (family)
       const QuickAction(
         'Estado de cuenta',
@@ -57,6 +76,20 @@ List<QuickAction> quickActionsFor(
         'Comprobantes',
         Icons.fact_check_outlined,
         '/comprobantes',
+      ),
+    if (organization.can('review_payment_reports'))
+      const QuickAction('Efectivo', Icons.savings_outlined, '/efectivo'),
+    if (organization.can('create_students'))
+      QuickAction(
+        'Cargar ${organization.word('student').lower}',
+        Icons.person_add_alt_1_outlined,
+        '/alumnos/nuevo',
+      ),
+    if (organization.can('manage_enrollment_requests'))
+      const QuickAction(
+        'Solicitudes',
+        Icons.how_to_reg_outlined,
+        '/solicitudes',
       ),
     if (organization.can('view_reports'))
       const QuickAction('Informes', Icons.bar_chart_outlined, '/informes'),

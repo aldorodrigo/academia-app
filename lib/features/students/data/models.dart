@@ -1,4 +1,5 @@
 import '../../../core/utils/format.dart';
+import '../../../core/vocabulary/vocabulary.dart';
 
 /// Estado de la inscripción, como lo define la API.
 enum EnrollmentStatus {
@@ -71,6 +72,7 @@ class Group {
     required this.program,
     this.schedules = const [],
     this.instructors = const [],
+    this.instructorGenders = const [],
   });
 
   factory Group.fromJson(Map<String, dynamic> json) => Group(
@@ -80,6 +82,10 @@ class Group {
     schedules: _list(json['schedules'], Schedule.fromJson)
       ..sort((a, b) => a.weekday.compareTo(b.weekday)),
     instructors: _list(json['instructors'], (i) => i['name'] as String),
+    instructorGenders: _list(
+      json['instructors'],
+      (i) => Gender.fromApi(i['gender']),
+    ),
   );
 
   final int id;
@@ -87,6 +93,9 @@ class Group {
   final Program program;
   final List<Schedule> schedules;
   final List<String> instructors;
+
+  /// El género de cada uno (mismo orden que [instructors]): "Técnica: Ana" / "Técnicos: Ana, Juan".
+  final List<Gender?> instructorGenders;
 }
 
 /// Inscripción = alumno + grupo + temporada.
@@ -195,6 +204,8 @@ class Student {
     this.medical,
     this.canViewMedical = false,
     this.classReminders,
+    this.leavingReportedOn,
+    this.gender,
   });
 
   factory Student.fromJson(Map<String, dynamic> json) {
@@ -216,8 +227,16 @@ class Student {
       medical: medical == null ? null : MedicalRecord.fromJson(medical),
       canViewMedical: permissions?['view_medical'] as bool? ?? false,
       classReminders: json['class_reminders'] as bool?,
+      leavingReportedOn: _date(json['leaving_reported_on']),
+      gender: Gender.fromApi(json['gender']),
     );
   }
+
+  /// Opcional (lo carga el club o el tutor): para nombrarlo bien ("Jugadora").
+  final Gender? gender;
+
+  /// El tutor avisó que deja el club (el club decide la baja).
+  final DateTime? leavingReportedOn;
 
   final int id;
   final String firstName;

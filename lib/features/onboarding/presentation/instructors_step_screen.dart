@@ -10,6 +10,8 @@ import '../../organizations/data/organization_repository.dart';
 import '../data/models.dart';
 import '../data/step_controllers.dart';
 import 'step_scaffold.dart';
+import '../../../core/vocabulary/vocabulary.dart';
+import '../../../core/vocabulary/gender_choice.dart';
 
 /// Paso 4: quién da las clases. El admin puede ser uno ("Yo también doy
 /// clases"); a los demás se los invita con sus categorías y se comparte el link.
@@ -25,6 +27,10 @@ class _InstructorsStepScreenState extends ConsumerState<InstructorsStepScreen>
     with StepEntry {
   bool _saving = false;
 
+  /// "Yo también doy clases" encendido sin categorías elegidas todavía: se
+  /// guarda recién al elegir la primera (no se dan todas por defecto).
+  bool _choosingMine = false;
+
   InstructorsStepController get _controller =>
       ref.read(instructorsStepProvider.notifier);
 
@@ -33,7 +39,46 @@ class _InstructorsStepScreenState extends ConsumerState<InstructorsStepScreen>
       teaches: teaches,
       groupIds: groupIds,
     );
-    if (error != null && mounted) showMessage(context, error);
+    if (!mounted) return;
+    if (error != null) {
+      showMessage(context, error);
+    } else {
+      setState(() => _choosingMine = false);
+    }
+  }
+
+  /// Encender pide elegir; apagar deja de dar clases.
+  void _toggleTeaching(InstructorsStep step, bool on) {
+    if (on && step.groups.isNotEmpty) {
+      setState(() => _choosingMine = true);
+    } else if (on) {
+      _setTeaching(true, const []);
+    } else {
+      setState(() => _choosingMine = false);
+      if (step.team.teaches) _setTeaching(false, const []);
+    }
+  }
+
+  void _toggleMine(
+    InstructorsStep step,
+    int groupId,
+    bool selected,
+    String group,
+  ) {
+    final ids = [
+      for (final id in step.team.myGroupIds)
+        if (id != groupId) id,
+      if (selected) groupId,
+    ];
+    if (ids.isEmpty) {
+      showMessage(
+        context,
+        'Elegí al menos ${Word.of(group).a}; '
+        'si no das clases, apagá «Yo también doy clases».',
+      );
+      return;
+    }
+    _setTeaching(true, ids);
   }
 
   Future<void> _invite(InstructorsStep step, String role) async {
@@ -98,6 +143,7 @@ class _InstructorsStepScreenState extends ConsumerState<InstructorsStepScreen>
     final async = ref.watch(instructorsStepProvider);
     final organization = ref.watch(currentOrganizationProvider).value;
     final role = organization?.term('instructor') ?? 'Técnico';
+    final groupTerm = organization?.term('group') ?? 'Categoría';
     final plural = pluralize(role);
     final step = async.value;
     final anyone =
@@ -133,16 +179,22 @@ class _InstructorsStepScreenState extends ConsumerState<InstructorsStepScreen>
                 subtitle: const Text(
                   'Tomás asistencia desde la app con tu cuenta.',
                 ),
-                value: step.team.teaches,
-                onChanged: (on) => _setTeaching(
-                  on,
-                  on ? step.groups.map((g) => g.id).toList() : const [],
-                ),
+                value: step.team.teaches || _choosingMine,
+                onChanged: (on) => _toggleTeaching(step, on),
               ),
-              if (step.team.teaches && step.groups.isNotEmpty) ...[
+              if ((step.team.teaches || _choosingMine) &&
+                  step.groups.isNotEmpty) ...[
                 Text(
-                  '¿Cuáles das vos?',
-                  style: Theme.of(context).textTheme.bodySmall,
+                  step.team.myGroupIds.isEmpty
+                      ? '¿Cuáles das vos? Elegí al menos '
+                            '${Word.of(groupTerm).a}.'
+                      : '¿Cuáles das vos?',
+                  key: const Key('i-teach-hint'),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: step.team.myGroupIds.isEmpty
+                        ? Theme.of(context).colorScheme.error
+                        : null,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Wrap(
@@ -153,11 +205,8 @@ class _InstructorsStepScreenState extends ConsumerState<InstructorsStepScreen>
                       FilterChip(
                         label: Text(group.name),
                         selected: step.team.myGroupIds.contains(group.id),
-                        onSelected: (selected) => _setTeaching(true, [
-                          for (final id in step.team.myGroupIds)
-                            if (id != group.id) id,
-                          if (selected) group.id,
-                        ]),
+                        onSelected: (selected) =>
+                            _toggleMine(step, group.id, selected, groupTerm),
                       ),
                   ],
                 ),
@@ -212,9 +261,7 @@ class _InstructorsStepScreenState extends ConsumerState<InstructorsStepScreen>
               OutlinedButton.icon(
                 key: const Key('invite-instructor'),
                 icon: const Icon(Icons.person_add_alt_1_outlined),
-                label: Text(
-                  'Invitar a ${gendered(role, 'un', 'una')} ${role.toLowerCase()}',
-                ),
+                label: Text('Invitar a ${Word.of(role).a}'),
                 onPressed: () => _invite(step, role),
               ),
             ],
@@ -240,6 +287,7 @@ class _InviteSheetState extends ConsumerState<_InviteSheet> {
   final _name = TextEditingController();
   final _contact = TextEditingController();
   final _groups = <int>{};
+  Gender? _gender;
   bool _loading = false;
   String? _error;
 
@@ -263,6 +311,7 @@ class _InviteSheetState extends ConsumerState<_InviteSheet> {
             name: _name.text,
             contact: _contact.text,
             groupIds: _groups.toList(),
+            gender: _gender,
           );
       if (mounted) Navigator.pop(context, invited);
     } catch (error) {
@@ -291,8 +340,7 @@ class _InviteSheetState extends ConsumerState<_InviteSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Invitar a ${gendered(widget.role, 'un', 'una')} '
-                '${widget.role.toLowerCase()}',
+                'Invitar a ${Word.of(widget.role).a}',
                 style: theme.textTheme.titleLarge,
               ),
               const SizedBox(height: 16),
@@ -319,6 +367,11 @@ class _InviteSheetState extends ConsumerState<_InviteSheet> {
                 validator: (v) => v == null || v.trim().isEmpty
                     ? 'Ingresá el celular o el correo.'
                     : validateLogin(v),
+              ),
+              const SizedBox(height: 16),
+              GenderChoice(
+                value: _gender,
+                onChanged: (gender) => setState(() => _gender = gender),
               ),
               if (widget.groups.isNotEmpty) ...[
                 const SizedBox(height: 16),
@@ -410,7 +463,8 @@ class _ShareInvitationDialog extends ConsumerWidget {
                 invitationMessage(
                   name: instructor.name,
                   organization: organization?.name ?? '',
-                  role: role,
+                  role: (organization?.word('instructor') ?? Word.of(role))
+                      .forPerson(instructor.gender),
                   link: link!,
                 ),
                 phone: instructor.phone,

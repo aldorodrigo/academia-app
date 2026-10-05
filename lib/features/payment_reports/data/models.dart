@@ -100,6 +100,8 @@ class PaymentReport {
     this.reportedBy,
     this.pendingBalance,
     this.moneyAccounts = const [],
+    this.registeredBy,
+    this.open,
   });
 
   factory PaymentReport.fromJson(Map<String, dynamic> json) {
@@ -129,6 +131,8 @@ class PaymentReport {
       moneyAccounts: ((json['money_accounts'] as List?) ?? const [])
           .map((a) => TransferAccount.fromJson(a as Map<String, dynamic>))
           .toList(),
+      registeredBy: json['registered_by'] as String?,
+      open: json['open'] as bool?,
     );
   }
 
@@ -161,6 +165,15 @@ class PaymentReport {
   final String? reportedBy;
   final int? pendingBalance;
   final List<TransferAccount> moneyAccounts;
+
+  /// Quién lo registró, si lo cargó el club (la captura que le mandó la
+  /// familia por WhatsApp); `null` si lo informó la familia.
+  final String? registeredBy;
+
+  /// Va arriba en el estado de cuenta (lo decide la API): en revisión, o
+  /// rechazado mientras alguna de sus cuotas siga pendiente. `null` si la API
+  /// no lo manda.
+  final bool? open;
 
   bool get isPending => status == PaymentReportStatus.pending;
 

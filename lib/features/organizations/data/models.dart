@@ -1,4 +1,5 @@
 import '../../../core/utils/format.dart';
+import '../../../core/vocabulary/vocabulary.dart';
 
 /// Rol vigente del usuario en la organización (tutor, cargo de comisión…).
 class OrganizationRole {
@@ -30,6 +31,14 @@ class OrganizationRole {
       value is String ? DateTime.parse(value) : null;
 }
 
+/// Qué es una organización según su tipo (sin la API a mano, ej. "Tu club" antes de crearla).
+String typeNounFor(String? type) => switch (type) {
+  'academy' => 'academia',
+  'school' => 'escuela',
+  'parents_association' => 'comisión',
+  _ => 'club',
+};
+
 /// Configuración de la organización activa (`GET /organization`).
 class OrganizationDetails {
   const OrganizationDetails({
@@ -39,6 +48,10 @@ class OrganizationDetails {
     required this.features,
     required this.roles,
     this.permissions = const [],
+    this.collectsToOrgCash = false,
+    this.cashBoxBalance = 0,
+    this.vocabulary = const {},
+    this.terminologyFeminine = const {},
     this.type,
     this.currency = 'PYG',
     this.timezone = 'America/Asuncion',
@@ -61,6 +74,17 @@ class OrganizationDetails {
           .toList(),
       permissions: List<String>.from(
         membership?['permissions'] as List? ?? const [],
+      ),
+      collectsToOrgCash: membership?['collects_to_org_cash'] as bool? ?? false,
+      cashBoxBalance: membership?['cash_box_balance'] as int? ?? 0,
+      vocabulary: {
+        for (final entry in (json['vocabulary'] as Map? ?? const {}).entries)
+          entry.key as String: Word.fromJson(
+            Map<String, dynamic>.from(entry.value as Map),
+          ),
+      },
+      terminologyFeminine: Map<String, String>.from(
+        json['terminology_feminine'] as Map? ?? const {},
       ),
     );
   }
@@ -86,8 +110,43 @@ class OrganizationDetails {
   /// Permisos del usuario para la app (ej. `view_reports`).
   final List<String> permissions;
 
+  /// Lo que cobra en efectivo entra directo a la Caja del club (sin caja
+  /// personal ni depósito). Lo decide quien administra los miembros.
+  final bool collectsToOrgCash;
+
+  /// Efectivo en su caja personal, en guaraníes (0 si no tiene caja). Incluye
+  /// los depósitos por confirmar, que siguen en la caja hasta que se confirman.
+  final int cashBoxBalance;
+
+  /// Cada palabra con plural, género, artículo y formas de persona (lo decide la API), más `organization`.
+  final Map<String, Word> vocabulary;
+
+  /// Formas femeninas que ajustó la organización (`{"instructor": "Entrenadora"}`); vacía = la de la regla.
+  final Map<String, String> terminologyFeminine;
+
   /// Etiqueta configurable de la organización (ej. term('group') → "Categoría").
   String term(String key) => terminology[key] ?? defaultTerminology[key] ?? key;
+
+  /// La palabra para concordar: word('group').the() → "la categoría", word('instructor').forPerson(Gender.female)
+  /// → "Técnica". La que manda la API; si no vino, con las reglas locales.
+  Word word(String key) {
+    final word = vocabulary[key];
+    if (key == 'organization') return word ?? Word.of(_typeNoun);
+    if (word != null && word.word == term(key)) return word;
+    return Word.of(term(key), feminineForm: terminologyFeminine[key]);
+  }
+
+  /// Qué es la organización ("club", "academia", "escuela", "comisión"): org.the() → "la academia",
+  /// org.of() → "del club".
+  Word get org => word('organization');
+
+  /// Qué es, en minúscula: "club", "academia", "escuela", "comisión".
+  String get typeNoun => org.word;
+
+  /// "el club", "la academia".
+  String get typeWithArticle => org.the();
+
+  String get _typeNoun => typeNounFor(type);
 
   bool hasFeature(String feature) => features.contains(feature);
 

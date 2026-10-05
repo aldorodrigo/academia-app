@@ -1,4 +1,5 @@
 import '../../../core/utils/format.dart';
+import '../../../core/vocabulary/vocabulary.dart';
 
 class Organization {
   const Organization({required this.slug, required this.name, this.type});
@@ -22,6 +23,7 @@ class Session {
     this.email,
     this.organizationSlug,
     this.verified = true,
+    this.gender,
   });
 
   final String name;
@@ -34,6 +36,9 @@ class Session {
 
   /// Cuenta recién creada que todavía no ingresó el código.
   final bool verified;
+
+  /// Opcional ("Mi cuenta"): para nombrarlo bien ("Técnica", "Tesorera"). null = sin especificar.
+  final Gender? gender;
 
   /// Cómo se identifica la cuenta: el celular (formateado) o el correo.
   String get contact => phone != null ? formatPhone(phone!) : email ?? '';
@@ -52,5 +57,16 @@ class Session {
     organizations: organizations,
     organizationSlug: organizationSlug ?? this.organizationSlug,
     verified: verified,
+    gender: gender,
+  );
+
+  Session withGender(Gender? gender) => Session(
+    name: name,
+    phone: phone,
+    email: email,
+    organizations: organizations,
+    organizationSlug: organizationSlug,
+    verified: verified,
+    gender: gender,
   );
 }

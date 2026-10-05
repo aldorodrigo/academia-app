@@ -61,6 +61,9 @@ const balancesJson = {
       'overdue': 150000,
       'credit': 0,
       'upcoming': 200000,
+      'withdrawn': [
+        {'student_id': 7, 'student': 'Sofía', 'on': '2026-06-03'},
+      ],
     },
   ],
   'pdf_url': 'https://api.test/informes/saldos.pdf',
@@ -77,10 +80,31 @@ const delinquentsJson = {
       'oldest_due_on': '2026-07-10',
       'months_overdue': 3,
       'contact': {'name': 'Rosa Ortiz', 'phone': '0981 222 333'},
+      'withdrawn': <Object>[],
     },
   ],
   'pdf_url': 'https://api.test/informes/morosos.pdf',
   'xlsx_url': 'https://api.test/informes/morosos.xlsx',
+};
+
+/// Morosos dados de baja (filtro `withdrawn=only`).
+const withdrawnDelinquentsJson = {
+  'total': 300000,
+  'families': [
+    {
+      'family': 'Familia Zárate',
+      'students': ['Matías'],
+      'overdue': 300000,
+      'oldest_due_on': '2026-05-10',
+      'months_overdue': 2,
+      'contact': null,
+      'withdrawn': [
+        {'student_id': 9, 'student': 'Matías', 'on': '2026-06-03'},
+      ],
+    },
+  ],
+  'pdf_url': 'https://api.test/informes/morosos.pdf?withdrawn=only',
+  'xlsx_url': 'https://api.test/informes/morosos.xlsx?withdrawn=only',
 };
 
 Map<String, Object? Function(RequestOptions)> _routes({
@@ -113,7 +137,11 @@ Map<String, Object? Function(RequestOptions)> _routes({
     };
   },
   'GET /reports/balances': (_) => {'data': balancesJson},
-  'GET /reports/delinquents': (_) => {'data': delinquentsJson},
+  'GET /reports/delinquents': (options) => {
+    'data': options.queryParameters['withdrawn'] == 'only'
+        ? withdrawnDelinquentsJson
+        : delinquentsJson,
+  },
 };
 
 Widget _app(
@@ -154,6 +182,30 @@ void main() {
     final delinquents = DelinquentsReport.fromJson(delinquentsJson);
     expect(delinquents.families.single.monthsOverdue, 3);
     expect(delinquents.families.single.contactPhone, '0981 222 333');
+    expect(delinquents.families.single.withdrawn, isEmpty);
+
+    final withdrawn = balances.families.single.withdrawn.single;
+    expect(withdrawn.studentId, 7);
+    expect(withdrawn.student, 'Sofía');
+    expect(withdrawn.on, DateTime(2026, 6, 3));
+  });
+
+  test('morosos: filtro de bajas solo si se elige', () async {
+    final requests = <RequestOptions>[];
+    final repository = ReportsRepository(
+      fakeDio(_routes(), requests: requests),
+      InMemorySessionStorage()..organization = 'jakare',
+    );
+
+    await repository.delinquents();
+    await repository.delinquents(withdrawn: WithdrawnFilter.only);
+    await repository.delinquents(withdrawn: WithdrawnFilter.exclude);
+
+    expect(requests.map((r) => r.queryParameters['withdrawn']), [
+      null,
+      'only',
+      'exclude',
+    ]);
   });
 
   test('el balance pide el mes completo', () async {
@@ -229,6 +281,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Próximas cuotas'), findsOneWidget);
+    expect(find.text('Sofía: baja el 03/06/2026'), findsOneWidget);
 
     await tester.tap(find.text('Morosos'));
     await tester.pumpAndSettle();
@@ -240,6 +293,21 @@ void main() {
 
     await tester.tap(find.text('Llamar'));
     expect(opened.single.toString(), 'tel:0981222333');
+  });
+
+  testWidgets('morosos: solo los dados de baja, con la fecha', (tester) async {
+    await tester.pumpWidget(_app(const ReportsScreen()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Morosos'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Todos'), findsOneWidget);
+    await tester.tap(find.text('Dados de baja'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Familia Ortiz'), findsNothing);
+    expect(find.text('Familia Zárate'), findsOneWidget);
+    expect(find.text('Matías: baja el 03/06/2026'), findsOneWidget);
   });
 
   testWidgets('sin permiso: no hay tarjeta y la pantalla lo dice', (

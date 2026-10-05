@@ -78,16 +78,23 @@ class ClassStudent {
     this.status,
     this.guardianResponse,
     this.note,
+    this.enrollmentRequestId,
+    this.canConfirm = false,
   });
 
-  factory ClassStudent.fromJson(Map<String, dynamic> json) => ClassStudent(
-    id: json['id'] as int,
-    fullName: json['full_name'] as String,
-    photoUrl: json['photo_url'] as String?,
-    status: AttendanceStatus.parse(json['status']),
-    guardianResponse: GuardianResponse.parse(json['guardian_response']),
-    note: json['note'] as String?,
-  );
+  factory ClassStudent.fromJson(Map<String, dynamic> json) {
+    final request = json['enrollment_request'] as Map<String, dynamic>?;
+    return ClassStudent(
+      id: json['id'] as int,
+      fullName: json['full_name'] as String,
+      photoUrl: json['photo_url'] as String?,
+      status: AttendanceStatus.parse(json['status']),
+      guardianResponse: GuardianResponse.parse(json['guardian_response']),
+      note: json['note'] as String?,
+      enrollmentRequestId: request?['id'] as int?,
+      canConfirm: request?['can_review'] as bool? ?? false,
+    );
+  }
 
   final int id;
   final String fullName;
@@ -95,6 +102,14 @@ class ClassStudent {
   final AttendanceStatus? status;
   final GuardianResponse? guardianResponse;
   final String? note;
+
+  /// Nuevo que pidió lugar desde la app: va a clases mientras el club confirma.
+  final int? enrollmentRequestId;
+
+  /// Quien toma la asistencia lo puede confirmar o rechazar acá mismo.
+  final bool canConfirm;
+
+  bool get isPendingConfirmation => enrollmentRequestId != null;
 
   String get initials => _initials(fullName);
 }
@@ -366,18 +381,28 @@ class StudentAttendanceSummary {
     this.absent = 0,
     this.justified = 0,
     this.rate,
+    this.dropoutReportedOn,
+    this.enrollmentRequestId,
+    this.canConfirm = false,
   });
 
-  factory StudentAttendanceSummary.fromJson(Map<String, dynamic> json) =>
-      StudentAttendanceSummary(
-        id: json['id'] as int,
-        fullName: json['full_name'] as String,
-        photoUrl: json['photo_url'] as String?,
-        present: json['present'] as int? ?? 0,
-        absent: json['absent'] as int? ?? 0,
-        justified: json['justified'] as int? ?? 0,
-        rate: json['rate'] as int?,
-      );
+  factory StudentAttendanceSummary.fromJson(Map<String, dynamic> json) {
+    final request = json['enrollment_request'] as Map<String, dynamic>?;
+    return StudentAttendanceSummary(
+      id: json['id'] as int,
+      fullName: json['full_name'] as String,
+      photoUrl: json['photo_url'] as String?,
+      present: json['present'] as int? ?? 0,
+      absent: json['absent'] as int? ?? 0,
+      justified: json['justified'] as int? ?? 0,
+      rate: json['rate'] as int?,
+      dropoutReportedOn: json['dropout_reported_on'] == null
+          ? null
+          : DateTime.parse(json['dropout_reported_on'] as String),
+      enrollmentRequestId: request?['id'] as int?,
+      canConfirm: request?['can_review'] as bool? ?? false,
+    );
+  }
 
   final int id;
   final String fullName;
@@ -386,6 +411,15 @@ class StudentAttendanceSummary {
   final int absent;
   final int justified;
   final int? rate;
+
+  /// Cuándo el técnico avisó que dejó de venir (la baja la decide el club).
+  final DateTime? dropoutReportedOn;
+
+  /// Nuevo que pidió lugar desde la app y el club todavía no confirmó.
+  final int? enrollmentRequestId;
+  final bool canConfirm;
+
+  bool get isPendingConfirmation => enrollmentRequestId != null;
 
   String get initials => _initials(fullName);
 }

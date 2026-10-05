@@ -5,6 +5,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/storage/session_storage.dart';
 import '../../attendance/data/models.dart';
 import 'models.dart';
+import '../../../core/vocabulary/vocabulary.dart';
 
 /// Alta del club y guía "Primeros pasos" (`API_V1.md`, Sprint 5d).
 class OnboardingRepository {
@@ -247,6 +248,7 @@ class OnboardingRepository {
     String? phone,
     String? email,
     required List<int> groupIds,
+    Gender? gender,
   }) async => SetupInstructor.fromJson(
     _data(
       await _dio.post(
@@ -256,6 +258,7 @@ class OnboardingRepository {
           'phone': ?phone,
           'email': ?email,
           'group_ids': groupIds,
+          'gender': ?gender?.value,
         },
       ),
     ),
@@ -304,6 +307,27 @@ class OnboardingRepository {
 
   Future<void> revokeInvitation(int id) =>
       _dio.delete<void>('/setup/invitations/$id');
+
+  // Borrador del paso 2 (lo que se está armando, guardado en la API para
+  // retomarlo desde cualquier dispositivo, en la app o en el panel).
+
+  Future<Map<String, dynamic>?> groupsDraft() async {
+    final data = _data(await _dio.get('/onboarding/steps/groups/draft'));
+    final draft = data['draft'];
+    return draft is Map ? Map<String, dynamic>.from(draft) : null;
+  }
+
+  /// null = no hay nada a medio armar (lo borra).
+  Future<void> saveGroupsDraft(Map<String, Object?>? draft) async {
+    if (draft == null) {
+      await _dio.delete<void>('/onboarding/steps/groups/draft');
+    } else {
+      await _dio.put<void>(
+        '/onboarding/steps/groups/draft',
+        data: {'draft': draft},
+      );
+    }
+  }
 }
 
 final onboardingRepositoryProvider = Provider<OnboardingRepository>(

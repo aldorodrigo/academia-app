@@ -190,12 +190,41 @@ class AttendanceRepository {
     return GroupAttendance.fromJson(_data(response.data!));
   }
 
-  /// Próxima clase de cada alumno a cargo del tutor.
+  /// Avisa al club que el alumno dejó de venir (el club decide si le da la baja).
+  /// Devuelve la fecha del aviso.
+  Future<DateTime> reportDropout(
+    int groupId,
+    int studentId, {
+    String? note,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/groups/$groupId/students/$studentId/dropout',
+      data: {if (note != null && note.trim().isNotEmpty) 'note': note.trim()},
+    );
+    return DateTime.parse(
+      _data(response.data!)['dropout_reported_on'] as String,
+    );
+  }
+
+  /// Deshace el aviso: el alumno sigue viniendo.
+  Future<void> cancelDropout(int groupId, int studentId) async {
+    await _dio.delete<void>('/groups/$groupId/students/$studentId/dropout');
+  }
+
+  /// Próxima clase de cada alumno a cargo del tutor, por fecha y hora de
+  /// inicio (la API ya las manda así; a la misma hora se respeta su orden).
   Future<List<AgendaItem>> agenda() async {
     if (await _storage.readOrganization() == null) return const [];
 
     final response = await _dio.get<Map<String, dynamic>>('/agenda');
-    return _items(response.data!, AgendaItem.fromJson);
+    final items = _items(response.data!, AgendaItem.fromJson).indexed.toList()
+      ..sort((a, b) {
+        final byDate = a.$2.session.date.compareTo(b.$2.session.date);
+        if (byDate != 0) return byDate;
+        final byTime = a.$2.session.startsAt.compareTo(b.$2.session.startsAt);
+        return byTime != 0 ? byTime : a.$1.compareTo(b.$1);
+      });
+    return [for (final (_, item) in items) item];
   }
 
   Future<AgendaItem> respond(

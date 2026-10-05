@@ -7,6 +7,7 @@ import '../../../core/utils/launcher.dart';
 import '../../billing/data/account_repository.dart';
 import '../data/models.dart';
 import '../data/payment_reports_repository.dart';
+import '../../organizations/data/organization_repository.dart';
 
 /// Comprobante informado por el tutor: en revisión (se puede retirar) o
 /// rechazado con el motivo.
@@ -20,8 +21,9 @@ class PaymentReportTile extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('¿Retirar el comprobante?'),
-        content: const Text(
-          'El club no lo va a revisar. Podés informar el pago de nuevo.',
+        content: Text(
+          '${ref.read(orgWordProvider).theUpper()} no lo va a revisar. '
+          'Podés informar el pago de nuevo.',
         ),
         actions: [
           TextButton(
@@ -84,6 +86,11 @@ class PaymentReportTile extends ConsumerWidget {
             ),
             const SizedBox(height: 4),
             Text(report.chargesSummary),
+            if (report.registeredBy != null)
+              Text(
+                'Registrado por ${report.registeredBy}',
+                style: theme.textTheme.bodySmall,
+              ),
             if (rejected && report.rejectionReason != null)
               Text(
                 'Motivo: ${report.rejectionReason}',
@@ -99,7 +106,8 @@ class PaymentReportTile extends ConsumerWidget {
                     onPressed: () =>
                         ref.read(urlLauncherProvider)(Uri.parse(proof)),
                   ),
-                if (report.isPending)
+                // Lo que registró el club lo retira quien lo registró, no la familia.
+                if (report.isPending && report.registeredBy == null)
                   TextButton(
                     onPressed: () => _withdraw(context, ref),
                     child: const Text('Retirar'),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../enrollment/presentation/enrollment_actions.dart';
 import '../../../core/utils/clock.dart';
 import '../../../core/utils/format.dart';
 import '../data/attendance_outbox.dart';
@@ -27,6 +28,42 @@ class _ClassAttendanceScreenState extends ConsumerState<ClassAttendanceScreen> {
   static const _searchFrom = 20;
 
   String _query = '';
+
+  /// Nuevos confirmados en esta pantalla (la lista no cambia: dejan de decir "por confirmar").
+  final _confirmed = <int>{};
+
+  Future<void> _confirm(ClassStudent student) async {
+    final ok = await confirmEnrollment(
+      context,
+      ref,
+      student.enrollmentRequestId!,
+      student.fullName,
+    );
+    if (ok && mounted) setState(() => _confirmed.add(student.id));
+  }
+
+  Future<void> _reject(ClassStudent student, AttendanceSheet sheet) async {
+    // Al rechazar sale de la lista: lo marcado sin guardar se perdería.
+    if (sheet.touched && sheet.dirty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Guardá la asistencia antes de rechazar a alguien.'),
+        ),
+      );
+      return;
+    }
+    final ok = await rejectEnrollment(
+      context,
+      ref,
+      student.enrollmentRequestId!,
+      student.fullName,
+    );
+    if (ok && mounted) {
+      ref
+        ..invalidate(attendanceSheetProvider(widget.id))
+        ..invalidate(classesProvider);
+    }
+  }
 
   AttendanceSheetController get _controller =>
       ref.read(attendanceSheetProvider(widget.id).notifier);
@@ -297,15 +334,38 @@ class _ClassAttendanceScreenState extends ConsumerState<ClassAttendanceScreen> {
             padding: EdgeInsets.all(16),
             child: Text('No hay alumnos inscriptos en esta clase.'),
           ),
-        for (final student in students)
+        for (final student in students) ...[
           _StudentRow(
             student: student,
             status: sheet.showsMarks ? sheet.statusOf(student.id) : null,
             note: sheet.notes[student.id],
             enabled: sheet.canEdit,
+            isNew:
+                student.isPendingConfirmation &&
+                !_confirmed.contains(student.id),
             onTap: () => _controller.toggle(student.id),
             onMore: () => _justify(student, sheet),
           ),
+          if (student.isPendingConfirmation &&
+              student.canConfirm &&
+              !_confirmed.contains(student.id))
+            Padding(
+              padding: const EdgeInsets.fromLTRB(72, 0, 16, 8),
+              child: Wrap(
+                spacing: 8,
+                children: [
+                  OutlinedButton(
+                    onPressed: () => _reject(student, sheet),
+                    child: const Text('Rechazar'),
+                  ),
+                  FilledButton.tonal(
+                    onPressed: () => _confirm(student),
+                    child: const Text('Confirmar inscripción'),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ],
     );
   }
@@ -457,12 +517,16 @@ class _StudentRow extends StatelessWidget {
     required this.enabled,
     required this.onTap,
     required this.onMore,
+    this.isNew = false,
   });
 
   final ClassStudent student;
   final AttendanceStatus? status;
   final String? note;
   final bool enabled;
+
+  /// Pidió lugar desde la app y el club todavía no lo confirmó.
+  final bool isNew;
   final VoidCallback onTap;
   final VoidCallback onMore;
 
@@ -472,10 +536,13 @@ class _StudentRow extends StatelessWidget {
       GuardianResponse.notGoing => notGoingNote,
       null => null,
     };
-    if (note != null && note != response) {
-      return response == null ? note : '$response · $note';
-    }
-    return response;
+    final text = note != null && note != response
+        ? (response == null ? note : '$response · $note')
+        : response;
+    if (!isNew) return text;
+    return text == null
+        ? 'Nuevo, por confirmar'
+        : 'Nuevo, por confirmar · $text';
   }
 
   @override

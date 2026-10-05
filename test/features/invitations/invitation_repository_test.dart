@@ -27,6 +27,7 @@ void main() {
       'user_exists': true,
     });
     expect(invitation.email, isNull);
+    expect(invitation.name, isNull);
     expect(invitation.contact, '0981 123 456');
     expect(invitation.userExists, isTrue);
   });
@@ -80,6 +81,7 @@ void main() {
       name: 'Ana',
       password: 'secreta12',
       passwordConfirmation: 'secreta12',
+      acceptedTerms: true,
     );
 
     expect(storage.token, 'nuevo-token');
@@ -89,6 +91,7 @@ void main() {
       'password': 'secreta12',
       'password_confirmation': 'secreta12',
       'device_name': 'app',
+      'terms': true,
     });
   });
 

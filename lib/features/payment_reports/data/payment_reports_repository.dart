@@ -5,6 +5,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/storage/session_storage.dart';
 import '../../../core/utils/format.dart';
 import '../../auth/data/session_controller.dart';
+import '../../billing/data/receipt_notice.dart';
 import 'models.dart';
 import 'report_form.dart';
 
@@ -57,7 +58,10 @@ class PaymentReportsRepository {
   }
 
   /// Registra el pago con su recibo. Lo que no se manda toma el valor del comprobante.
-  Future<PaymentReport> approve(
+  /// Aprueba y registra el pago. Si lo había registrado alguien del club,
+  /// `notice` dice a quién le llega el recibo (WhatsApp para quien no tiene la
+  /// app).
+  Future<({PaymentReport report, ReceiptNotice? notice})> approve(
     int id, {
     int? moneyAccountId,
     DateTime? receivedOn,
@@ -71,8 +75,11 @@ class PaymentReportsRepository {
         'amount': ?amount,
       },
     );
-    return PaymentReport.fromJson(
-      response.data!['data'] as Map<String, dynamic>,
+    return (
+      report: PaymentReport.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      ),
+      notice: ReceiptNotice.fromJson(response.data!['notice']),
     );
   }
 

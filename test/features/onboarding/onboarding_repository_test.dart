@@ -1,6 +1,7 @@
 import 'package:academia_app/features/auth/data/auth_repository.dart';
 import 'package:academia_app/features/onboarding/data/models.dart';
 import 'package:academia_app/features/onboarding/data/onboarding_repository.dart';
+import 'package:academia_app/features/organizations/data/organization_repository.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -439,5 +440,33 @@ void main() {
       expect(invited.phone, '+595981555444');
       expect(invited.email, isNull);
     });
+  });
+
+  test('cambiar cómo les dicen', () async {
+    final requests = <RequestOptions>[];
+    final storage = InMemorySessionStorage()..organization = 'jakare';
+    final terminology = await OrganizationRepository(
+      fakeDio({
+        'PUT /organization/terminology': (_) => {
+          'data': {
+            'terminology': {
+              'program': 'Disciplina',
+              'group': 'Categoría',
+              'student': 'Alumno',
+              'instructor': 'Técnico',
+              'guardian': 'Tutor',
+              'space': 'Cancha',
+            },
+          },
+        },
+      }, requests: requests),
+      storage,
+    ).updateTerminology({'group': 'Categoría', 'instructor': 'Técnico'});
+
+    expect(requests.single.data, {
+      'terminology': {'group': 'Categoría', 'instructor': 'Técnico'},
+    });
+    expect(terminology['student'], 'Alumno');
+    expect(terminology['space'], 'Cancha');
   });
 }

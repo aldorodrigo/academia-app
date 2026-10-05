@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../billing/data/amount_hint.dart';
 import '../../billing/data/models.dart';
 
 /// Archivo del comprobante elegido por el tutor (foto o PDF).
@@ -71,7 +72,7 @@ String? validateProof(PickedProof? proof) {
 
 String? validateRejectionReason(String? value) =>
     value == null || value.trim().isEmpty
-    ? 'Contale al tutor por qué no lo aprobás.'
+    ? 'Contá por qué no lo aprobás.'
     : null;
 
 /// Cuotas que se pueden informar: impagas y que no estén en otro comprobante
@@ -88,3 +89,12 @@ List<Charge> reportableCharges(Account account) {
 /// Monto sugerido: lo que falta pagar de las cuotas elegidas.
 int suggestedAmount(Iterable<Charge> charges) =>
     charges.fold(0, (sum, c) => sum + c.pendingAmount);
+
+/// Aviso del monto informado frente a lo elegido (parcial o lo que sobra).
+String? reportAmountHint(int? amount, int selected) => amountHint(
+  amount,
+  selected,
+  noneSelected:
+      'Sin cuotas elegidas: se aplica a lo que debas, de lo más viejo a lo más '
+      'nuevo; lo que sobre queda a favor.',
+);

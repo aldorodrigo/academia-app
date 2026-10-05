@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../auth/data/session_controller.dart';
+import '../../inbox/data/inbox_repository.dart';
 import '../../onboarding/data/onboarding_controller.dart';
 import '../../organizations/data/organization_repository.dart';
 import '../../organizations/presentation/roles_list.dart';
+import '../../../core/vocabulary/gender_choice.dart';
+import '../../../core/api/api_client.dart';
 
 class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
@@ -16,6 +19,7 @@ class AccountScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final organization = ref.watch(currentOrganizationProvider).value;
     final onboarding = ref.watch(onboardingProvider).value;
+    final unread = ref.watch(unreadNotificationsProvider);
     final teaches =
         (organization?.hasFeature('private_lessons') ?? false) &&
         (organization!.can('teach_lessons') ||
@@ -39,6 +43,29 @@ class AccountScreen extends ConsumerWidget {
               ].whereType<String>().join('\n'),
             ),
           ),
+          if (session != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: GenderChoice(
+                key: const Key('my-gender'),
+                title: 'Género (opcional, para nombrarte bien)',
+                value: session.gender,
+                onChanged: (gender) async {
+                  try {
+                    await ref
+                        .read(sessionControllerProvider.notifier)
+                        .setGender(gender);
+                    ref.invalidate(currentOrganizationProvider);
+                  } catch (error) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(apiErrorMessage(error))),
+                      );
+                    }
+                  }
+                },
+              ),
+            ),
           ListTile(
             leading: const Icon(Icons.groups_outlined),
             title: Text(session?.organization?.name ?? ''),
@@ -58,7 +85,7 @@ class AccountScreen extends ConsumerWidget {
           if (onboarding != null && !onboarding.completed)
             ListTile(
               leading: const Icon(Icons.tune),
-              title: const Text('Configurar el club'),
+              title: Text('Configurar ${organization?.org.the() ?? 'el club'}'),
               subtitle: Text(
                 'Guía de primeros pasos · ${onboarding.done} de ${onboarding.total}',
               ),
@@ -69,6 +96,44 @@ class AccountScreen extends ConsumerWidget {
                 if (context.mounted) context.go('/inicio');
               },
             ),
+          if (organization?.can('configure_organization') ?? false)
+            ListTile(
+              leading: const Icon(Icons.translate_outlined),
+              title: const Text('Cómo les dicen'),
+              subtitle: Text(
+                '${organization!.term('group')}, '
+                '${organization.term('instructor').toLowerCase()}, '
+                '${organization.term('space').toLowerCase()}…',
+              ),
+              onTap: () => context.push('/vocabulario'),
+            ),
+          // También para quien no es tutor (ej. el técnico o el admin con hijos).
+          ListTile(
+            leading: const Icon(Icons.person_add_alt_outlined),
+            title: const Text('Inscribir a un hijo'),
+            subtitle: Text(
+              '${organization?.org.theUpper() ?? 'El club'} revisa la '
+              'solicitud',
+            ),
+            onTap: () => context.go('/hijos/inscribir'),
+          ),
+          ListTile(
+            key: const Key('account-inbox'),
+            leading: Badge(
+              isLabelVisible: unread > 0,
+              label: Text('$unread'),
+              child: const Icon(Icons.inbox_outlined),
+            ),
+            title: const Text('Avisos'),
+            subtitle: Text(
+              unread == 0
+                  ? 'Lo que te mandó ${organization?.org.the() ?? 'el club'}'
+                  : unread == 1
+                  ? '1 sin leer'
+                  : '$unread sin leer',
+            ),
+            onTap: () => context.push('/avisos'),
+          ),
           ListTile(
             leading: const Icon(Icons.notifications_outlined),
             title: const Text('Notificaciones'),

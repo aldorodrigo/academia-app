@@ -21,4 +21,16 @@ void main() {
     expect(apiDate(DateTime(2026, 9, 5)), '2026-09-05');
     expect(apiMonth(DateTime(2026, 9, 5)), '2026-09');
   });
+
+  test('cantidades en singular o plural', () {
+    expect(countOf(1, 'familia', 'familias'), '1 familia');
+    expect(countOf(0, 'justificado', 'justificados'), '0 justificados');
+    expect(countOf(3, 'ausente', 'ausentes'), '3 ausentes');
+  });
+
+  test('"Temporada" no se repite', () {
+    expect(seasonLabel('2026'), 'Temporada 2026');
+    expect(seasonLabel('Temporada 2026'), 'Temporada 2026');
+    expect(seasonLabel('temporada de verano'), 'temporada de verano');
+  });
 }

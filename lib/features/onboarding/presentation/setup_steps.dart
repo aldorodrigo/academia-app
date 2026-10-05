@@ -64,14 +64,19 @@ class SetupStepTile extends StatelessWidget {
               side: BorderSide(color: theme.colorScheme.primary),
             )
           : null,
-      child: ListTile(
-        leading: Icon(icon, color: color, size: 28),
-        title: Text(step.title),
-        subtitle: Text(subtitle),
-        trailing: step.status == StepStatus.pending && step.minutes != null
-            ? Text('${step.minutes} min', style: theme.textTheme.bodySmall)
-            : const Icon(Icons.chevron_right),
-        onTap: onTap,
+      // Cada paso, un botón propio para el lector de pantalla.
+      child: Semantics(
+        container: true,
+        button: true,
+        child: ListTile(
+          leading: Icon(icon, color: color, size: 28),
+          title: Text(step.title),
+          subtitle: Text(subtitle),
+          trailing: step.status == StepStatus.pending && step.minutes != null
+              ? Text('${step.minutes} min', style: theme.textTheme.bodySmall)
+              : const Icon(Icons.chevron_right),
+          onTap: onTap,
+        ),
       ),
     );
   }

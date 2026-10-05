@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/storage/session_storage.dart';
 import 'models.dart';
+import '../../../core/vocabulary/vocabulary.dart';
 
 class AuthRepository {
   AuthRepository(this._dio, this._storage);
@@ -109,6 +110,7 @@ class AuthRepository {
         organizations: organizations,
         organizationSlug: slug,
         verified: data['verified'] as bool? ?? true,
+        gender: Gender.fromApi(data['gender']),
       );
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {
@@ -118,6 +120,10 @@ class AuthRepository {
       rethrow;
     }
   }
+
+  /// "Mi cuenta": el género (opcional) de la persona (`PATCH me`).
+  Future<void> updateGender(Gender? gender) =>
+      _dio.patch<void>('/me', data: {'gender': gender?.value});
 
   Future<void> selectOrganization(String slug) =>
       _storage.writeOrganization(slug);
