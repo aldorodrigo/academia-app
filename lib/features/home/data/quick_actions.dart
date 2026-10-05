@@ -15,9 +15,9 @@ class QuickAction {
 }
 
 /// Los botones según lo que hace cada uno en la organización: el técnico, sus
-/// grupos; la comisión, los comprobantes y los informes; la familia, su estado
-/// de cuenta y sus reservas; el profesor de clases particulares, su agenda y sus
-/// alumnos.
+/// grupos; la comisión, los comprobantes, las solicitudes de inscripción y los
+/// informes; la familia, su estado de cuenta y sus reservas; el profesor de
+/// clases particulares, su agenda y sus alumnos.
 List<QuickAction> quickActionsFor(
   OrganizationDetails? organization, {
   required bool hasStudents,
@@ -57,6 +57,18 @@ List<QuickAction> quickActionsFor(
         'Comprobantes',
         Icons.fact_check_outlined,
         '/comprobantes',
+      ),
+    if (organization.can('create_students'))
+      const QuickAction(
+        'Cargar alumno',
+        Icons.person_add_alt_1_outlined,
+        '/alumnos/nuevo',
+      ),
+    if (organization.can('manage_enrollment_requests'))
+      const QuickAction(
+        'Solicitudes',
+        Icons.how_to_reg_outlined,
+        '/solicitudes',
       ),
     if (organization.can('view_reports'))
       const QuickAction('Informes', Icons.bar_chart_outlined, '/informes'),

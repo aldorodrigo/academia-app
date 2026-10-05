@@ -98,12 +98,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(
-        find.text(
-          'Todavía no hay hijos cargados. Si falta alguno, avisá al club.',
-        ),
-        findsOneWidget,
-      );
+      expect(find.text('Todavía no hay hijos cargados.'), findsOneWidget);
+      expect(find.text('Inscribir a mi hijo'), findsOneWidget);
     });
 
     testWidgets('sin rol de tutor ni alumnos no muestra la sección', (

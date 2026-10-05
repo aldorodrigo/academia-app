@@ -60,5 +60,16 @@ void main() {
       ),
       ['Comprobantes', 'Informes'],
     );
+
+    // Secretario: aprueba las solicitudes de inscripción de las familias.
+    expect(
+      _labels(
+        _organization(
+          roles: ['secretario'],
+          permissions: ['manage_enrollment_requests', 'create_students'],
+        ),
+      ),
+      ['Cargar alumno', 'Solicitudes'],
+    );
   });
 }

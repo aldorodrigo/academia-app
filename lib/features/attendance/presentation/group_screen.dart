@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/utils/clock.dart';
 import '../../../core/utils/format.dart';
+import '../../enrollment/presentation/enrollment_actions.dart';
 import '../../organizations/data/organization_repository.dart';
 import '../data/attendance_repository.dart';
 import '../data/models.dart';
@@ -82,6 +83,21 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
     );
   }
 
+  /// Confirmar o rechazar al nuevo desde la lista del mes; después se recarga.
+  Future<void> _review(
+    StudentAttendanceSummary student, {
+    required bool confirm,
+  }) async {
+    final action = confirm ? confirmEnrollment : rejectEnrollment;
+    final ok = await action(
+      context,
+      ref,
+      student.enrollmentRequestId!,
+      student.fullName,
+    );
+    if (ok && mounted) ref.invalidate(groupAttendanceProvider);
+  }
+
   List<Widget> _details(
     BuildContext context,
     GroupAttendance data,
@@ -124,7 +140,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
         ),
       const SizedBox(height: 16),
       Text('Asistencia por alumno', style: theme.textTheme.titleMedium),
-      for (final student in data.students)
+      for (final student in data.students) ...[
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: CircleAvatar(
@@ -137,6 +153,11 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (student.isPendingConfirmation)
+                Text(
+                  'Nuevo, por confirmar',
+                  style: TextStyle(color: theme.colorScheme.tertiary),
+                ),
               Row(
                 children: [
                   for (final (status, count) in [
@@ -198,6 +219,24 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
             ],
           ),
         ),
+        if (student.isPendingConfirmation && student.canConfirm)
+          Padding(
+            padding: const EdgeInsets.only(left: 56, bottom: 8),
+            child: Wrap(
+              spacing: 8,
+              children: [
+                OutlinedButton(
+                  onPressed: () => _review(student, confirm: false),
+                  child: const Text('Rechazar'),
+                ),
+                FilledButton.tonal(
+                  onPressed: () => _review(student, confirm: true),
+                  child: const Text('Confirmar inscripción'),
+                ),
+              ],
+            ),
+          ),
+      ],
     ];
   }
 

@@ -82,6 +82,13 @@ class AccountScreen extends ConsumerWidget {
               ),
               onTap: () => context.push('/vocabulario'),
             ),
+          // También para quien no es tutor (ej. el técnico o el admin con hijos).
+          ListTile(
+            leading: const Icon(Icons.person_add_alt_outlined),
+            title: const Text('Inscribir a un hijo'),
+            subtitle: const Text('El club revisa la solicitud'),
+            onTap: () => context.go('/hijos/inscribir'),
+          ),
           ListTile(
             leading: const Icon(Icons.notifications_outlined),
             title: const Text('Notificaciones'),
