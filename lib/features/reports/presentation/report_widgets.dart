@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/utils/format.dart';
 import '../../../core/utils/launcher.dart';
+import '../../organizations/data/organization_repository.dart';
 import '../data/models.dart';
 
 /// Botones de descarga (PDF y Excel) de un informe.
@@ -120,4 +122,46 @@ class ReportBody<T> extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// "Matías: baja el 03/06/2026": la deuda de un hijo que ya dejó el club.
+class WithdrawalLabel extends ConsumerWidget {
+  const WithdrawalLabel(this.withdrawal, {super.key});
+
+  final Withdrawal withdrawal;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final on = withdrawal.on;
+    final organization = ref.watch(currentOrganizationProvider).value;
+    final manages =
+        (organization?.can('withdraw_students') ?? false) ||
+        (organization?.can('waive_charges') ?? false);
+    final label = Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Row(
+        children: [
+          Icon(Icons.logout, size: 14, color: theme.colorScheme.tertiary),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              '${withdrawal.student}: baja${on == null ? '' : ' el ${formatDate(on)}'}',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.tertiary,
+                decoration: manages ? TextDecoration.underline : null,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    // Quien condona o da de baja abre la ficha del alumno.
+    return manages
+        ? InkWell(
+            onTap: () => context.push('/alumnos/${withdrawal.studentId}'),
+            child: label,
+          )
+        : label;
+  }
 }

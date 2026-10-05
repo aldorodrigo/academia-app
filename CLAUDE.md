@@ -71,6 +71,13 @@ lib/
   `review_payment_reports` ve `PaymentReportsCard` en el inicio y `/comprobantes` (aprobar o rechazar con motivo).
 - **Informes** (comisión): `/informes` (balance del mes, saldos por familia, morosos; PDF/Excel por link firmado)
   y tarjeta en el inicio, solo si `currentOrganizationProvider` trae el permiso `view_reports` (`can()`).
+  Saldos y Morosos marcan a los hijos dados de baja (`withdrawn`, `WithdrawalLabel`: "Matías: baja el 03/06/2026");
+  Morosos filtra con chips Todos / Siguen / Dados de baja (`WithdrawnFilter`, `delinquentsReportProvider(filtro)`).
+- **Bajas y condonación** (`features/withdrawals/`, `academia-api/docs/PLAN_BAJAS.md`): avisos de baja del técnico
+  ("Dejó de venir" en `/grupos/:id`) y del tutor ("Avisar que deja el club" en la ficha del hijo, `LeavingMenu`); quien
+  tiene `withdraw_students` los ve en `DropoutReportsCard` y `/bajas`, y en `/alumnos/:id` (`ManageStudentScreen`) da la
+  baja (`WithdrawForm`: fecha, motivo y aviso a la familia prellenado y editable) o "Sigue viniendo"; con
+  `waive_charges` condona y deshace desde la cuenta del alumno. `WithdrawalsRepository`; estado `ChargeStatus.waived`.
 - **Fecha de hoy:** `todayProvider` y `nowProvider` (con hora) en `core/utils/clock.dart`, reemplazables en los tests.
 - **Asistencia** (técnico, permiso `take_attendance`): tarjeta "Hoy" en el inicio con las clases de sus grupos,
   `/clases/:id` para tomarla (todos arrancan presentes, los que el tutor avisó "No va" justificados; un toque alterna

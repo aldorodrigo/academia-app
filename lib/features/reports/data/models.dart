@@ -90,6 +90,39 @@ class BalanceReport {
   int get result => incomeTotal - expensesTotal;
 }
 
+/// Hijo de la familia dado de baja (ninguna inscripción vigente sin baja).
+class Withdrawal {
+  const Withdrawal({required this.studentId, required this.student, this.on});
+
+  factory Withdrawal.fromJson(Map<String, dynamic> json) => Withdrawal(
+    studentId: json['student_id'] as int,
+    student: json['student'] as String,
+    on: json['on'] == null ? null : DateTime.parse(json['on'] as String),
+  );
+
+  final int studentId;
+
+  /// Nombre de pila.
+  final String student;
+  final DateTime? on;
+}
+
+List<Withdrawal> _withdrawals(Object? value) => ((value as List?) ?? const [])
+    .map((w) => Withdrawal.fromJson(w as Map<String, dynamic>))
+    .toList();
+
+/// Filtro de Morosos por bajas (`withdrawn` de la API).
+enum WithdrawnFilter {
+  all(null, 'Todos'),
+  exclude('exclude', 'Siguen'),
+  only('only', 'Dados de baja');
+
+  const WithdrawnFilter(this.value, this.label);
+
+  final String? value;
+  final String label;
+}
+
 class FamilyBalance {
   const FamilyBalance({
     required this.family,
@@ -98,6 +131,7 @@ class FamilyBalance {
     required this.overdue,
     required this.credit,
     this.upcoming = 0,
+    this.withdrawn = const [],
   });
 
   factory FamilyBalance.fromJson(Map<String, dynamic> json) => FamilyBalance(
@@ -107,10 +141,14 @@ class FamilyBalance {
     overdue: json['overdue'] as int,
     credit: json['credit'] as int? ?? 0,
     upcoming: json['upcoming'] as int? ?? 0,
+    withdrawn: _withdrawals(json['withdrawn']),
   );
 
   final String family;
   final List<String> students;
+
+  /// Hijos dados de baja: la deuda queda como histórica.
+  final List<Withdrawal> withdrawn;
 
   /// Pendiente sin las próximas cuotas.
   final int pending;
@@ -163,6 +201,7 @@ class Delinquent {
     required this.monthsOverdue,
     this.contactName,
     this.contactPhone,
+    this.withdrawn = const [],
   });
 
   factory Delinquent.fromJson(Map<String, dynamic> json) {
@@ -175,6 +214,7 @@ class Delinquent {
       monthsOverdue: json['months_overdue'] as int,
       contactName: contact?['name'] as String?,
       contactPhone: contact?['phone'] as String?,
+      withdrawn: _withdrawals(json['withdrawn']),
     );
   }
 
@@ -185,6 +225,9 @@ class Delinquent {
   final int monthsOverdue;
   final String? contactName;
   final String? contactPhone;
+
+  /// Hijos dados de baja: la deuda queda como histórica.
+  final List<Withdrawal> withdrawn;
 }
 
 /// Morosos: familias con cuotas vencidas.

@@ -366,6 +366,7 @@ class StudentAttendanceSummary {
     this.absent = 0,
     this.justified = 0,
     this.rate,
+    this.dropoutReportedOn,
   });
 
   factory StudentAttendanceSummary.fromJson(Map<String, dynamic> json) =>
@@ -377,6 +378,9 @@ class StudentAttendanceSummary {
         absent: json['absent'] as int? ?? 0,
         justified: json['justified'] as int? ?? 0,
         rate: json['rate'] as int?,
+        dropoutReportedOn: json['dropout_reported_on'] == null
+            ? null
+            : DateTime.parse(json['dropout_reported_on'] as String),
       );
 
   final int id;
@@ -386,6 +390,9 @@ class StudentAttendanceSummary {
   final int absent;
   final int justified;
   final int? rate;
+
+  /// Cuándo el técnico avisó que dejó de venir (la baja la decide el club).
+  final DateTime? dropoutReportedOn;
 
   String get initials => _initials(fullName);
 }

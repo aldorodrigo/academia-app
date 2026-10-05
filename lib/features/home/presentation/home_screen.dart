@@ -15,6 +15,7 @@ import '../../payment_reports/presentation/payment_reports_card.dart';
 import '../../reports/presentation/reports_card.dart';
 import '../../students/data/students_repository.dart';
 import '../../students/presentation/students_list.dart';
+import '../../withdrawals/presentation/dropout_reports.dart';
 import 'quick_actions_bar.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -56,6 +57,7 @@ class HomeScreen extends ConsumerWidget {
           const TodayClassesCard(),
           const TodayLessonsCard(),
           const PaymentReportsCard(),
+          const DropoutReportsCard(),
           const ReportsCard(),
           const LessonsCard(),
           if (isGuardian || students.isNotEmpty) ...[

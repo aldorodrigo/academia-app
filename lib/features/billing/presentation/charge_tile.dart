@@ -19,7 +19,7 @@ class ChargeStatusLabel extends StatelessWidget {
       ChargeStatus.overdue => scheme.error,
       ChargeStatus.pending => scheme.tertiary,
       ChargeStatus.paid => scheme.primary,
-      ChargeStatus.voided => scheme.onSurfaceVariant,
+      ChargeStatus.voided || ChargeStatus.waived => scheme.onSurfaceVariant,
     };
 
     return Text(

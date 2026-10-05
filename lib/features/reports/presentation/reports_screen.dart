@@ -186,16 +186,22 @@ class _BalancesTab extends ConsumerWidget {
           Card(
             child: ListTile(
               title: Text(family.family),
-              subtitle: Text(
-                [
-                  family.students.join(', '),
-                  if (family.overdue > 0)
-                    'Vencido ${formatMoney(family.overdue)}',
-                  if (family.credit > 0)
-                    'Saldo a favor ${formatMoney(family.credit)}',
-                  if (family.upcoming > 0)
-                    'Próximas ${formatMoney(family.upcoming)}',
-                ].join(' · '),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    [
+                      family.students.join(', '),
+                      if (family.overdue > 0)
+                        'Vencido ${formatMoney(family.overdue)}',
+                      if (family.credit > 0)
+                        'Saldo a favor ${formatMoney(family.credit)}',
+                      if (family.upcoming > 0)
+                        'Próximas ${formatMoney(family.upcoming)}',
+                    ].join(' · '),
+                  ),
+                  ...family.withdrawn.map(WithdrawalLabel.new),
+                ],
               ),
               trailing: Text(
                 formatMoney(family.pending),
@@ -208,75 +214,111 @@ class _BalancesTab extends ConsumerWidget {
   }
 }
 
-class _DelinquentsTab extends ConsumerWidget {
+class _DelinquentsTab extends ConsumerStatefulWidget {
   const _DelinquentsTab();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_DelinquentsTab> createState() => _DelinquentsTabState();
+}
+
+class _DelinquentsTabState extends ConsumerState<_DelinquentsTab> {
+  WithdrawnFilter _filter = WithdrawnFilter.all;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final open = ref.read(urlLauncherProvider);
-    return ReportBody<DelinquentsReport>(
-      value: ref.watch(delinquentsReportProvider),
-      onRefresh: () => ref.refresh(delinquentsReportProvider.future),
-      builder: (r) => [
-        ReportSection(
-          'Total vencido',
-          children: [
-            AmountRow(
-              countOf(r.families.length, 'familia', 'familias'),
-              r.total,
-              bold: true,
-              color: theme.colorScheme.error,
-            ),
-          ],
-        ),
-        DownloadButtons(r.links),
-        const SizedBox(height: 8),
-        if (r.families.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(24),
-            child: Text('No hay morosos.', textAlign: TextAlign.center),
+    final provider = delinquentsReportProvider(_filter);
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: Wrap(
+            spacing: 8,
+            children: [
+              for (final filter in WithdrawnFilter.values)
+                ChoiceChip(
+                  label: Text(filter.label),
+                  selected: _filter == filter,
+                  onSelected: (_) => setState(() => _filter = filter),
+                ),
+            ],
           ),
-        for (final d in r.families)
-          Card(
-            child: ListTile(
-              title: Text(d.family),
-              subtitle: Text(
-                [
-                  d.students.join(', '),
-                  '${d.monthsOverdue} ${d.monthsOverdue == 1 ? 'mes' : 'meses'} · desde ${formatDate(d.oldestDueOn)}',
-                  if (d.contactName != null) d.contactName!,
-                ].join('\n'),
-              ),
-              isThreeLine: true,
-              trailing: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
+        ),
+        Expanded(
+          child: ReportBody<DelinquentsReport>(
+            value: ref.watch(provider),
+            onRefresh: () => ref.refresh(provider.future),
+            builder: (r) => [
+              ReportSection(
+                'Total vencido',
                 children: [
-                  Text(
-                    formatMoney(d.overdue),
-                    style: theme.textTheme.titleSmall,
+                  AmountRow(
+                    countOf(r.families.length, 'familia', 'familias'),
+                    r.total,
+                    bold: true,
+                    color: theme.colorScheme.error,
                   ),
-                  if (d.contactPhone != null)
-                    InkWell(
-                      onTap: () => open(
-                        Uri(
-                          scheme: 'tel',
-                          path: d.contactPhone!.replaceAll(' ', ''),
-                        ),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          'Llamar',
-                          style: TextStyle(color: theme.colorScheme.primary),
-                        ),
-                      ),
-                    ),
                 ],
               ),
-            ),
+              DownloadButtons(r.links),
+              const SizedBox(height: 8),
+              if (r.families.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text('No hay morosos.', textAlign: TextAlign.center),
+                ),
+              for (final d in r.families)
+                Card(
+                  child: ListTile(
+                    title: Text(d.family),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          [
+                            d.students.join(', '),
+                            '${d.monthsOverdue} ${d.monthsOverdue == 1 ? 'mes' : 'meses'} · desde ${formatDate(d.oldestDueOn)}',
+                            if (d.contactName != null) d.contactName!,
+                          ].join('\n'),
+                        ),
+                        ...d.withdrawn.map(WithdrawalLabel.new),
+                      ],
+                    ),
+                    isThreeLine: true,
+                    trailing: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          formatMoney(d.overdue),
+                          style: theme.textTheme.titleSmall,
+                        ),
+                        if (d.contactPhone != null)
+                          InkWell(
+                            onTap: () => open(
+                              Uri(
+                                scheme: 'tel',
+                                path: d.contactPhone!.replaceAll(' ', ''),
+                              ),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                'Llamar',
+                                style: TextStyle(
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
           ),
+        ),
       ],
     );
   }
