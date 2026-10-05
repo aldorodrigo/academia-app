@@ -53,6 +53,7 @@ class CashRepository {
         'guardian_id': ?draft.guardianId,
         if (notes != null && notes.isNotEmpty) 'notes': notes,
         'request_id': draft.requestId,
+        'money_account_id': ?draft.moneyAccountId,
       },
     );
     return CollectionResult.fromJson(
@@ -127,6 +128,17 @@ class CashRepository {
 
     final response = await _dio.get<Map<String, dynamic>>('/cash-boxes');
     return CashOverview.fromJson(
+      response.data!['data'] as Map<String, dynamic>,
+    );
+  }
+
+  /// "Cobra directo a la Caja": sí o no para una persona que cobra.
+  Future<CashCollector> setCollectsToOrgCash(int userId, bool value) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      '/cash-collectors/$userId',
+      data: {'collects_to_org_cash': value},
+    );
+    return CashCollector.fromJson(
       response.data!['data'] as Map<String, dynamic>,
     );
   }

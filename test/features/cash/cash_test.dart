@@ -66,6 +66,7 @@ Map<String, Object?> _target({
   },
   int credit = 0,
   bool approves = false,
+  bool direct = false,
 }) => {
   'student': {'id': 12, 'full_name': 'Mateo Benítez'},
   'family': {
@@ -111,6 +112,14 @@ Map<String, Object?> _target({
     {'id': 3, 'name': 'Ueno'},
   ],
   'approves_transfers': approves,
+  'collects_to_org_cash': direct,
+  'collect_accounts': direct
+      ? [
+          {'id': 1, 'name': 'Caja'},
+          {'id': 2, 'name': 'Banco Itaú'},
+        ]
+      : <Object>[],
+  'default_collect_account_id': direct ? 1 : null,
 };
 
 /// Comprobante registrado por el club (`POST collections/transfers`).
@@ -212,7 +221,22 @@ Map<String, Object?> _cashBox({
   ],
 };
 
-Map<String, Object?> _overview() => {
+Map<String, Object?> _overview({bool collectors = false}) => {
+  if (collectors)
+    'collectors': [
+      {
+        'user_id': 5,
+        'name': 'Juan Pérez',
+        'collects_to_org_cash': false,
+        'owner': false,
+      },
+      {
+        'user_id': 1,
+        'name': 'Óscar Benítez',
+        'collects_to_org_cash': true,
+        'owner': true,
+      },
+    ],
   'total': 885000,
   'boxes': [
     {
@@ -361,6 +385,34 @@ void main() {
       expect(early.earlyPaymentLabel, 'Pronto pago −10 %');
       expect(target.charges[2].underReview, isTrue);
     });
+
+    test(
+      'cobra directo a la Caja: cuentas del club y la caja cerrada no frena',
+      () {
+        final normal = CollectionTarget.fromJson(_target());
+        expect(normal.collectsToOrgCash, isFalse);
+        expect(normal.collectAccounts, isEmpty);
+
+        final direct = CollectionTarget.fromJson(
+          _target(
+            direct: true,
+            box: {
+              'id': 9,
+              'name': 'Caja de Juan Pérez',
+              'balance': 50000,
+              'active': false,
+            },
+          ),
+        );
+        expect(direct.collectsToOrgCash, isTrue);
+        expect(direct.collectAccounts.map((a) => a.name), [
+          'Caja',
+          'Banco Itaú',
+        ]);
+        expect(direct.defaultCollectAccountId, 1);
+        expect(direct.canCollect, isTrue);
+      },
+    );
 
     test('trae las cuentas para la transferencia y si se aprueba al toque', () {
       final target = CollectionTarget.fromJson(_target(approves: true));
@@ -780,6 +832,59 @@ void main() {
       expect(find.text('Lista de cobro'), findsOneWidget);
     });
 
+    testWidgets('cobra directo a la Caja: sin caja propia y elige la cuenta', (
+      tester,
+    ) async {
+      final requests = <RequestOptions>[];
+      await tester.pumpWidget(
+        _app(
+          {
+            ..._session(),
+            'GET /collections/students/12': (_) => {
+              'data': _target(box: null, direct: true),
+            },
+            'GET /collections/students': (_) => {'data': _students},
+            'POST /collections': (_) => {
+              'data': {
+                'payment': _payment(amount: 285000),
+                'applied': 285000,
+                'credit': 0,
+                'cash_box': null,
+                'account': {'id': 2, 'name': 'Banco Itaú'},
+                'message': 'Cobrado ₲ 285.000. Recibo N° 000124.',
+              },
+            },
+          },
+          const CollectScreen(studentId: 12),
+          requests: requests,
+        ),
+      );
+      await _settle(tester);
+
+      await _scrollTo(tester, find.text('Cobrar ₲ 285.000'));
+      expect(
+        find.text(
+          'Entra directo en Caja: no tenés que depositarlo. '
+          'La familia recibe el recibo.',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const Key('collect-account')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Banco Itaú').last);
+      await tester.pumpAndSettle();
+      await _scrollTo(tester, find.text('Cobrar ₲ 285.000'));
+      await tester.tap(find.text('Cobrar ₲ 285.000'));
+      await tester.pumpAndSettle();
+
+      expect(
+        (requests.firstWhere((r) => r.method == 'POST').data
+            as Map)['money_account_id'],
+        2,
+      );
+      expect(find.text('Entró en Banco Itaú.'), findsOneWidget);
+    });
+
     testWidgets('transferencia: pide el comprobante y queda en revisión', (
       tester,
     ) async {
@@ -1051,6 +1156,59 @@ void main() {
         find.text('Listo. Te avisamos cuando lo confirmen.'),
         findsOneWidget,
       );
+    });
+
+    testWidgets('quien administra elige quién cobra directo a la Caja', (
+      tester,
+    ) async {
+      final requests = <RequestOptions>[];
+      await tester.pumpWidget(
+        _app(
+          {
+            ..._session(),
+            'GET /cash-boxes': (_) => {'data': _overview(collectors: true)},
+            'PUT /cash-collectors/5': (_) => {
+              'data': {
+                'user_id': 5,
+                'name': 'Juan Pérez',
+                'collects_to_org_cash': true,
+                'owner': false,
+              },
+            },
+          },
+          const CashOverviewScreen(),
+          requests: requests,
+        ),
+      );
+      await _settle(tester);
+
+      expect(find.text('Quién cobra directo a la Caja'), findsOneWidget);
+      expect(
+        find.text('Cobra directo a la Caja · creó la organización'),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const Key('collector-5')));
+      await tester.pumpAndSettle();
+      final put = requests.singleWhere((r) => r.method == 'PUT');
+      expect(put.path, '/cash-collectors/5');
+      expect(put.data, {'collects_to_org_cash': true});
+      expect(
+        find.textContaining('sigue ahí hasta que lo deposite'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('sin permiso de miembros no se ve quién cobra directo', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _app({
+          ..._session(),
+          'GET /cash-boxes': (_) => {'data': _overview()},
+        }, const CashOverviewScreen()),
+      );
+      await _settle(tester);
+      expect(find.text('Quién cobra directo a la Caja'), findsNothing);
     });
 
     testWidgets('quien valida confirma y rechaza depósitos', (tester) async {

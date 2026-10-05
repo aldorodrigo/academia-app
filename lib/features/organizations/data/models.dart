@@ -39,6 +39,7 @@ class OrganizationDetails {
     required this.features,
     required this.roles,
     this.permissions = const [],
+    this.collectsToOrgCash = false,
     this.type,
     this.currency = 'PYG',
     this.timezone = 'America/Asuncion',
@@ -62,6 +63,7 @@ class OrganizationDetails {
       permissions: List<String>.from(
         membership?['permissions'] as List? ?? const [],
       ),
+      collectsToOrgCash: membership?['collects_to_org_cash'] as bool? ?? false,
     );
   }
 
@@ -85,6 +87,10 @@ class OrganizationDetails {
 
   /// Permisos del usuario para la app (ej. `view_reports`).
   final List<String> permissions;
+
+  /// Lo que cobra en efectivo entra directo a la Caja del club (sin caja
+  /// personal ni depósito). Lo decide quien administra los miembros.
+  final bool collectsToOrgCash;
 
   /// Etiqueta configurable de la organización (ej. term('group') → "Categoría").
   String term(String key) => terminology[key] ?? defaultTerminology[key] ?? key;

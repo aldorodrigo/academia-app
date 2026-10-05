@@ -80,6 +80,34 @@ class _OverviewView extends ConsumerWidget {
     }
   }
 
+  Future<void> _setCollector(
+    BuildContext context,
+    WidgetRef ref,
+    CashCollector collector,
+    bool value,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref
+          .read(cashRepositoryProvider)
+          .setCollectsToOrgCash(collector.userId, value);
+      ref.invalidate(cashOverviewProvider);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            value
+                ? '${collector.name} cobra directo a la Caja. Lo que ya tiene '
+                      'en su caja sigue ahí hasta que lo deposite.'
+                : '${collector.name} rinde lo que cobra: queda en su caja '
+                      'hasta que lo deposite.',
+          ),
+        ),
+      );
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(apiErrorMessage(error))));
+    }
+  }
+
   Future<void> _reject(
     BuildContext context,
     WidgetRef ref,
@@ -141,6 +169,35 @@ class _OverviewView extends ConsumerWidget {
             onConfirm: () => _confirm(context, ref, deposit),
             onReject: () => _reject(context, ref, deposit),
           ),
+        if (overview.collectors != null && overview.collectors!.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Text(
+            'Quién cobra directo a la Caja',
+            style: theme.textTheme.titleMedium,
+          ),
+          const Text(
+            'Lo que cobran en efectivo entra en la Caja del club, sin caja '
+            'propia ni depósito. Los demás lo rinden: queda en su caja hasta '
+            'que lo depositan.',
+          ),
+          for (final collector in overview.collectors!)
+            SwitchListTile(
+              key: Key('collector-${collector.userId}'),
+              contentPadding: EdgeInsets.zero,
+              title: Text(collector.name),
+              subtitle: Text(
+                [
+                  collector.collectsToOrgCash
+                      ? 'Cobra directo a la Caja'
+                      : 'Rinde lo que cobra',
+                  if (collector.isOwner) 'creó la organización',
+                ].join(' · '),
+              ),
+              value: collector.collectsToOrgCash,
+              onChanged: (value) =>
+                  _setCollector(context, ref, collector, value),
+            ),
+        ],
         const SizedBox(height: 16),
         Text('Cajas', style: theme.textTheme.titleMedium),
         if (overview.boxes.isEmpty)

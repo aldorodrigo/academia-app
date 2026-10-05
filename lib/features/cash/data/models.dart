@@ -147,6 +147,9 @@ class CollectionTarget {
     this.cashBox,
     this.transferAccounts = const [],
     this.approvesTransfers = false,
+    this.collectsToOrgCash = false,
+    this.collectAccounts = const [],
+    this.defaultCollectAccountId,
   });
 
   factory CollectionTarget.fromJson(Map<String, dynamic> json) {
@@ -172,6 +175,11 @@ class CollectionTarget {
           .map((a) => TransferAccount.fromJson(a as Map<String, dynamic>))
           .toList(),
       approvesTransfers: json['approves_transfers'] as bool? ?? false,
+      collectsToOrgCash: json['collects_to_org_cash'] as bool? ?? false,
+      collectAccounts: ((json['collect_accounts'] as List?) ?? const [])
+          .map((a) => TransferAccount.fromJson(a as Map<String, dynamic>))
+          .toList(),
+      defaultCollectAccountId: json['default_collect_account_id'] as int?,
     );
   }
 
@@ -195,7 +203,15 @@ class CollectionTarget {
   /// registrarla (si no, en revisión del tesorero).
   final bool approvesTransfers;
 
-  bool get canCollect => cashBox?.active ?? true;
+  /// Cobra directo a la Caja del club (o a otra cuenta del club que elija):
+  /// sin caja personal ni depósito.
+  final bool collectsToOrgCash;
+
+  /// Cuentas del club donde puede entrar el efectivo (solo si cobra directo).
+  final List<TransferAccount> collectAccounts;
+  final int? defaultCollectAccountId;
+
+  bool get canCollect => collectsToOrgCash || (cashBox?.active ?? true);
 
   List<CollectableCharge> get dueCharges =>
       charges.where((c) => !c.isUpcoming).toList();
@@ -213,6 +229,7 @@ class CollectionDraft {
     this.chargeIds = const [],
     this.guardianId,
     this.notes,
+    this.moneyAccountId,
   });
 
   final int studentId;
@@ -223,6 +240,9 @@ class CollectionDraft {
   final List<int> chargeIds;
   final int? guardianId;
   final String? notes;
+
+  /// Solo si cobra directo: la cuenta del club donde entra (sin elegir, la Caja).
+  final int? moneyAccountId;
 }
 
 /// Transferencia que la familia le mandó a quien cobra (la captura de
@@ -265,11 +285,14 @@ class CollectionResult {
     required this.credit,
     required this.message,
     this.cashBox,
+    this.accountName,
   });
 
   factory CollectionResult.fromJson(Map<String, dynamic> json) {
     final box = json['cash_box'] as Map<String, dynamic>?;
+    final account = json['account'] as Map<String, dynamic>?;
     return CollectionResult(
+      accountName: account?['name'] as String?,
       payment: Payment.fromJson(json['payment'] as Map<String, dynamic>),
       applied: json['applied'] as int? ?? 0,
       credit: json['credit'] as int? ?? 0,
@@ -284,7 +307,12 @@ class CollectionResult {
   final int applied;
   final int credit;
   final String message;
+
+  /// `null` si cobró directo a una cuenta del club.
   final CashBoxSummary? cashBox;
+
+  /// Dónde entró la plata ("Caja de Juan Pérez" o "Caja").
+  final String? accountName;
 }
 
 /// Estado de un depósito de efectivo informado por el técnico.
@@ -524,14 +552,43 @@ class HolderCashBox {
 }
 
 /// "Efectivo": cuánto tiene cada uno y los depósitos por confirmar.
+/// Quien cobra en efectivo y si cobra directo a la Caja del club (lo ve y lo
+/// cambia quien administra los miembros).
+class CashCollector {
+  const CashCollector({
+    required this.userId,
+    required this.name,
+    this.collectsToOrgCash = false,
+    this.isOwner = false,
+  });
+
+  factory CashCollector.fromJson(Map<String, dynamic> json) => CashCollector(
+    userId: json['user_id'] as int,
+    name: json['name'] as String? ?? '',
+    collectsToOrgCash: json['collects_to_org_cash'] as bool? ?? false,
+    isOwner: json['owner'] as bool? ?? false,
+  );
+
+  final int userId;
+  final String name;
+  final bool collectsToOrgCash;
+
+  /// Quien creó la organización (cobra directo por defecto).
+  final bool isOwner;
+}
+
 class CashOverview {
   const CashOverview({
     this.total = 0,
     this.boxes = const [],
     this.deposits = const [],
+    this.collectors,
   });
 
   factory CashOverview.fromJson(Map<String, dynamic> json) => CashOverview(
+    collectors: (json['collectors'] as List?)
+        ?.map((c) => CashCollector.fromJson(c as Map<String, dynamic>))
+        .toList(),
     total: json['total'] as int? ?? 0,
     boxes: ((json['boxes'] as List?) ?? const [])
         .map((b) => HolderCashBox.fromJson(b as Map<String, dynamic>))
@@ -544,6 +601,9 @@ class CashOverview {
   final int total;
   final List<HolderCashBox> boxes;
   final List<CashDeposit> deposits;
+
+  /// Solo para quien administra los miembros (si no, `null`).
+  final List<CashCollector>? collectors;
 }
 
 DateTime? _dateTime(Object? value) =>

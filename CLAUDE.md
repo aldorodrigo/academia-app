@@ -92,6 +92,11 @@ lib/
   "Registrado por …" (`PaymentReport.registeredBy`, sin "Retirar"). El efectivo entra en su caja personal: `/mi-caja` (saldo en su poder, movimientos y
   "Depositar", que queda por confirmar). Quien valida comprobantes (`review_payment_reports`) ve `/efectivo` (cajas de
   cada uno y depósitos para confirmar o rechazar). Cobrar y depositar requieren conexión.
+  **Cobra directo a la Caja** (por persona; por defecto solo quien creó la organización): con
+  `collects_to_org_cash` en `GET collections/students/{id}` el cobro entra en la Caja del club (o en la cuenta que
+  elija de `collect_accounts`, `money_account_id`), sin caja propia ni depósito; quien administra los miembros lo
+  cambia en `/efectivo` ("Quién cobra directo a la Caja", `collectors`, `PUT cash-collectors/{user}`). Lo que ya tenía
+  en su caja sigue ahí hasta que lo deposite.
 - **Informes** (comisión): `/informes` (balance del mes, saldos por familia, morosos; PDF/Excel por link firmado)
   y tarjeta en el inicio, solo si `currentOrganizationProvider` trae el permiso `view_reports` (`can()`).
   Saldos y Morosos marcan a los hijos dados de baja (`withdrawn`, `WithdrawalLabel`: "Matías: baja el 03/06/2026");

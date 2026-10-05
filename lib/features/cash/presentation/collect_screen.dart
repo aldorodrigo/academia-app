@@ -82,6 +82,13 @@ class _CollectFormState extends ConsumerState<_CollectForm> {
       ? widget.target.transferAccounts.single.id
       : null;
   final _reference = TextEditingController();
+
+  /// Si cobra directo a la Caja: la cuenta del club donde entra el efectivo.
+  late int? _cashAccountId =
+      widget.target.defaultCollectAccountId ??
+      (widget.target.collectAccounts.isEmpty
+          ? null
+          : widget.target.collectAccounts.first.id);
   PickedProof? _proof;
   String? _proofError;
 
@@ -136,6 +143,9 @@ class _CollectFormState extends ConsumerState<_CollectForm> {
               ],
               guardianId: _guardianId,
               notes: _notes.text,
+              moneyAccountId: widget.target.collectsToOrgCash
+                  ? _cashAccountId
+                  : null,
             ),
           );
       ref
@@ -332,6 +342,23 @@ class _CollectFormState extends ConsumerState<_CollectForm> {
           if (_transfer)
             ..._transferFields()
           else ...[
+            if (target.collectsToOrgCash &&
+                target.collectAccounts.length > 1) ...[
+              const SizedBox(height: 16),
+              DropdownButtonFormField<int>(
+                key: const Key('collect-account'),
+                initialValue: _cashAccountId,
+                decoration: const InputDecoration(labelText: '¿Dónde entra?'),
+                items: [
+                  for (final account in target.collectAccounts)
+                    DropdownMenuItem(
+                      value: account.id,
+                      child: Text(account.name),
+                    ),
+                ],
+                onChanged: (value) => setState(() => _cashAccountId = value),
+              ),
+            ],
             const SizedBox(height: 16),
             TextFormField(
               controller: _notes,
@@ -388,7 +415,10 @@ class _CollectFormState extends ConsumerState<_CollectForm> {
           if (!_transfer) ...[
             const SizedBox(height: 8),
             Text(
-              box == null
+              target.collectsToOrgCash
+                  ? 'Entra directo en ${_cashAccountName(target) ?? 'la Caja del club'}: '
+                        'no tenés que depositarlo. La familia recibe el recibo.'
+                  : box == null
                   ? 'Queda en tu caja hasta que lo deposites en la cuenta del club. '
                         'La familia recibe el recibo.'
                   : 'Queda en tu caja (${formatMoney(box.balance)} en tu poder) '
@@ -400,6 +430,13 @@ class _CollectFormState extends ConsumerState<_CollectForm> {
         ],
       ),
     );
+  }
+
+  String? _cashAccountName(CollectionTarget target) {
+    for (final account in target.collectAccounts) {
+      if (account.id == _cashAccountId) return account.name;
+    }
+    return null;
   }
 
   /// Fecha, cuenta, N° de operación y la captura o el PDF.
@@ -505,7 +542,9 @@ class CollectionDoneDialog extends ConsumerWidget {
           if (result.credit > 0)
             Text('Quedan ${formatMoney(result.credit)} a favor de la familia.'),
           if (result.cashBox != null)
-            Text('En tu caja: ${formatMoney(result.cashBox!.balance)}.'),
+            Text('En tu caja: ${formatMoney(result.cashBox!.balance)}.')
+          else if (result.accountName != null)
+            Text('Entró en ${result.accountName}.'),
           const SizedBox(height: 8),
           const Text('Le avisamos a la familia con el recibo.'),
         ],
