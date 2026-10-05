@@ -5,9 +5,11 @@ import 'package:go_router/go_router.dart';
 import '../../../core/utils/format.dart';
 import '../data/cash_repository.dart';
 import '../data/models.dart';
+import '../../../core/vocabulary/vocabulary.dart';
 import '../../../core/widgets/error_view.dart';
+import '../../organizations/data/organization_repository.dart';
 
-/// "Cobrar": los alumnos que puede cobrar quien usa la app (los de sus grupos,
+/// "Cobrar": los alumnos (con la palabra de la organización) que puede cobrar quien usa la app (los de sus grupos,
 /// o todos para la comisión), con lo que debe hoy cada familia.
 class CollectStudentsScreen extends ConsumerStatefulWidget {
   const CollectStudentsScreen({super.key});
@@ -68,10 +70,17 @@ class _CollectStudentsScreenState extends ConsumerState<CollectStudentsScreen> {
 
   List<Widget> _list(BuildContext context, List<CollectableStudent> list) {
     if (list.isEmpty) {
-      return const [
+      final organization = ref.watch(currentOrganizationProvider).value;
+      final student = organization?.word('student') ?? Word.of('Jugador');
+      final group = organization?.word('group') ?? Word.of('Categoría');
+      return [
         Padding(
-          padding: EdgeInsets.symmetric(vertical: 16),
-          child: Text('No hay alumnos inscriptos en tus grupos.'),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Text(
+            'No hay ${student.pluralLower} '
+            '${student.g('inscriptos', 'inscriptas')} en tus '
+            '${group.pluralLower}.',
+          ),
         ),
       ];
     }

@@ -517,6 +517,29 @@ void main() {
   });
 
   group('cobro', () {
+    test('la caja cerrada nombra a quién la reabre', () {
+      final club = Word.of('club');
+      expect(
+        closedBoxMessage(['Óscar Giménez'], club),
+        'Tu caja está cerrada. Hablá con Óscar Giménez para reabrirla.',
+      );
+      expect(
+        closedBoxMessage(['Óscar Giménez', 'Ana Duarte'], club),
+        'Tu caja está cerrada. Hablá con Óscar Giménez o Ana Duarte para '
+        'reabrirla.',
+      );
+      expect(
+        closedBoxMessage(['A', 'B', 'C'], Word.of('academia')),
+        'Tu caja está cerrada. Hablá con quien maneja las cuentas de la '
+        'academia para reabrirla.',
+      );
+      expect(
+        closedBoxMessage(const [], club),
+        'Tu caja está cerrada. Hablá con quien maneja las cuentas del club '
+        'para reabrirla.',
+      );
+    });
+
     test('nombra a quién confirma el depósito (N10)', () {
       final academia = Word.of('academia');
       expect(
@@ -1185,18 +1208,24 @@ void main() {
         _app({
           ..._session(),
           'GET /collections/students/12': (_) => {
-            'data': _target(
-              box: {'id': 9, 'name': 'Caja', 'balance': 0, 'active': false},
-            ),
+            'data': {
+              ..._target(
+                box: {'id': 9, 'name': 'Caja', 'balance': 0, 'active': false},
+              ),
+              'reopeners': [
+                {'id': 2, 'name': 'Óscar Giménez'},
+              ],
+            },
           },
         }, const CollectScreen(studentId: 12)),
       );
       await _settle(tester);
 
+      // Nombra a quién la puede reabrir.
       await _scrollTo(
         tester,
         find.text(
-          'Tu caja está cerrada. Hablá con quien maneja las cuentas del club.',
+          'Tu caja está cerrada. Hablá con Óscar Giménez para reabrirla.',
         ),
       );
       expect(find.widgetWithText(FilledButton, 'Cobrar'), findsNothing);
@@ -1211,7 +1240,7 @@ void main() {
             'message': 'x',
             'errors': {
               'amount': [
-                'Tu caja está cerrada. Hablá con quien maneja las cuentas del club.',
+                'Tu caja está cerrada. Hablá con Óscar Giménez para reabrirla.',
               ],
             },
           }),
@@ -1225,8 +1254,64 @@ void main() {
 
       expect(
         find.text(
-          'Tu caja está cerrada. Hablá con quien maneja las cuentas del club.',
+          'Tu caja está cerrada. Hablá con Óscar Giménez para reabrirla.',
         ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('mi caja cerrada nombra a los dos que la reabren', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _app({
+          ..._session(),
+          'GET /me/cash-box': (_) => {
+            'data': {
+              ..._cashBox(active: false),
+              'reopeners': [
+                {'id': 2, 'name': 'Óscar Giménez'},
+                {'id': 3, 'name': 'Ana Duarte'},
+              ],
+            },
+          },
+        }, const CashBoxScreen()),
+      );
+      await _settle(tester);
+
+      expect(
+        find.text(
+          'Tu caja está cerrada. Hablá con Óscar Giménez o Ana Duarte para '
+          'reabrirla. Mientras tanto no podés cobrar, pero sí depositar.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('sin nadie para cobrar, con las palabras de la organización', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _app({
+          ..._session(),
+          'GET /organization': (_) => {
+            'data': {
+              'slug': 'jakare',
+              'name': 'Club Jakare',
+              'terminology': {'student': 'Jugador', 'group': 'Categoría'},
+              'membership': {
+                'roles': <Object>[],
+                'permissions': ['collect_payments'],
+              },
+            },
+          },
+          'GET /collections/students': (_) => {'data': <Object>[]},
+        }, const CollectStudentsScreen()),
+      );
+      await _settle(tester);
+
+      expect(
+        find.text('No hay jugadores inscriptos en tus categorías.'),
         findsOneWidget,
       );
     });

@@ -95,7 +95,8 @@ class _CashBoxView extends ConsumerWidget {
                   Text(box.name!, style: theme.textTheme.bodySmall),
                 if (!box.active)
                   Text(
-                    'Tu caja está cerrada: no podés cobrar, pero sí depositar.',
+                    '${closedBoxMessage(box.reopeners, ref.watch(orgWordProvider))} '
+                    'Mientras tanto no podés cobrar, pero sí depositar.',
                     style: TextStyle(color: theme.colorScheme.error),
                   ),
                 const SizedBox(height: 12),

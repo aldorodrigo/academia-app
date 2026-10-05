@@ -78,6 +78,18 @@ String untilConfirmed(
   _ => 'hasta que alguien ${organization.of()} $anyone',
 };
 
+/// "Tu caja está cerrada. Hablá con Óscar Giménez para reabrirla." (con dos,
+/// "con Óscar Giménez o Ana Duarte"; con más o sin nadie, "con quien maneja
+/// las cuentas del club"). [reopeners]: `reopeners` de la API.
+String closedBoxMessage(List<String> reopeners, Word organization) {
+  final who = switch (reopeners) {
+    [final only] => only,
+    [final first, final second] => '$first o $second',
+    _ => 'quien maneja las cuentas ${organization.of()}',
+  };
+  return 'Tu caja está cerrada. Hablá con $who para reabrirla.';
+}
+
 String? validateDepositRejection(String? value) =>
     value == null || value.trim().isEmpty
     ? 'Contale por qué no lo confirmás.'

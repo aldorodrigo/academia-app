@@ -102,7 +102,8 @@ lib/
   avisamos a la familia": `notice` de la API (`ReceiptNotice` en `features/billing/data/receipt_notice.dart`, con
   `NoticeReach`) se muestra con `ReceiptNoticeView` ("A Laura le llega en la app." / "Carlos no tiene la app: no le
   llega." y "Mandar recibo por WhatsApp a …" con el link al recibo de 30 días). Quién confirma un depósito o aprueba una
-  transferencia: `confirmers` de la API con `untilConfirmed()` (`cash_form.dart`), nunca "el tesorero" fijo.
+  transferencia: `confirmers` de la API con `untilConfirmed()` (`cash_form.dart`), nunca "el tesorero" fijo. Caja cerrada:
+  `reopeners` con `closedBoxMessage()` ("Hablá con Óscar Giménez para reabrirla").
 - **Informes** (comisión): `/informes` (balance del mes, saldos por familia, morosos; PDF/Excel por link firmado)
   y tarjeta en el inicio, solo si `currentOrganizationProvider` trae el permiso `view_reports` (`can()`).
   Saldos y Morosos marcan a los hijos dados de baja (`withdrawn`, `WithdrawalLabel`: "Matías: baja el 03/06/2026");

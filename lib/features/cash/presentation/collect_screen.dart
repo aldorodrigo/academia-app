@@ -395,8 +395,7 @@ class _CollectFormState extends ConsumerState<_CollectForm> {
             ),
           ] else if (!target.canCollect)
             Text(
-              'Tu caja está cerrada. Hablá con quien maneja las cuentas '
-              '${ref.watch(orgWordProvider).of()}.',
+              closedBoxMessage(target.reopeners, ref.watch(orgWordProvider)),
               style: TextStyle(color: theme.colorScheme.error),
               textAlign: TextAlign.center,
             )

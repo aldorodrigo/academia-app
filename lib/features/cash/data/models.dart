@@ -154,6 +154,7 @@ class CollectionTarget {
     this.collectAccounts = const [],
     this.defaultCollectAccountId,
     this.confirmers = const [],
+    this.reopeners = const [],
   });
 
   factory CollectionTarget.fromJson(Map<String, dynamic> json) {
@@ -185,6 +186,7 @@ class CollectionTarget {
           .toList(),
       defaultCollectAccountId: json['default_collect_account_id'] as int?,
       confirmers: confirmerNames(json['confirmers']),
+      reopeners: confirmerNames(json['reopeners']),
     );
   }
 
@@ -210,6 +212,9 @@ class CollectionTarget {
 
   /// Quiénes aprueban la transferencia si no la aprueba quien la registra.
   final List<String> confirmers;
+
+  /// Quiénes pueden reabrir su caja si está cerrada.
+  final List<String> reopeners;
 
   /// Cobra directo a la Caja del club (o a otra cuenta del club que elija):
   /// sin caja personal ni depósito.
@@ -487,6 +492,7 @@ class CashBox {
     this.deposits = const [],
     this.depositAccounts = const [],
     this.confirmers = const [],
+    this.reopeners = const [],
   });
 
   factory CashBox.fromJson(Map<String, dynamic> json) => CashBox(
@@ -506,6 +512,7 @@ class CashBox {
         .map((a) => DepositAccount.fromJson(a as Map<String, dynamic>))
         .toList(),
     confirmers: confirmerNames(json['confirmers']),
+    reopeners: confirmerNames(json['reopeners']),
   );
 
   static const empty = CashBox();
@@ -525,6 +532,9 @@ class CashBox {
 
   /// Quiénes confirman los depósitos (sin quien deposita).
   final List<String> confirmers;
+
+  /// Quiénes pueden reabrir la caja si está cerrada (sin quien la tiene).
+  final List<String> reopeners;
 
   bool get canDeposit => available > 0 && depositAccounts.isNotEmpty;
 }
